@@ -43,6 +43,88 @@ describe('GET /api/teams', () => {
   });
 });
 
+describe('GET /api/teams/:id', () => {
+  it('should return a specific team by ID', async () => {
+    // Create a team first
+    const createResponse = await SELF.fetch('http://localhost/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        createNewTeam: true,
+        teamName: 'Specific Team Test',
+        teamPassword: 'testpass',
+        members: [
+          {
+            firstName: 'Specific',
+            lastName: 'Test',
+            email: 'specifictest@example.com',
+            bacLevel: 3,
+            isLeader: true,
+            foodDiet: 'margherita'
+          }
+        ]
+      })
+    });
+
+    const createData = await createResponse.json();
+    const teamId = createData.team.id;
+
+    const response = await SELF.fetch(`http://localhost/api/teams/${teamId}`);
+    expect(response.status).toBe(200);
+
+    const data = await response.json();
+    expect(data.team).toBeDefined();
+    expect(data.team.id).toBe(teamId);
+    expect(data.team.name).toBe('Specific Team Test');
+  });
+
+  it('should return 404 for non-existent team', async () => {
+    const response = await SELF.fetch('http://localhost/api/teams/99999');
+    expect(response.status).toBe(404);
+  });
+
+  it('should include members array for specific team', async () => {
+    // Create a team with members
+    const createResponse = await SELF.fetch('http://localhost/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        createNewTeam: true,
+        teamName: 'Member Count Test',
+        teamPassword: 'testpass',
+        members: [
+          {
+            firstName: 'Count1',
+            lastName: 'Test',
+            email: 'count1test@example.com',
+            bacLevel: 2,
+            isLeader: true,
+            foodDiet: 'none'
+          },
+          {
+            firstName: 'Count2',
+            lastName: 'Test',
+            email: 'count2test@example.com',
+            bacLevel: 1,
+            isLeader: false,
+            foodDiet: 'pepperoni'
+          }
+        ]
+      })
+    });
+
+    const createData = await createResponse.json();
+    const teamId = createData.team.id;
+
+    const response = await SELF.fetch(`http://localhost/api/teams/${teamId}`);
+    const data = await response.json();
+
+    expect(data.team.members).toBeDefined();
+    expect(data.team.members).toHaveLength(2);
+    expect(data.team.members[0].first_name).toBe('Count1');
+  });
+});
+
 describe('GET /api/stats', () => {
   it('should return statistics', async () => {
     const response = await SELF.fetch('http://localhost/api/stats');
