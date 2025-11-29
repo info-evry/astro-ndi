@@ -4,7 +4,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
 <BaseLayout title="Nuit de l'Info - Inscription">
   <main class="container">
-    <header class="header">
+    <header class="page-header">
       <h1>Nuit de l'Info</h1>
       <p class="subtitle">Inscription des équipes</p>
       <div id="stats" class="stats"></div>
@@ -32,8 +32,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <h2>Formulaire d'Inscription</h2>
 
       <form id="registration-form" class="form">
-        <fieldset class="fieldset team-selection">
-          <legend>Équipe</legend>
+        <div class="form-card">
+          <h3 class="form-card-title">Équipe</h3>
 
           <div class="radio-group">
             <label class="radio-label">
@@ -73,17 +73,18 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <input type="password" id="join-password" name="joinPassword" maxlength="64" placeholder="Demandez-le au chef d'équipe">
             </div>
           </div>
-        </fieldset>
+        </div>
 
-        <fieldset class="fieldset members-section">
-          <legend>Membres <span id="member-count">(1)</span></legend>
+        <div class="form-card">
+          <div class="form-card-header">
+            <h3 class="form-card-title">Membres <span id="member-count">(1)</span></h3>
+            <button type="button" id="add-member" class="btn btn-secondary btn-sm">
+              + Ajouter un membre
+            </button>
+          </div>
 
           <div id="members-container"></div>
-
-          <button type="button" id="add-member" class="btn btn-secondary">
-            + Ajouter un membre
-          </button>
-        </fieldset>
+        </div>
 
         <div id="form-errors" class="errors hidden"></div>
 

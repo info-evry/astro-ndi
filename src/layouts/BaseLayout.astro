@@ -5,9 +5,21 @@ interface Props {
   title: string;
   description?: string;
   adminStyles?: boolean;
+  showHeader?: boolean;
 }
 
-const { title, description = "Inscription des équipes pour la Nuit de l'Info", adminStyles = false } = Astro.props;
+const {
+  title,
+  description = "Inscription des équipes pour la Nuit de l'Info",
+  adminStyles = false,
+  showHeader = true
+} = Astro.props;
+
+const navLinks = [
+  { href: 'https://info-evry.fr/#a-propos', label: 'À propos' },
+  { href: 'https://info-evry.fr/#ressources', label: 'Ressources' },
+  { href: 'https://info-evry.fr/#ndi', label: 'Nuit de l\'Info' },
+];
 ---
 
 <!DOCTYPE html>
@@ -21,7 +33,41 @@ const { title, description = "Inscription des équipes pour la Nuit de l'Info", 
   <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
   <title>{title}</title>
 </head>
-<body>
+<body class={showHeader ? 'has-header' : ''}>
+  {showHeader && (
+    <header class="site-header">
+      <div class="header-container container">
+        <a href="https://info-evry.fr" class="logo">
+          <span class="logo-text">Info</span>
+          <span class="logo-accent">Évry</span>
+        </a>
+
+        <nav class="nav">
+          {navLinks.map(link => (
+            <a href={link.href} class="nav-link">{link.label}</a>
+          ))}
+        </nav>
+
+        <div class="header-actions">
+          <a href="https://info-evry.fr/#adhesion" class="btn btn-primary btn-header">Adhérer</a>
+        </div>
+
+        <input type="checkbox" id="mobile-menu-toggle" class="mobile-menu-checkbox" aria-label="Menu" />
+        <label for="mobile-menu-toggle" class="mobile-menu-btn">
+          <span class="hamburger"></span>
+        </label>
+
+        <div class="mobile-nav">
+          <nav class="mobile-nav-links">
+            {navLinks.map(link => (
+              <a href={link.href} class="mobile-nav-link">{link.label}</a>
+            ))}
+            <a href="https://info-evry.fr/#adhesion" class="btn btn-primary mobile-cta">Adhérer à l'association</a>
+          </nav>
+        </div>
+      </div>
+    </header>
+  )}
   <slot />
 </body>
 </html>
@@ -44,13 +90,13 @@ const { title, description = "Inscription des équipes pour la Nuit de l'Info", 
   }
 }
 
-/* Header */
-.header {
+/* Page Header */
+.page-header {
   text-align: center;
   margin-bottom: var(--space-8);
 }
 
-.header h1 {
+.page-header h1 {
   margin: 0 0 var(--space-2);
   font-size: var(--text-3xl);
   font-weight: 700;
