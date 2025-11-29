@@ -4,6 +4,7 @@
 
 import { json, error } from '../lib/router.js';
 import * as db from '../lib/db.js';
+import { getCapacitySettings } from '../database/db.settings.js';
 
 /**
  * Simple admin authentication middleware
@@ -119,7 +120,10 @@ export async function adminStats(request, env) {
     const teamsExcludingOrg = await db.getTeamsExcludingOrg(env.DB);
     const participantsExcludingOrg = await db.getParticipantsExcludingOrg(env.DB);
     const foodStats = await db.getFoodStats(env.DB);
-    const maxTotal = parseInt(env.MAX_TOTAL_PARTICIPANTS, 10) || 200;
+
+    // Get capacity from D1 settings with env fallback
+    const capacity = await getCapacitySettings(env.DB, env);
+    const maxTotal = capacity.maxTotalParticipants;
 
     // Get detailed team info
     const teamsWithMembers = await Promise.all(

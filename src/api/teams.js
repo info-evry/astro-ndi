@@ -4,6 +4,7 @@
 
 import { json, error } from '../lib/router.js';
 import * as db from '../lib/db.js';
+import * as settingsDb from '../database/db.settings.js';
 
 /**
  * GET /api/teams - List all teams with member counts
@@ -11,7 +12,8 @@ import * as db from '../lib/db.js';
 export async function listTeams(request, env) {
   try {
     const teams = await db.getTeams(env.DB);
-    const maxTeamSize = parseInt(env.MAX_TEAM_SIZE, 10) || 15;
+    const capacity = await settingsDb.getCapacitySettings(env.DB, env);
+    const maxTeamSize = capacity.maxTeamSize;
 
     // Add available slots info
     const teamsWithSlots = teams.map(team => {
@@ -52,17 +54,18 @@ export async function getTeam(request, env, ctx, params) {
  */
 export async function getStats(request, env) {
   try {
-    const teams = await db.getTeams(env.DB);
-    const totalParticipants = await db.getTotalParticipants(env.DB);
+    const teamsExcludingOrg = await db.getTeamsExcludingOrg(env.DB);
+    const participantsExcludingOrg = await db.getParticipantsExcludingOrg(env.DB);
     const foodStats = await db.getFoodStats(env.DB);
-    const maxTotal = parseInt(env.MAX_TOTAL_PARTICIPANTS, 10) || 200;
+    const capacity = await settingsDb.getCapacitySettings(env.DB, env);
+    const maxTotal = capacity.maxTotalParticipants;
 
     return json({
       stats: {
-        total_teams: teams.length,
-        total_participants: totalParticipants,
+        total_teams: teamsExcludingOrg.length,
+        total_participants: participantsExcludingOrg,
         max_participants: maxTotal,
-        available_spots: Math.max(0, maxTotal - totalParticipants),
+        available_spots: Math.max(0, maxTotal - participantsExcludingOrg),
         food_preferences: foodStats
       }
     });
