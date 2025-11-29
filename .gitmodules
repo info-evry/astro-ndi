@@ -1,3 +1,6 @@
 [submodule "design"]
 	path = design
 	url = https://github.com/info-evry/astro-design.git
+[submodule "knowledge"]
+	path = knowledge
+	url = git@github.com:info-evry/astro-knowledge.git

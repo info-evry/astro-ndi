@@ -1,8 +1,29 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import ndiEvent from '../../knowledge/src/ndi/event.json';
+import ndiInfoEvry from '../../knowledge/src/ndi/info-evry.json';
+
+// Format date helper
+function formatDate(dateString: string) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+}
+
+function formatTime(dateString: string) {
+  const date = new Date(dateString);
+  return date.toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
 ---
 
-<BaseLayout title="Nuit de l'Info - Inscription">
+<BaseLayout title="Nuit de l'Info - Inscription | Info Evry">
   <!-- Hero Section -->
   <section class="hero">
     <div class="hero-bg">
@@ -15,7 +36,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     <div class="hero-content container">
       <p class="hero-badge">
         <span class="badge-dot"></span>
-        <span>Édition 2025</span>
+        <span>{ndiEvent.edition}</span>
       </p>
 
       <h1 class="hero-title large">
@@ -24,9 +45,24 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </h1>
 
       <p class="hero-description">
-        Inscrivez votre équipe pour la plus grande compétition de développement web de France.
-        24 heures pour relever des défis techniques.
+        {ndiEvent.tagline}
       </p>
+
+      <!-- Event Date/Time -->
+      <div class="hero-datetime">
+        <div class="datetime-item">
+          <span class="datetime-icon">&#128197;</span>
+          <span>{ndiEvent.dates.startLabel}</span>
+        </div>
+        <div class="datetime-item">
+          <span class="datetime-icon">&#9203;</span>
+          <span>Durée : {ndiEvent.dates.duration}</span>
+        </div>
+        <div class="datetime-item">
+          <span class="datetime-icon">&#128205;</span>
+          <span>{ndiInfoEvry.site.location}</span>
+        </div>
+      </div>
 
       <!-- Modern KPI Stats -->
       <div id="hero-stats" class="hero-stats">
@@ -50,8 +86,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <a href="#inscription" class="btn btn-primary btn-lg">
           S'inscrire maintenant
         </a>
-        <a href="#teams" class="btn btn-secondary btn-lg">
-          Voir les équipes
+        <a href="#about" class="btn btn-secondary btn-lg">
+          En savoir plus
         </a>
       </div>
     </div>
@@ -60,6 +96,93 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   <!-- Main Content -->
   <main class="main-content">
     <div class="container">
+      <!-- About Section -->
+      <section id="about" class="content-section">
+        <h2>Qu'est-ce que la Nuit de l'Info ?</h2>
+        <div class="info-grid">
+          <div class="info-card glass-card">
+            <div class="info-card-icon">&#127942;</div>
+            <h3>Le Concept</h3>
+            <p>{ndiEvent.description}</p>
+          </div>
+          <div class="info-card glass-card">
+            <div class="info-card-icon">&#128188;</div>
+            <h3>Les Défis</h3>
+            <p>{ndiInfoEvry.challenges.official.description}. Chaque équipe peut participer à maximum {ndiEvent.structure.maxChallenges} défis.</p>
+          </div>
+          <div class="info-card glass-card">
+            <div class="info-card-icon">&#127828;</div>
+            <h3>Sur Place</h3>
+            <p>{ndiInfoEvry.amenities.food.description}. {ndiInfoEvry.amenities.networking.description}.</p>
+          </div>
+        </div>
+
+        <!-- Stats from last year -->
+        <div class="last-year-stats">
+          <p class="stats-label">Édition {ndiEvent.stats.sinceYear + (2024 - 2007)} :</p>
+          <div class="stats-row">
+            <span><strong>{ndiEvent.stats.participants2024.toLocaleString('fr-FR')}</strong> participants</span>
+            <span class="stats-sep">•</span>
+            <span><strong>{ndiEvent.stats.teams2024}</strong> équipes</span>
+            <span class="stats-sep">•</span>
+            <span><strong>{ndiEvent.stats.sites2024}</strong> sites en France</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Association Challenge -->
+      <section id="defi-asso" class="content-section">
+        <h2>Défi de l'Asso</h2>
+        <div class="challenge-card glass-card">
+          <div class="challenge-header">
+            <span class="challenge-badge">Info Evry</span>
+            <h3>{ndiInfoEvry.challenges.association.type}</h3>
+          </div>
+          <p class="challenge-desc">{ndiInfoEvry.challenges.association.description}</p>
+
+          <div class="categories-grid">
+            {ndiInfoEvry.challenges.association.categories.map((cat: {id: string, name: string, description: string}) => (
+              <div class="category-item">
+                <span class="category-name">{cat.name}</span>
+                <span class="category-desc">{cat.description}</span>
+              </div>
+            ))}
+          </div>
+
+          <div class="challenge-rules">
+            <h4>Règles</h4>
+            <ul>
+              {ndiInfoEvry.challenges.association.rules.map((rule: string) => (
+                <li>{rule}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pricing Section -->
+      <section id="tarifs" class="content-section">
+        <h2>Tarifs</h2>
+        <div class="pricing-grid">
+          <div class="pricing-card glass-card">
+            <div class="pricing-amount">{ndiInfoEvry.registration.prices.member.amount}€</div>
+            <div class="pricing-label">Adhérent</div>
+            <p>Membre de l'association Info Evry</p>
+          </div>
+          <div class="pricing-card glass-card featured">
+            <div class="pricing-amount">{ndiInfoEvry.registration.prices.nonMember.amount}€</div>
+            <div class="pricing-label">Non-adhérent</div>
+            <p>Accès complet avec goodies</p>
+          </div>
+          <div class="pricing-card glass-card">
+            <div class="pricing-amount">Gratuit</div>
+            <div class="pricing-label">Sans goodies</div>
+            <p>Participation uniquement</p>
+          </div>
+        </div>
+        <p class="pricing-note">{ndiInfoEvry.registration.payment}</p>
+      </section>
+
       <!-- Capacity Warning -->
       <div id="capacity-warning" class="capacity-warning hidden">
         <span class="capacity-warning-icon">&#9888;</span>
@@ -186,6 +309,33 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 <style>
   /* Page-Specific Styles (Hero styles from shared design system) */
 
+  /* Hero DateTime */
+  .hero-datetime {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-8);
+    opacity: 0;
+    animation: hero-fade-in-up 0.6s ease 350ms forwards;
+  }
+
+  .datetime-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    padding: var(--space-2) var(--space-4);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-full);
+  }
+
+  .datetime-icon {
+    font-size: var(--text-base);
+  }
+
   /* Main Content */
   .main-content {
     background: var(--color-bg);
@@ -210,6 +360,199 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     gap: var(--space-3);
   }
 
+  /* Info Grid */
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-4);
+    margin-bottom: var(--space-8);
+  }
+
+  .info-card {
+    padding: var(--space-6);
+    text-align: center;
+  }
+
+  .info-card-icon {
+    font-size: 2.5rem;
+    margin-bottom: var(--space-4);
+  }
+
+  .info-card h3 {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    margin-bottom: var(--space-3);
+    color: var(--color-text);
+  }
+
+  .info-card p {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* Last Year Stats */
+  .last-year-stats {
+    text-align: center;
+    padding: var(--space-4);
+    background: rgba(14, 165, 233, 0.1);
+    border: 1px solid rgba(14, 165, 233, 0.2);
+    border-radius: var(--radius-lg);
+  }
+
+  .stats-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    margin: 0 0 var(--space-2);
+  }
+
+  .stats-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-2);
+    font-size: var(--text-base);
+    color: var(--color-text);
+  }
+
+  .stats-row strong {
+    color: var(--color-primary);
+  }
+
+  .stats-sep {
+    color: var(--color-text-muted);
+  }
+
+  /* Challenge Card */
+  .challenge-card {
+    padding: var(--space-6);
+  }
+
+  .challenge-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+
+  .challenge-badge {
+    display: inline-flex;
+    padding: var(--space-1) var(--space-3);
+    background: var(--color-primary);
+    color: white;
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .challenge-header h3 {
+    margin: 0;
+    font-size: var(--text-xl);
+    color: var(--color-text);
+  }
+
+  .challenge-desc {
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-6);
+  }
+
+  .categories-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+  }
+
+  .category-item {
+    padding: var(--space-4);
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    text-align: center;
+  }
+
+  .category-name {
+    display: block;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: var(--space-1);
+  }
+
+  .category-desc {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .challenge-rules h4 {
+    font-size: var(--text-base);
+    margin: 0 0 var(--space-3);
+    color: var(--color-text);
+  }
+
+  .challenge-rules ul {
+    margin: 0;
+    padding-left: var(--space-5);
+    color: var(--color-text-secondary);
+  }
+
+  .challenge-rules li {
+    margin-bottom: var(--space-1);
+  }
+
+  /* Pricing Grid */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+
+  .pricing-card {
+    padding: var(--space-6);
+    text-align: center;
+    transition: transform var(--transition-base), border-color var(--transition-base);
+  }
+
+  .pricing-card:hover {
+    transform: translateY(-4px);
+  }
+
+  .pricing-card.featured {
+    border-color: var(--color-primary);
+    background: rgba(14, 165, 233, 0.1);
+  }
+
+  .pricing-amount {
+    font-size: var(--text-3xl);
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: var(--space-2);
+  }
+
+  .pricing-label {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-3);
+  }
+
+  .pricing-card p {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+
+  .pricing-note {
+    text-align: center;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+
   .section-header-row {
     margin-bottom: var(--space-6);
   }
@@ -230,8 +573,39 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   /* Responsive */
   @media (max-width: 768px) {
+    .hero-datetime {
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .datetime-item {
+      width: 100%;
+      justify-content: center;
+    }
+
     .main-content .container {
       padding: var(--space-10) var(--space-4);
+    }
+
+    .info-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .categories-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .pricing-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .stats-row {
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .stats-sep {
+      display: none;
     }
   }
 </style>
