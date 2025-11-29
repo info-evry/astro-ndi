@@ -1,0 +1,191 @@
+/* Admin Dashboard Styles */
+
+.admin .header {
+  margin-bottom: 1.5rem;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-header h2 {
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.stat-card {
+  background: var(--color-bg);
+  border-radius: var(--radius);
+  padding: 1rem;
+  text-align: center;
+}
+
+.stat-card .stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.stat-card .stat-label {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+/* Food Stats */
+.food-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.food-item {
+  background: var(--color-bg);
+  border-radius: var(--radius);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.food-item .count {
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+/* Teams */
+.team-block {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.team-header {
+  background: var(--color-bg);
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.team-header:hover {
+  background: var(--color-border);
+}
+
+.team-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.team-header .team-info {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.team-body {
+  padding: 1rem;
+  display: none;
+}
+
+.team-block.open .team-body {
+  display: block;
+}
+
+.team-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Members Table */
+.members-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.members-table th,
+.members-table td {
+  padding: 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.members-table th {
+  background: var(--color-bg);
+  font-weight: 600;
+}
+
+.members-table tr:hover td {
+  background: var(--color-bg);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge-leader {
+  background: var(--color-primary);
+  color: white;
+}
+
+.badge-bac {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+/* Auth */
+#auth-section {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.error-text {
+  color: var(--color-error);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .members-table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .admin-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .actions .btn {
+    flex: 1;
+  }
+}

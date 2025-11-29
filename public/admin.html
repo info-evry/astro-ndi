@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NDI Admin - Gestion des équipes</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <main class="container admin">
+    <header class="header">
+      <h1>Administration NDI</h1>
+      <p class="subtitle">Gestion des équipes et participants</p>
+    </header>
+
+    <section id="auth-section" class="section">
+      <h2>Authentification</h2>
+      <div class="form-group">
+        <label for="admin-token">Token d'administration</label>
+        <input type="password" id="admin-token" placeholder="Entrez votre token...">
+      </div>
+      <button type="button" id="auth-btn" class="btn btn-primary">Connexion</button>
+      <p id="auth-error" class="error-text hidden"></p>
+    </section>
+
+    <div id="admin-content" class="hidden">
+      <section class="section">
+        <div class="admin-header">
+          <h2>Vue d'ensemble</h2>
+          <div class="actions">
+            <button type="button" id="export-all-btn" class="btn btn-secondary">
+              Exporter tout (CSV)
+            </button>
+            <button type="button" id="refresh-btn" class="btn btn-secondary">
+              Rafraîchir
+            </button>
+          </div>
+        </div>
+        <div id="stats-grid" class="stats-grid"></div>
+      </section>
+
+      <section class="section">
+        <h2>Préférences alimentaires</h2>
+        <div id="food-stats" class="food-stats"></div>
+      </section>
+
+      <section class="section">
+        <h2>Équipes et membres</h2>
+        <div id="teams-container"></div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="/js/admin.js"></script>
+</body>
+</html>

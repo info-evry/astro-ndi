@@ -1,0 +1,19 @@
+{
+  "name": "ndi-registration",
+  "version": "1.0.0",
+  "description": "Team registration system for Nuit de l'Info - Cloudflare Workers + D1",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute ndi-db --local --file=./db/schema.sql",
+    "db:seed": "wrangler d1 execute ndi-db --local --file=./db/seed.sql",
+    "db:migrate": "wrangler d1 execute ndi-db --file=./db/schema.sql"
+  },
+  "keywords": ["cloudflare", "workers", "d1", "registration"],
+  "author": "Guillaume Coquard",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.91.0"
+  }
+}

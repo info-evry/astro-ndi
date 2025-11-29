@@ -1,0 +1,451 @@
+/**
+ * Nuit de l'Info - Registration App
+ * Vanilla JavaScript, ES Modules, No Dependencies
+ */
+
+// State
+const state = {
+  config: null,
+  teams: [],
+  stats: null,
+  members: [],
+  isNewTeam: true
+};
+
+// DOM Elements
+const elements = {
+  statsContainer: document.getElementById('stats'),
+  teamsList: document.getElementById('teams-list'),
+  teamSelect: document.getElementById('team-select'),
+  newTeamFields: document.getElementById('new-team-fields'),
+  joinTeamFields: document.getElementById('join-team-fields'),
+  membersContainer: document.getElementById('members-container'),
+  memberCount: document.getElementById('member-count'),
+  addMemberBtn: document.getElementById('add-member'),
+  form: document.getElementById('registration-form'),
+  submitBtn: document.getElementById('submit-btn'),
+  errorsDiv: document.getElementById('form-errors'),
+  successModal: document.getElementById('success-modal'),
+  successMessage: document.getElementById('success-message')
+};
+
+// API Functions
+async function api(endpoint, options = {}) {
+  const response = await fetch(`/api${endpoint}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+async function loadConfig() {
+  const { config } = await api('/config');
+  state.config = config;
+  return config;
+}
+
+async function loadTeams() {
+  const { teams } = await api('/teams');
+  state.teams = teams;
+  return teams;
+}
+
+async function loadStats() {
+  const { stats } = await api('/stats');
+  state.stats = stats;
+  return stats;
+}
+
+async function submitRegistration(data) {
+  return api('/register', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+// Render Functions
+function renderStats(stats) {
+  elements.statsContainer.innerHTML = `
+    <div class="stat">
+      <span class="stat-value">${stats.total_teams}</span>
+      <span class="stat-label">équipes</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value">${stats.total_participants}/${stats.max_participants}</span>
+      <span class="stat-label">participants</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value">${stats.available_spots}</span>
+      <span class="stat-label">places disponibles</span>
+    </div>
+  `;
+}
+
+function renderTeams(teams) {
+  if (teams.length === 0) {
+    elements.teamsList.innerHTML = '<p>Aucune équipe inscrite pour le moment.</p>';
+    return;
+  }
+
+  elements.teamsList.innerHTML = teams.map(team => `
+    <div class="team-card ${team.is_full ? 'full' : ''}">
+      <h3 class="team-name">${escapeHtml(team.name)}</h3>
+      ${team.description ? `<p class="team-desc">${escapeHtml(team.description)}</p>` : ''}
+      <div class="team-meta">
+        <span class="team-members">${team.member_count} membre${team.member_count > 1 ? 's' : ''}</span>
+        <span class="team-spots ${team.is_full ? 'full' : ''}">
+          ${team.is_full ? 'Complet' : `${team.available_slots} place${team.available_slots > 1 ? 's' : ''}`}
+        </span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderTeamSelect(teams) {
+  const availableTeams = teams.filter(t => !t.is_full);
+  elements.teamSelect.innerHTML = `
+    <option value="">-- Choisir une équipe --</option>
+    ${availableTeams.map(team => `
+      <option value="${team.id}">
+        ${escapeHtml(team.name)} (${team.available_slots} place${team.available_slots > 1 ? 's' : ''})
+      </option>
+    `).join('')}
+  `;
+}
+
+function createMemberCard(index) {
+  const { pizzas, bacLevels } = state.config;
+
+  const card = document.createElement('div');
+  card.className = 'member-card';
+  card.dataset.index = index;
+
+  card.innerHTML = `
+    <div class="member-header">
+      <span class="member-title">Membre ${index + 1}</span>
+      ${index > 0 ? '<button type="button" class="remove-btn">Retirer</button>' : ''}
+    </div>
+
+    <div class="member-grid">
+      <div class="form-group">
+        <label>
+          <span class="toggle-group">
+            <span class="toggle">
+              <input type="checkbox" name="members[${index}].isLeader">
+              <span class="toggle-slider"></span>
+            </span>
+            Chef d'équipe
+          </span>
+        </label>
+      </div>
+
+      <div></div>
+
+      <div class="form-group">
+        <label>Prénom *</label>
+        <input type="text" name="members[${index}].firstName" required maxlength="128">
+      </div>
+
+      <div class="form-group">
+        <label>Nom *</label>
+        <input type="text" name="members[${index}].lastName" required maxlength="128">
+      </div>
+
+      <div class="form-group">
+        <label>Email *</label>
+        <input type="email" name="members[${index}].email" required maxlength="256">
+      </div>
+
+      <div class="form-group">
+        <label>Niveau d'études *</label>
+        <select name="members[${index}].bacLevel" required>
+          ${bacLevels.map(level => `
+            <option value="${level.value}">${level.label}</option>
+          `).join('')}
+        </select>
+      </div>
+
+      <div class="form-group full-width">
+        <label>Choix de pizza</label>
+        <div class="pizza-grid">
+          ${pizzas.map((pizza, i) => `
+            <label class="pizza-option ${i === 0 ? 'selected' : ''}">
+              <input type="radio" name="members[${index}].foodDiet" value="${pizza.id}" ${i === 0 ? 'checked' : ''}>
+              <div class="pizza-info">
+                <div class="pizza-name">${escapeHtml(pizza.name)}</div>
+                ${pizza.description ? `<div class="pizza-desc">${escapeHtml(pizza.description)}</div>` : ''}
+              </div>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Event listeners
+  const removeBtn = card.querySelector('.remove-btn');
+  if (removeBtn) {
+    removeBtn.addEventListener('click', () => removeMember(index));
+  }
+
+  // Pizza selection highlighting
+  card.querySelectorAll('.pizza-option input').forEach(input => {
+    input.addEventListener('change', (e) => {
+      card.querySelectorAll('.pizza-option').forEach(opt => opt.classList.remove('selected'));
+      e.target.closest('.pizza-option').classList.add('selected');
+    });
+  });
+
+  return card;
+}
+
+function addMember() {
+  const maxSize = state.config.maxTeamSize;
+  if (state.members.length >= maxSize) {
+    showErrors([`Maximum ${maxSize} membres par équipe`]);
+    return;
+  }
+
+  const index = state.members.length;
+  const card = createMemberCard(index);
+  elements.membersContainer.appendChild(card);
+  state.members.push({ index });
+  updateMemberCount();
+}
+
+function removeMember(index) {
+  const minSize = state.config.minTeamSize;
+  if (state.members.length <= minSize) {
+    showErrors([`Minimum ${minSize} membres requis`]);
+    return;
+  }
+
+  const card = elements.membersContainer.querySelector(`[data-index="${index}"]`);
+  if (card) card.remove();
+
+  state.members = state.members.filter(m => m.index !== index);
+
+  // Reindex remaining cards
+  reindexMembers();
+  updateMemberCount();
+}
+
+function reindexMembers() {
+  const cards = elements.membersContainer.querySelectorAll('.member-card');
+  state.members = [];
+
+  cards.forEach((card, newIndex) => {
+    card.dataset.index = newIndex;
+    card.querySelector('.member-title').textContent = `Membre ${newIndex + 1}`;
+
+    // Update all input names
+    card.querySelectorAll('input, select').forEach(input => {
+      if (input.name) {
+        input.name = input.name.replace(/members\[\d+\]/, `members[${newIndex}]`);
+      }
+    });
+
+    // Show/hide remove button
+    const removeBtn = card.querySelector('.remove-btn');
+    if (newIndex === 0 && removeBtn) {
+      removeBtn.remove();
+    } else if (newIndex > 0 && !removeBtn) {
+      const header = card.querySelector('.member-header');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'remove-btn';
+      btn.textContent = 'Retirer';
+      btn.addEventListener('click', () => removeMember(newIndex));
+      header.appendChild(btn);
+    }
+
+    state.members.push({ index: newIndex });
+  });
+}
+
+function updateMemberCount() {
+  elements.memberCount.textContent = `(${state.members.length})`;
+
+  // Check capacity
+  const maxSize = state.config.maxTeamSize;
+  elements.addMemberBtn.disabled = state.members.length >= maxSize;
+}
+
+// Form Handling
+function collectFormData() {
+  const formData = new FormData(elements.form);
+  const data = {
+    createNewTeam: state.isNewTeam,
+    members: []
+  };
+
+  if (state.isNewTeam) {
+    data.teamName = formData.get('teamName');
+    data.teamDescription = formData.get('teamDescription');
+  } else {
+    data.teamId = parseInt(formData.get('teamId'), 10);
+  }
+
+  // Collect members
+  state.members.forEach((_, i) => {
+    data.members.push({
+      firstName: formData.get(`members[${i}].firstName`),
+      lastName: formData.get(`members[${i}].lastName`),
+      email: formData.get(`members[${i}].email`),
+      bacLevel: parseInt(formData.get(`members[${i}].bacLevel`), 10),
+      isLeader: formData.get(`members[${i}].isLeader`) === 'on',
+      foodDiet: formData.get(`members[${i}].foodDiet`) || 'none'
+    });
+  });
+
+  return data;
+}
+
+function validateForm() {
+  const errors = [];
+  const data = collectFormData();
+
+  if (state.isNewTeam) {
+    if (!data.teamName?.trim()) {
+      errors.push("Le nom de l'équipe est requis");
+    }
+
+    const hasLeader = data.members.some(m => m.isLeader);
+    if (!hasLeader) {
+      errors.push("Une nouvelle équipe doit avoir au moins un chef d'équipe");
+    }
+  } else {
+    if (!data.teamId) {
+      errors.push("Veuillez sélectionner une équipe");
+    }
+  }
+
+  const minSize = state.config.minTeamSize;
+  if (data.members.length < minSize) {
+    errors.push(`Minimum ${minSize} membres requis`);
+  }
+
+  // Validate each member
+  data.members.forEach((member, i) => {
+    if (!member.firstName?.trim()) errors.push(`Membre ${i + 1}: Prénom requis`);
+    if (!member.lastName?.trim()) errors.push(`Membre ${i + 1}: Nom requis`);
+    if (!member.email?.trim()) errors.push(`Membre ${i + 1}: Email requis`);
+    else if (!isValidEmail(member.email)) errors.push(`Membre ${i + 1}: Email invalide`);
+  });
+
+  // Check duplicates
+  const seen = new Set();
+  data.members.forEach((m, i) => {
+    const key = `${m.firstName?.toLowerCase()}|${m.lastName?.toLowerCase()}`;
+    if (seen.has(key)) {
+      errors.push(`Membre ${i + 1}: Nom en double`);
+    }
+    seen.add(key);
+  });
+
+  return errors;
+}
+
+async function handleSubmit(e) {
+  e.preventDefault();
+
+  const errors = validateForm();
+  if (errors.length > 0) {
+    showErrors(errors);
+    return;
+  }
+
+  hideErrors();
+  setLoading(true);
+
+  try {
+    const data = collectFormData();
+    const result = await submitRegistration(data);
+
+    elements.successMessage.textContent = result.message;
+    elements.successModal.classList.remove('hidden');
+
+  } catch (err) {
+    showErrors([err.message]);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// UI Helpers
+function showErrors(errors) {
+  elements.errorsDiv.innerHTML = `<ul>${errors.map(e => `<li>${escapeHtml(e)}</li>`).join('')}</ul>`;
+  elements.errorsDiv.classList.remove('hidden');
+  elements.errorsDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function hideErrors() {
+  elements.errorsDiv.classList.add('hidden');
+}
+
+function setLoading(loading) {
+  elements.submitBtn.disabled = loading;
+  elements.form.classList.toggle('loading', loading);
+  elements.submitBtn.textContent = loading ? 'Inscription en cours...' : "S'inscrire";
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+// Event Listeners
+function setupEventListeners() {
+  // Team mode toggle
+  document.querySelectorAll('input[name="team-mode"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      state.isNewTeam = e.target.value === 'new';
+      elements.newTeamFields.classList.toggle('hidden', !state.isNewTeam);
+      elements.joinTeamFields.classList.toggle('hidden', state.isNewTeam);
+    });
+  });
+
+  // Add member button
+  elements.addMemberBtn.addEventListener('click', addMember);
+
+  // Form submission
+  elements.form.addEventListener('submit', handleSubmit);
+}
+
+// Initialize
+async function init() {
+  try {
+    // Load data in parallel
+    const [config, teams, stats] = await Promise.all([
+      loadConfig(),
+      loadTeams(),
+      loadStats()
+    ]);
+
+    renderStats(stats);
+    renderTeams(teams);
+    renderTeamSelect(teams);
+
+    // Add initial member cards (minimum required)
+    for (let i = 0; i < config.minTeamSize; i++) {
+      addMember();
+    }
+
+    setupEventListeners();
+
+  } catch (err) {
+    console.error('Initialization error:', err);
+    showErrors(['Erreur de chargement. Veuillez rafraîchir la page.']);
+  }
+}
+
+// Start app
+init();

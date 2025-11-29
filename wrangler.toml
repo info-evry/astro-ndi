@@ -1,0 +1,42 @@
+name = "ndi-registration"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Static assets served from public/
+assets = { directory = "public" }
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "ndi-db"
+database_id = "placeholder-update-after-creation"
+
+# KV Namespace for configuration
+[[kv_namespaces]]
+binding = "CONFIG"
+id = "placeholder-update-after-creation"
+
+# Environment variables
+[vars]
+ADMIN_EMAIL = "asso@info-evry.fr"
+REPLY_TO_EMAIL = "contact@info-evry.fr"
+MAX_TEAM_SIZE = "15"
+MAX_TOTAL_PARTICIPANTS = "200"
+MIN_TEAM_SIZE = "2"
+
+# Secrets (set via wrangler secret put ADMIN_TOKEN)
+# ADMIN_TOKEN = "your-secret-token"
+
+# Production environment
+[env.production]
+name = "ndi-registration"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "ndi-db"
+database_id = "placeholder-update-after-creation"
+
+[[env.production.kv_namespaces]]
+binding = "CONFIG"
+id = "placeholder-update-after-creation"
