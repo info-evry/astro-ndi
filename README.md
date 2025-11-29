@@ -1,6 +1,6 @@
 # NDI Registration - Nuit de l'Info
 
-Registration platform for the "Nuit de l'Info" event organized by Info Evry at Université d'Évry.
+Registration platform for the "Nuit de l'Info" event organized by Asso Info Evry at Université d'Évry.
 
 ## Features
 
@@ -127,4 +127,4 @@ Required Cloudflare bindings (configured via wrangler.jsonc):
 
 ## License
 
-MIT - Info Evry
+MIT - Asso Info Evry
