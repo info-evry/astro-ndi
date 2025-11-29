@@ -3,13 +3,23 @@ import AdminLayout from '../layouts/AdminLayout.astro';
 ---
 
 <AdminLayout title="NDI Admin - Gestion des équipes">
-  <main class="container admin">
-    <header class="header">
-      <h1>Administration NDI</h1>
-      <p class="subtitle">Gestion des équipes et participants</p>
-    </header>
+  <!-- Admin Hero Header -->
+  <section class="page-hero">
+    <div class="page-hero-bg">
+      <div class="orb orb-blue"></div>
+      <div class="orb orb-indigo"></div>
+    </div>
+    <div class="page-hero-content container">
+      <h1 class="page-hero-title">
+        <span>Administration</span>
+        <span class="gradient-text">NDI</span>
+      </h1>
+      <p class="page-hero-subtitle">Gestion des équipes et participants</p>
+    </div>
+  </section>
 
-    <section id="auth-section" class="section">
+  <main class="container admin">
+    <section id="auth-section" class="section glass-card">
       <h2>Authentification</h2>
       <div class="form-group">
         <label for="admin-token">Token d'administration</label>
