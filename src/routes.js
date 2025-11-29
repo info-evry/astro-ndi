@@ -12,6 +12,7 @@ import {
   exportAllCSV,
   exportTeamCSV,
   exportOfficialCSV,
+  exportTeamOfficialCSV,
   adminStats,
   addMemberManually,
   updateMemberAdmin,
@@ -40,6 +41,7 @@ export function createRouter() {
   router.get('/api/admin/stats', adminStats);
   router.get('/api/admin/export', exportAllCSV);
   router.get('/api/admin/export-official', exportOfficialCSV);
+  router.get('/api/admin/export-official/:teamId', exportTeamOfficialCSV);
   router.get('/api/admin/export/:teamId', exportTeamCSV);
   router.get('/api/admin/settings', getSettings);
 

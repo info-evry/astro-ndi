@@ -312,6 +312,116 @@ describe('CSV Export - Official NDI Format', () => {
   });
 });
 
+describe('CSV Export - Team Official NDI Format', () => {
+  it('should require authorization', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/export-official/1');
+    expect(response.status).toBe(401);
+  });
+
+  it('should export team official CSV with authorization', async () => {
+    // First create a team
+    const createResponse = await SELF.fetch('http://localhost/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        createNewTeam: true,
+        teamName: 'Team Official Export Test',
+        teamPassword: 'testpass',
+        members: [
+          {
+            firstName: 'TeamOfficiel',
+            lastName: 'Test',
+            email: 'teamofficiel@example.com',
+            bacLevel: 4,
+            isLeader: true,
+            foodDiet: 'margherita'
+          }
+        ]
+      })
+    });
+
+    const createData = await createResponse.json();
+    const teamId = createData.team.id;
+
+    const response = await SELF.fetch(`http://localhost/api/admin/export-official/${teamId}`, {
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toContain('text/csv');
+  });
+
+  it('should have correct official headers for team export', async () => {
+    // Get any existing team
+    const teamsResponse = await SELF.fetch('http://localhost/api/teams');
+    const teamsData = await teamsResponse.json();
+    const teamId = teamsData.teams[0]?.id;
+
+    if (!teamId) return; // Skip if no teams
+
+    const response = await SELF.fetch(`http://localhost/api/admin/export-official/${teamId}`, {
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+
+    const text = await response.text();
+    const firstLine = text.replace(/^\ufeff/, '').split('\n')[0];
+
+    expect(firstLine).toContain('prenom');
+    expect(firstLine).toContain('nom');
+    expect(firstLine).toContain('niveauBac');
+    expect(firstLine).toContain('estLeader');
+  });
+
+  it('should return 404 for non-existent team', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/export-official/99999', {
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+
+    expect(response.status).toBe(404);
+  });
+
+  it('should include team name in filename', async () => {
+    // Create a team with specific name
+    const createResponse = await SELF.fetch('http://localhost/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        createNewTeam: true,
+        teamName: 'Filename Official Team',
+        teamPassword: 'testpass',
+        members: [
+          {
+            firstName: 'FileOfficiel',
+            lastName: 'Test',
+            email: 'fileofficiel@example.com',
+            bacLevel: 2,
+            isLeader: true,
+            foodDiet: 'none'
+          }
+        ]
+      })
+    });
+
+    const createData = await createResponse.json();
+    const teamId = createData.team.id;
+
+    const response = await SELF.fetch(`http://localhost/api/admin/export-official/${teamId}`, {
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+
+    const contentDisposition = response.headers.get('Content-Disposition');
+    expect(contentDisposition).toContain('participants_officiel_Filename_Official_Team');
+  });
+});
+
 describe('CSV Import - Authentication', () => {
   it('should require authorization', async () => {
     const response = await SELF.fetch('http://localhost/api/admin/import', {

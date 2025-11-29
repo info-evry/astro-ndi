@@ -149,6 +149,55 @@ export async function exportOfficialCSV(request, env) {
 }
 
 /**
+ * GET /api/admin/export-official/:teamId - Export team data in official NDI format
+ */
+export async function exportTeamOfficialCSV(request, env, ctx, params) {
+  if (!await verifyAdmin(request, env)) {
+    return error('Unauthorized', 401);
+  }
+
+  try {
+    const team = await db.getTeamById(env.DB, params.teamId);
+    if (!team) {
+      return error('Team not found', 404);
+    }
+
+    const members = team.members.map(m => ({
+      ...m,
+      team_name: team.name
+    }));
+
+    // Get school name from settings with fallback
+    const DEFAULT_SCHOOL_NAME = "Université d'Evry";
+    let schoolName = DEFAULT_SCHOOL_NAME;
+    try {
+      const { getSetting } = await import('../database/db.settings.js');
+      const dbSchoolName = await getSetting(env.DB, 'school_name');
+      if (dbSchoolName) {
+        schoolName = dbSchoolName;
+      } else if (env.SCHOOL_NAME) {
+        schoolName = env.SCHOOL_NAME;
+      }
+    } catch (e) {
+      if (env.SCHOOL_NAME) schoolName = env.SCHOOL_NAME;
+    }
+
+    const csv = generateOfficialCSV(members, schoolName);
+    const safeTeamName = team.name.replace(/[^a-z0-9]/gi, '_');
+
+    return new Response(csv, {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="participants_officiel_${safeTeamName}.csv"`
+      }
+    });
+  } catch (err) {
+    console.error('Error exporting team official:', err);
+    return error('Export failed', 500);
+  }
+}
+
+/**
  * GET /api/admin/stats - Detailed admin statistics
  */
 export async function adminStats(request, env) {

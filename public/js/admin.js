@@ -10,6 +10,7 @@ import { initImport } from './admin/admin-import.js';
 let adminToken = localStorage.getItem('ndi_admin_token') || '';
 let teamsData = [];
 let selectedMembers = new Set();
+let pizzasConfig = [];
 
 // DOM Elements
 const elements = {
@@ -150,6 +151,7 @@ function renderTeams(teams) {
         <div class="team-actions">
           <button type="button" class="btn btn-sm btn-secondary" onclick="editTeam(${team.id})">Modifier</button>
           <button type="button" class="btn btn-sm btn-secondary" onclick="exportTeam(${team.id}, '${escapeHtml(team.name)}')">Exporter CSV</button>
+          <button type="button" class="btn btn-sm btn-primary" onclick="exportTeamOfficial(${team.id}, '${escapeHtml(team.name)}')">Export Officiel</button>
           ${team.name !== 'Organisation' ? `<button type="button" class="btn btn-sm btn-danger" onclick="confirmDeleteTeam(${team.id}, '${escapeHtml(team.name)}')">Supprimer</button>` : ''}
         </div>
         ${renderMembersTable(team.members, team.id)}
@@ -286,6 +288,24 @@ window.exportTeam = async function(teamId, teamName) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  } catch (err) {
+    showToast('Erreur export: ' + err.message, 'error');
+  }
+};
+
+window.exportTeamOfficial = async function(teamId, teamName) {
+  try {
+    const response = await api(`/admin/export-official/${teamId}`);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `participants_officiel_${teamName.replace(/[^a-z0-9]/gi, '_')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Export officiel téléchargé');
   } catch (err) {
     showToast('Erreur export: ' + err.message, 'error');
   }
@@ -505,6 +525,27 @@ async function loadData() {
   renderTeams(teams);
   // Refresh settings data
   await loadSettings();
+  // Load pizza config
+  await loadPizzasConfig();
+}
+
+async function loadPizzasConfig() {
+  try {
+    const response = await fetch('/api/config');
+    const { config } = await response.json();
+    pizzasConfig = config.pizzas || [];
+    updatePizzaSelect();
+  } catch (err) {
+    console.error('Error loading pizzas config:', err);
+  }
+}
+
+function updatePizzaSelect() {
+  const select = document.getElementById('member-form-food');
+  if (!select) return;
+
+  select.innerHTML = '<option value="">Aucune</option>' +
+    pizzasConfig.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('');
 }
 
 async function handleExportAll() {
