@@ -216,9 +216,8 @@ function addMember() {
 }
 
 function removeMember(index) {
-  const minSize = state.config.minTeamSize;
-  if (state.members.length <= minSize) {
-    showErrors([`Minimum ${minSize} membres requis`]);
+  if (state.members.length <= 1) {
+    showErrors(['Au moins un membre est requis']);
     return;
   }
 
@@ -284,8 +283,10 @@ function collectFormData() {
   if (state.isNewTeam) {
     data.teamName = formData.get('teamName');
     data.teamDescription = formData.get('teamDescription');
+    data.teamPassword = formData.get('teamPassword');
   } else {
     data.teamId = parseInt(formData.get('teamId'), 10);
+    data.teamPassword = formData.get('joinPassword');
   }
 
   // Collect members
@@ -311,6 +312,11 @@ function validateForm() {
     if (!data.teamName?.trim()) {
       errors.push("Le nom de l'équipe est requis");
     }
+    if (!data.teamPassword?.trim()) {
+      errors.push("Le mot de passe de l'équipe est requis");
+    } else if (data.teamPassword.length < 4) {
+      errors.push("Le mot de passe doit faire au moins 4 caractères");
+    }
 
     const hasLeader = data.members.some(m => m.isLeader);
     if (!hasLeader) {
@@ -320,11 +326,9 @@ function validateForm() {
     if (!data.teamId) {
       errors.push("Veuillez sélectionner une équipe");
     }
-  }
-
-  const minSize = state.config.minTeamSize;
-  if (data.members.length < minSize) {
-    errors.push(`Minimum ${minSize} membres requis`);
+    if (!data.teamPassword?.trim()) {
+      errors.push("Le mot de passe de l'équipe est requis");
+    }
   }
 
   // Validate each member
@@ -434,10 +438,8 @@ async function init() {
     renderTeams(teams);
     renderTeamSelect(teams);
 
-    // Add initial member cards (minimum required)
-    for (let i = 0; i < config.minTeamSize; i++) {
-      addMember();
-    }
+    // Add initial member card
+    addMember();
 
     setupEventListeners();
 

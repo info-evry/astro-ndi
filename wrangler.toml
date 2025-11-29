@@ -23,7 +23,7 @@ ADMIN_EMAIL = "asso@info-evry.fr"
 REPLY_TO_EMAIL = "contact@info-evry.fr"
 MAX_TEAM_SIZE = "15"
 MAX_TOTAL_PARTICIPANTS = "200"
-MIN_TEAM_SIZE = "2"
+MIN_TEAM_SIZE = "1"
 
 # Secrets (set via wrangler secret put ADMIN_TOKEN)
 # ADMIN_TOKEN = "your-secret-token"

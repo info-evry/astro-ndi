@@ -7,6 +7,17 @@ import * as db from '../lib/db.js';
 import { validateRegistration, sanitizeString } from '../lib/validation.js';
 
 /**
+ * Hash password using Web Crypto API (SHA-256)
+ */
+async function hashPassword(password) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
  * POST /api/register - Register team members
  */
 export async function register(request, env) {
@@ -39,6 +50,14 @@ export async function register(request, env) {
     let teamName;
     let isNewTeam = false;
 
+    // Hash password using Web Crypto API
+    const password = sanitizeString(data.teamPassword || '', 64);
+    if (!password) {
+      return error('Team password is required', 400);
+    }
+
+    const passwordHash = await hashPassword(password);
+
     // Handle team creation or selection
     if (data.createNewTeam) {
       const name = sanitizeString(data.teamName, 128);
@@ -50,7 +69,7 @@ export async function register(request, env) {
         return error('Team name already exists', 400);
       }
 
-      const team = await db.createTeam(env.DB, name, description);
+      const team = await db.createTeam(env.DB, name, description, passwordHash);
       teamId = team.id;
       teamName = name;
       isNewTeam = true;
@@ -60,6 +79,12 @@ export async function register(request, env) {
 
       if (!team) {
         return error('Selected team not found', 404);
+      }
+
+      // Verify password
+      const passwordValid = await db.verifyTeamPassword(env.DB, teamId, passwordHash);
+      if (!passwordValid) {
+        return error('Mot de passe incorrect', 403);
       }
 
       teamName = team.name;

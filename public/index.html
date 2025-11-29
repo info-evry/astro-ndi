@@ -40,11 +40,15 @@
           <div id="new-team-fields" class="team-fields">
             <div class="form-group">
               <label for="team-name">Nom de l'équipe *</label>
-              <input type="text" id="team-name" name="teamName" maxlength="128" required>
+              <input type="text" id="team-name" name="teamName" maxlength="128">
             </div>
             <div class="form-group">
               <label for="team-desc">Description (optionnelle)</label>
               <textarea id="team-desc" name="teamDescription" maxlength="256" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="team-password">Mot de passe de l'équipe *</label>
+              <input type="password" id="team-password" name="teamPassword" maxlength="64" placeholder="Les autres membres en auront besoin pour rejoindre">
             </div>
           </div>
 
@@ -54,6 +58,10 @@
               <select id="team-select" name="teamId">
                 <option value="">-- Choisir une équipe --</option>
               </select>
+            </div>
+            <div class="form-group">
+              <label for="join-password">Mot de passe de l'équipe *</label>
+              <input type="password" id="join-password" name="joinPassword" maxlength="64" placeholder="Demandez-le au chef d'équipe">
             </div>
           </div>
         </fieldset>

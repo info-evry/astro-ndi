@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS teams (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     description TEXT DEFAULT '',
+    password_hash TEXT NOT NULL,
     created_at TEXT DEFAULT (datetime('now'))
 );
 

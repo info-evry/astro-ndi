@@ -48,14 +48,26 @@ export async function getTeamByName(db, name) {
 }
 
 /**
- * Create a new team
+ * Create a new team with password
  */
-export async function createTeam(db, name, description = '') {
+export async function createTeam(db, name, description = '', passwordHash = '') {
   const result = await db.prepare(
-    'INSERT INTO teams (name, description) VALUES (?, ?)'
-  ).bind(name, description).run();
+    'INSERT INTO teams (name, description, password_hash) VALUES (?, ?, ?)'
+  ).bind(name, description, passwordHash).run();
 
   return { id: result.meta.last_row_id, name, description };
+}
+
+/**
+ * Verify team password
+ */
+export async function verifyTeamPassword(db, teamId, passwordHash) {
+  const team = await db.prepare(
+    'SELECT password_hash FROM teams WHERE id = ?'
+  ).bind(teamId).first();
+
+  if (!team) return false;
+  return team.password_hash === passwordHash;
 }
 
 /**

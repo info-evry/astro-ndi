@@ -63,7 +63,6 @@ export function validateMember(member) {
 export function validateRegistration(data, config) {
   const errors = [];
   const maxTeamSize = parseInt(config.maxTeamSize, 10) || 15;
-  const minTeamSize = parseInt(config.minTeamSize, 10) || 2;
 
   // Validate team info
   if (data.createNewTeam) {
@@ -79,9 +78,6 @@ export function validateRegistration(data, config) {
   if (!Array.isArray(data.members) || data.members.length === 0) {
     errors.push('At least one member is required');
   } else {
-    if (data.members.length < minTeamSize) {
-      errors.push(`Minimum ${minTeamSize} members required`);
-    }
     if (data.members.length > maxTeamSize) {
       errors.push(`Maximum ${maxTeamSize} members allowed`);
     }
