@@ -10,13 +10,15 @@ const state = {
   stats: null,
   members: [],
   isNewTeam: true,
-  selectedTeamId: null
+  selectedTeamId: null,
+  isAtCapacity: false
 };
 
 // DOM Elements
 const elements = {
   statsContainer: document.getElementById('stats'),
   teamsList: document.getElementById('teams-list'),
+  teamsBadge: document.getElementById('teams-badge'),
   teamSelect: document.getElementById('team-select'),
   newTeamFields: document.getElementById('new-team-fields'),
   joinTeamFields: document.getElementById('join-team-fields'),
@@ -24,10 +26,13 @@ const elements = {
   memberCount: document.getElementById('member-count'),
   addMemberBtn: document.getElementById('add-member'),
   form: document.getElementById('registration-form'),
+  formSection: document.getElementById('form-section'),
   submitBtn: document.getElementById('submit-btn'),
   errorsDiv: document.getElementById('form-errors'),
   successModal: document.getElementById('success-modal'),
   successMessage: document.getElementById('success-message'),
+  capacityWarning: document.getElementById('capacity-warning'),
+  capacityWarningText: document.getElementById('capacity-warning-text'),
   // Team view modal elements
   teamViewModal: document.getElementById('team-view-modal'),
   teamViewAuth: document.getElementById('team-view-auth'),
@@ -41,6 +46,14 @@ const elements = {
   teamDetailName: document.getElementById('team-detail-name'),
   teamDetailDesc: document.getElementById('team-detail-desc'),
   teamMembersList: document.getElementById('team-members-list')
+};
+
+// Disclosure toggle function (global for onclick)
+window.toggleDisclosure = function(name) {
+  const group = document.querySelector(`[data-disclosure="${name}"]`);
+  if (group) {
+    group.classList.toggle('open');
+  }
 };
 
 // API Functions
@@ -88,6 +101,12 @@ async function viewTeamMembers(teamId, password) {
 
 // Render Functions
 function renderStats(stats) {
+  const percentUsed = (stats.total_participants / stats.max_participants) * 100;
+  const isNearCapacity = percentUsed >= 80;
+  const isAtCapacity = stats.available_spots <= 0;
+
+  state.isAtCapacity = isAtCapacity;
+
   elements.statsContainer.innerHTML = `
     <div class="stat">
       <span class="stat-value">${stats.total_teams}</span>
@@ -102,27 +121,85 @@ function renderStats(stats) {
       <span class="stat-label">places disponibles</span>
     </div>
   `;
+
+  // Handle capacity warning
+  if (isAtCapacity) {
+    elements.capacityWarning.classList.remove('hidden');
+    elements.capacityWarning.classList.add('capacity-full');
+    elements.capacityWarningText.innerHTML = '<strong>Inscriptions closes</strong> — Le nombre maximum de participants a été atteint.';
+    disableForm();
+  } else if (isNearCapacity) {
+    elements.capacityWarning.classList.remove('hidden');
+    elements.capacityWarning.classList.remove('capacity-full');
+    elements.capacityWarningText.innerHTML = `<strong>Places limitées</strong> — Il ne reste que <strong>${stats.available_spots}</strong> place${stats.available_spots > 1 ? 's' : ''} disponible${stats.available_spots > 1 ? 's' : ''}.`;
+  } else {
+    elements.capacityWarning.classList.add('hidden');
+  }
+}
+
+function disableForm() {
+  elements.form.classList.add('disabled');
+  elements.submitBtn.disabled = true;
+  elements.submitBtn.textContent = 'Inscriptions closes';
+  elements.addMemberBtn.disabled = true;
+
+  // Disable all inputs
+  elements.form.querySelectorAll('input, select, textarea').forEach(el => {
+    el.disabled = true;
+  });
 }
 
 function renderTeams(teams) {
+  // Update badge with team count (excluding Organisation)
+  const teamCount = teams.filter(t => !t.is_organisation).length;
+  elements.teamsBadge.textContent = teamCount;
+
   if (teams.length === 0) {
-    elements.teamsList.innerHTML = '<p>Aucune équipe inscrite pour le moment.</p>';
+    elements.teamsList.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">&#128101;</div>
+        <p class="empty-state-text">Aucune équipe inscrite pour le moment.</p>
+      </div>
+    `;
     return;
   }
 
-  elements.teamsList.innerHTML = teams.map(team => `
-    <div class="team-card clickable ${team.is_full ? 'full' : ''}" data-team-id="${team.id}">
-      <h3 class="team-name">${escapeHtml(team.name)}</h3>
-      ${team.description ? `<p class="team-desc">${escapeHtml(team.description)}</p>` : ''}
-      <div class="team-meta">
-        <span class="team-members">${team.member_count} membre${team.member_count > 1 ? 's' : ''}</span>
-        <span class="team-spots ${team.is_full ? 'full' : ''}">
-          ${team.is_organisation ? 'Illimité' : (team.is_full ? 'Complet' : `${team.available_slots} place${team.available_slots > 1 ? 's' : ''}`)}
-        </span>
+  elements.teamsList.innerHTML = teams.map(team => {
+    const isOrg = team.is_organisation;
+    const cardClasses = [
+      'team-card',
+      'clickable',
+      team.is_full ? 'full' : '',
+      isOrg ? 'organisation' : ''
+    ].filter(Boolean).join(' ');
+
+    const spotsClasses = [
+      'team-spots',
+      team.is_full ? 'full' : '',
+      isOrg ? 'unlimited' : ''
+    ].filter(Boolean).join(' ');
+
+    let spotsText = '';
+    if (isOrg) {
+      spotsText = 'Illimité';
+    } else if (team.is_full) {
+      spotsText = 'Complet';
+    } else {
+      spotsText = `${team.available_slots} place${team.available_slots > 1 ? 's' : ''}`;
+    }
+
+    return `
+      <div class="${cardClasses}" data-team-id="${team.id}">
+        <h3 class="team-name">${escapeHtml(team.name)}</h3>
+        ${team.description ? `<p class="team-desc">${escapeHtml(team.description)}</p>` : ''}
+        <div class="team-meta">
+          <span class="team-members">${team.member_count} membre${team.member_count > 1 ? 's' : ''}</span>
+          <span class="${spotsClasses}">${spotsText}</span>
+        </div>
+        <div class="team-view-hint">Cliquez pour voir les membres</div>
       </div>
-      <div class="team-view-hint">Cliquez pour voir les membres</div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 
   // Add click event listeners to team cards
   elements.teamsList.querySelectorAll('.team-card').forEach(card => {
@@ -232,9 +309,17 @@ function createMemberCard(index) {
 }
 
 function addMember() {
+  if (state.isAtCapacity) return;
+
   const maxSize = state.config.maxTeamSize;
   if (state.members.length >= maxSize) {
     showErrors([`Maximum ${maxSize} membres par équipe`]);
+    return;
+  }
+
+  // Check available spots
+  if (state.stats && state.members.length >= state.stats.available_spots) {
+    showErrors([`Il ne reste que ${state.stats.available_spots} place(s) disponible(s)`]);
     return;
   }
 
@@ -252,13 +337,15 @@ function removeMember(index) {
   }
 
   const card = elements.membersContainer.querySelector(`[data-index="${index}"]`);
-  if (card) card.remove();
-
-  state.members = state.members.filter(m => m.index !== index);
-
-  // Reindex remaining cards
-  reindexMembers();
-  updateMemberCount();
+  if (card) {
+    card.style.animation = 'fadeIn 0.2s ease-out reverse';
+    setTimeout(() => {
+      card.remove();
+      state.members = state.members.filter(m => m.index !== index);
+      reindexMembers();
+      updateMemberCount();
+    }, 200);
+  }
 }
 
 function reindexMembers() {
@@ -299,7 +386,8 @@ function updateMemberCount() {
 
   // Check capacity
   const maxSize = state.config.maxTeamSize;
-  elements.addMemberBtn.disabled = state.members.length >= maxSize;
+  const maxBySpots = state.stats ? state.stats.available_spots : maxSize;
+  elements.addMemberBtn.disabled = state.members.length >= Math.min(maxSize, maxBySpots) || state.isAtCapacity;
 }
 
 // Form Handling
@@ -384,6 +472,11 @@ function validateForm() {
 
 async function handleSubmit(e) {
   e.preventDefault();
+
+  if (state.isAtCapacity) {
+    showErrors(['Les inscriptions sont closes']);
+    return;
+  }
 
   const errors = validateForm();
   if (errors.length > 0) {
@@ -549,6 +642,18 @@ function setupEventListeners() {
       closeTeamViewModal();
     }
   });
+
+  // Close modal on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (!elements.teamViewModal.classList.contains('hidden')) {
+        closeTeamViewModal();
+      }
+      if (!elements.successModal.classList.contains('hidden')) {
+        location.reload();
+      }
+    }
+  });
 }
 
 // Initialize
@@ -565,8 +670,10 @@ async function init() {
     renderTeams(teams);
     renderTeamSelect(teams);
 
-    // Add initial member card
-    addMember();
+    // Only add initial member if not at capacity
+    if (!state.isAtCapacity) {
+      addMember();
+    }
 
     setupEventListeners();
 
