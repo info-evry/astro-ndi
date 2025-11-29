@@ -10,12 +10,12 @@ assets = { directory = "public" }
 [[d1_databases]]
 binding = "DB"
 database_name = "ndi-db"
-database_id = "placeholder-update-after-creation"
+database_id = "3213e689-b0ef-44e7-80e6-657ea8c2fef7"
 
 # KV Namespace for configuration
 [[kv_namespaces]]
 binding = "CONFIG"
-id = "placeholder-update-after-creation"
+id = "b905d4df752b4dfb80b42b168c7a0904"
 
 # Environment variables
 [vars]
@@ -35,8 +35,8 @@ name = "ndi-registration"
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "ndi-db"
-database_id = "placeholder-update-after-creation"
+database_id = "3213e689-b0ef-44e7-80e6-657ea8c2fef7"
 
 [[env.production.kv_namespaces]]
 binding = "CONFIG"
-id = "placeholder-update-after-creation"
+id = "b905d4df752b4dfb80b42b168c7a0904"
