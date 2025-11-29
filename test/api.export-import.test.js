@@ -172,6 +172,146 @@ describe('CSV Export - Team Specific', () => {
   });
 });
 
+describe('CSV Export - Official NDI Format', () => {
+  it('should require authorization for official export', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/export-official');
+    expect(response.status).toBe(401);
+  });
+
+  it('should export official CSV with authorization', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/export-official', {
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toContain('text/csv');
+  });
+
+  it('should have correct official headers', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/export-official', {
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+
+    const text = await response.text();
+    const firstLine = text.replace(/^\ufeff/, '').split('\n')[0];
+
+    expect(firstLine).toContain('prenom');
+    expect(firstLine).toContain('nom');
+    expect(firstLine).toContain('mail');
+    expect(firstLine).toContain('niveauBac');
+    expect(firstLine).toContain('equipe');
+    expect(firstLine).toContain('estLeader (0\\1)');
+    expect(firstLine).toContain('ecole');
+  });
+
+  it('should use semicolon delimiter', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/export-official', {
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+
+    const text = await response.text();
+    const firstLine = text.split('\n')[0];
+    expect(firstLine.split(';').length).toBe(7);
+  });
+
+  it('should include UTF-8 BOM', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/export-official', {
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+
+    const text = await response.text();
+    expect(text.charCodeAt(0)).toBe(0xFEFF);
+  });
+
+  it('should set proper filename', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/export-official', {
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+
+    const contentDisposition = response.headers.get('Content-Disposition');
+    expect(contentDisposition).toContain('participants_officiel.csv');
+  });
+
+  it('should have uppercase last names', async () => {
+    // Create a team with a member
+    await SELF.fetch('http://localhost/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        createNewTeam: true,
+        teamName: 'Official Export Team',
+        teamPassword: 'officialtest',
+        members: [
+          {
+            firstName: 'Jean',
+            lastName: 'Dupont',
+            email: 'officialjean@example.com',
+            bacLevel: 3,
+            isLeader: true,
+            foodDiet: 'margherita'
+          }
+        ]
+      })
+    });
+
+    const response = await SELF.fetch('http://localhost/api/admin/export-official', {
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+
+    const text = await response.text();
+    expect(text).toContain('DUPONT');
+  });
+
+  it('should have bac_level as integer', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/export-official', {
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+
+    const text = await response.text();
+    const lines = text.replace(/^\ufeff/, '').split('\n');
+    // Check a data line (skip header)
+    if (lines.length > 1 && lines[1].trim()) {
+      const fields = lines[1].split(';');
+      const bacLevel = fields[3]; // niveauBac is 4th column (index 3)
+      // Should be a plain integer, not "BAC+3" or similar
+      expect(bacLevel).toMatch(/^\d+$/);
+    }
+  });
+
+  it('should have estLeader as 0 or 1', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/export-official', {
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+
+    const text = await response.text();
+    const lines = text.replace(/^\ufeff/, '').split('\n');
+    // Check data lines
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i].trim()) {
+        const fields = lines[i].split(';');
+        const estLeader = fields[5]; // estLeader is 6th column (index 5)
+        expect(['0', '1']).toContain(estLeader);
+      }
+    }
+  });
+});
+
 describe('CSV Import - Authentication', () => {
   it('should require authorization', async () => {
     const response = await SELF.fetch('http://localhost/api/admin/import', {

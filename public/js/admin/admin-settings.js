@@ -12,6 +12,7 @@ let settingsState = {
   maxTeamSize: 15,
   maxTotalParticipants: 200,
   minTeamSize: 1,
+  schoolName: "Université d'Evry",
   pizzas: [],
   bacLevels: [],
   isDirty: false
@@ -34,6 +35,7 @@ export async function loadSettings() {
     settingsState.maxTeamSize = parseInt(data.settings.max_team_size, 10) || 15;
     settingsState.maxTotalParticipants = parseInt(data.settings.max_total_participants, 10) || 200;
     settingsState.minTeamSize = parseInt(data.settings.min_team_size, 10) || 1;
+    settingsState.schoolName = data.settings.school_name || "Université d'Evry";
     settingsState.pizzas = data.settings.pizzas || [];
     settingsState.bacLevels = data.settings.bac_levels || [];
     settingsState.isDirty = false;
@@ -49,6 +51,10 @@ export async function loadSettings() {
  * Render settings UI
  */
 function renderSettings() {
+  // School name input
+  const schoolNameInput = $('setting-school-name');
+  if (schoolNameInput) schoolNameInput.value = settingsState.schoolName;
+
   // Capacity inputs
   const maxTeamInput = $('setting-max-team');
   const maxParticipantsInput = $('setting-max-participants');
@@ -115,8 +121,8 @@ function renderPizzasList() {
  * Setup event listeners
  */
 function setupEventListeners() {
-  // Capacity inputs - mark dirty on change
-  ['setting-max-team', 'setting-max-participants', 'setting-min-team'].forEach(id => {
+  // Settings inputs - mark dirty on change
+  ['setting-max-team', 'setting-max-participants', 'setting-min-team', 'setting-school-name'].forEach(id => {
     const input = $(id);
     if (input) {
       input.addEventListener('change', markDirty);
@@ -242,6 +248,7 @@ async function saveSettings() {
     const maxTeamSize = parseInt($('setting-max-team')?.value, 10);
     const maxTotalParticipants = parseInt($('setting-max-participants')?.value, 10);
     const minTeamSize = parseInt($('setting-min-team')?.value, 10);
+    const schoolName = $('setting-school-name')?.value?.trim() || "Université d'Evry";
 
     // Validate
     if (isNaN(maxTeamSize) || maxTeamSize < 1 || maxTeamSize > 100) {
@@ -267,6 +274,7 @@ async function saveSettings() {
       max_team_size: maxTeamSize,
       max_total_participants: maxTotalParticipants,
       min_team_size: minTeamSize,
+      school_name: schoolName,
       pizzas: settingsState.pizzas
     });
 
@@ -274,6 +282,7 @@ async function saveSettings() {
     settingsState.maxTeamSize = maxTeamSize;
     settingsState.maxTotalParticipants = maxTotalParticipants;
     settingsState.minTeamSize = minTeamSize;
+    settingsState.schoolName = schoolName;
 
     updateSaveButton();
     toastSuccess('Paramètres enregistrés');

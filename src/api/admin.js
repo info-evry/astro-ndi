@@ -108,6 +108,47 @@ export async function exportTeamCSV(request, env, ctx, params) {
 }
 
 /**
+ * GET /api/admin/export-official - Export data in official NDI format
+ */
+export async function exportOfficialCSV(request, env) {
+  if (!await verifyAdmin(request, env)) {
+    return error('Unauthorized', 401);
+  }
+
+  try {
+    const members = await db.getAllMembers(env.DB);
+
+    // Get school name from settings with fallback
+    const DEFAULT_SCHOOL_NAME = "Université d'Evry";
+    let schoolName = DEFAULT_SCHOOL_NAME;
+    try {
+      const { getSetting } = await import('../database/db.settings.js');
+      const dbSchoolName = await getSetting(env.DB, 'school_name');
+      if (dbSchoolName) {
+        schoolName = dbSchoolName;
+      } else if (env.SCHOOL_NAME) {
+        schoolName = env.SCHOOL_NAME;
+      }
+    } catch (e) {
+      // Fall back to env value or default
+      if (env.SCHOOL_NAME) schoolName = env.SCHOOL_NAME;
+    }
+
+    const csv = generateOfficialCSV(members, schoolName);
+
+    return new Response(csv, {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="participants_officiel.csv"'
+      }
+    });
+  } catch (err) {
+    console.error('Error exporting official:', err);
+    return error('Export failed', 500);
+  }
+}
+
+/**
  * GET /api/admin/stats - Detailed admin statistics
  */
 export async function adminStats(request, env) {
@@ -198,6 +239,40 @@ function escapeCSV(field) {
     return `"${str.replace(/"/g, '""')}"`;
   }
   return str;
+}
+
+/**
+ * Generate official NDI format CSV
+ * Format: prenom;nom;mail;niveauBac;equipe;estLeader (0\1);ecole
+ */
+function generateOfficialCSV(members, schoolName) {
+  const BOM = '\ufeff'; // UTF-8 BOM for Excel
+  const headers = [
+    'prenom',
+    'nom',
+    'mail',
+    'niveauBac',
+    'equipe',
+    'estLeader (0\\1)',
+    'ecole (nom exact saisi sur le site)'
+  ];
+
+  const rows = members.map(m => [
+    m.first_name,
+    (m.last_name || '').toUpperCase(),
+    m.email,
+    parseInt(m.bac_level, 10) || 0,
+    m.team_name,
+    m.is_leader ? 1 : 0,
+    schoolName
+  ]);
+
+  const csvContent = [
+    headers.join(';'),
+    ...rows.map(row => row.map(escapeCSV).join(';'))
+  ].join('\n');
+
+  return BOM + csvContent;
 }
 
 /**

@@ -21,6 +21,7 @@ const elements = {
   statsGrid: document.getElementById('stats-grid'),
   foodStats: document.getElementById('food-stats'),
   teamsContainer: document.getElementById('teams-container'),
+  exportOfficialBtn: document.getElementById('export-official-btn'),
   exportAllBtn: document.getElementById('export-all-btn'),
   refreshBtn: document.getElementById('refresh-btn'),
   addTeamBtn: document.getElementById('add-team-btn'),
@@ -523,6 +524,24 @@ async function handleExportAll() {
   }
 }
 
+async function handleExportOfficial() {
+  try {
+    const response = await api('/admin/export-official');
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'participants_officiel.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Export officiel téléchargé');
+  } catch (err) {
+    showToast('Erreur export: ' + err.message, 'error');
+  }
+}
+
 async function handleRefresh() {
   try {
     await loadData();
@@ -544,6 +563,7 @@ async function init() {
   elements.tokenInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleAuth();
   });
+  elements.exportOfficialBtn.addEventListener('click', handleExportOfficial);
   elements.exportAllBtn.addEventListener('click', handleExportAll);
   elements.refreshBtn.addEventListener('click', handleRefresh);
   elements.addTeamBtn.addEventListener('click', openAddTeamModal);

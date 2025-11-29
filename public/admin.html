@@ -30,6 +30,7 @@
         <div class="disclosure-header" onclick="toggleDisclosure('stats')">
           <h2><span class="disclosure-chevron">&#9654;</span> Vue d'ensemble</h2>
           <div class="header-actions" onclick="event.stopPropagation()">
+            <button type="button" id="export-official-btn" class="btn btn-primary btn-sm">Export Officiel</button>
             <button type="button" id="export-all-btn" class="btn btn-secondary btn-sm">Exporter CSV</button>
             <button type="button" id="refresh-btn" class="btn btn-secondary btn-sm">Rafraîchir</button>
           </div>
@@ -60,6 +61,15 @@
           </div>
         </div>
         <div class="disclosure-body">
+          <!-- School Name for Official Export -->
+          <div class="settings-card">
+            <h3>Export Officiel NDI</h3>
+            <div class="form-group">
+              <label for="setting-school-name">Nom de l'école (exact comme saisi sur le site NDI)</label>
+              <input type="text" id="setting-school-name" value="Université d'Evry" maxlength="256" placeholder="Université d'Evry">
+            </div>
+          </div>
+
           <!-- Capacity Settings -->
           <div class="settings-card">
             <h3>Limites de capacité</h3>
@@ -221,10 +231,12 @@
                 <option value="0">Non bachelier</option>
                 <option value="1">BAC+1</option>
                 <option value="2">BAC+2</option>
-                <option value="3">BAC+3</option>
+                <option value="3">BAC+3 (Licence)</option>
                 <option value="4">BAC+4</option>
-                <option value="5">BAC+5</option>
-                <option value="6">BAC+6+</option>
+                <option value="5">BAC+5 (Master)</option>
+                <option value="6">BAC+6</option>
+                <option value="7">BAC+7</option>
+                <option value="8">BAC+8 (Doctorat)</option>
               </select>
             </div>
             <div class="form-group">

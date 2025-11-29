@@ -12,7 +12,8 @@ const VALID_KEYS = new Set([
   'max_total_participants',
   'min_team_size',
   'pizzas',
-  'bac_levels'
+  'bac_levels',
+  'school_name'
 ]);
 
 /**
@@ -150,6 +151,12 @@ function validateSetting(key, value) {
         if (!level.label || typeof level.label !== 'string') {
           return { valid: false, error: `BAC level at index ${i} must have a string 'label'` };
         }
+      }
+      break;
+
+    case 'school_name':
+      if (typeof value !== 'string' || value.length > 256) {
+        return { valid: false, error: 'Must be a string up to 256 characters' };
       }
       break;
 

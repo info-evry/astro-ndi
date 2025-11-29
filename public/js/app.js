@@ -582,10 +582,12 @@ function showTeamMembers(team) {
     0: 'Non bachelier',
     1: 'BAC+1',
     2: 'BAC+2',
-    3: 'BAC+3',
+    3: 'BAC+3 (Licence)',
     4: 'BAC+4',
-    5: 'BAC+5',
-    6: 'BAC+6+'
+    5: 'BAC+5 (Master)',
+    6: 'BAC+6',
+    7: 'BAC+7',
+    8: 'BAC+8 (Doctorat)'
   };
 
   elements.teamMembersList.innerHTML = team.members.map(member => `
