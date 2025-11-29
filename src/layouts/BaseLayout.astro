@@ -152,7 +152,7 @@ const currentYear = new Date().getFullYear();
           </div>
         </div>
         <div class="ndi-footer-bottom">
-          <p>© {currentYear} {associationInfo.fullName}</p>
+          <p>© {currentYear} {associationInfo.fullName}. Tous droits réservés.</p>
         </div>
       </div>
     </footer>
@@ -659,14 +659,14 @@ const currentYear = new Date().getFullYear();
   font-size: var(--text-xs);
 }
 
-/* Links - underline on hover */
-a {
+/* Links - underline on hover (except buttons) */
+a:not(.btn) {
   color: var(--color-primary);
   text-decoration: none;
   transition: color var(--transition-fast);
 }
 
-a:hover {
+a:not(.btn):hover {
   color: var(--color-primary-light);
   text-decoration: underline;
 }
