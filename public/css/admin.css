@@ -171,8 +171,13 @@
 .members-table .checkbox-col {
   width: 40px;
   text-align: center;
+  vertical-align: middle;
   padding-left: var(--space-2);
   padding-right: var(--space-2);
+}
+
+.members-table .checkbox-col input[type="checkbox"] {
+  vertical-align: middle;
 }
 
 .members-table .actions-col {
@@ -258,7 +263,7 @@
 }
 
 .checkbox-label input[type="checkbox"] {
-  width: auto;
+  /* Use base sizing from style.css */
 }
 
 /* Selection */
