@@ -116,7 +116,8 @@ export async function adminStats(request, env) {
 
   try {
     const teams = await db.getTeams(env.DB);
-    const totalParticipants = await db.getTotalParticipants(env.DB);
+    const teamsExcludingOrg = await db.getTeamsExcludingOrg(env.DB);
+    const participantsExcludingOrg = await db.getParticipantsExcludingOrg(env.DB);
     const foodStats = await db.getFoodStats(env.DB);
     const maxTotal = parseInt(env.MAX_TOTAL_PARTICIPANTS, 10) || 200;
 
@@ -130,10 +131,10 @@ export async function adminStats(request, env) {
 
     return json({
       stats: {
-        total_teams: teams.length,
-        total_participants: totalParticipants,
+        total_teams: teamsExcludingOrg.length,
+        total_participants: participantsExcludingOrg,
         max_participants: maxTotal,
-        available_spots: Math.max(0, maxTotal - totalParticipants),
+        available_spots: Math.max(0, maxTotal - participantsExcludingOrg),
         food_preferences: foodStats,
         bac_level_distribution: await getBacLevelStats(env.DB)
       },

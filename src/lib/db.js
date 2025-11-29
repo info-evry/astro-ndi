@@ -103,6 +103,38 @@ export async function getTotalParticipants(db) {
 }
 
 /**
+ * Get participant count excluding Organisation team
+ */
+export async function getParticipantsExcludingOrg(db) {
+  const result = await db.prepare(`
+    SELECT COUNT(*) as count FROM members m
+    JOIN teams t ON m.team_id = t.id
+    WHERE t.name != 'Organisation'
+  `).first();
+  return result?.count || 0;
+}
+
+/**
+ * Get teams excluding Organisation
+ */
+export async function getTeamsExcludingOrg(db) {
+  const result = await db.prepare(`
+    SELECT
+      t.id,
+      t.name,
+      t.description,
+      t.created_at,
+      COUNT(m.id) as member_count
+    FROM teams t
+    LEFT JOIN members m ON t.id = m.team_id
+    WHERE t.name != 'Organisation'
+    GROUP BY t.id
+    ORDER BY t.created_at DESC
+  `).all();
+  return result.results;
+}
+
+/**
  * Get team member count
  */
 export async function getTeamMemberCount(db, teamId) {
