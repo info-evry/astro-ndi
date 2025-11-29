@@ -77,7 +77,8 @@ describe('PUT /api/admin/settings', () => {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-admin-token'
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
       },
       body: JSON.stringify({
         max_team_size: 20,
@@ -112,7 +113,8 @@ describe('PUT /api/admin/settings', () => {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-admin-token'
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
       },
       body: JSON.stringify({ pizzas: newPizzas })
     });
@@ -135,7 +137,8 @@ describe('PUT /api/admin/settings', () => {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-admin-token'
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
       },
       body: JSON.stringify({ invalid_key: 'value' })
     });
@@ -151,7 +154,8 @@ describe('PUT /api/admin/settings', () => {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-admin-token'
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
       },
       body: JSON.stringify({ max_team_size: 500 })
     });
@@ -165,7 +169,8 @@ describe('PUT /api/admin/settings', () => {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-admin-token'
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
       },
       body: JSON.stringify({ max_team_size: 0 })
     });
@@ -179,7 +184,8 @@ describe('PUT /api/admin/settings', () => {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-admin-token'
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
       },
       body: JSON.stringify({ pizzas: 'not an array' })
     });
@@ -191,7 +197,8 @@ describe('PUT /api/admin/settings', () => {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-admin-token'
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
       },
       body: JSON.stringify({ pizzas: [{ name: 'No ID' }] })
     });
@@ -203,7 +210,8 @@ describe('PUT /api/admin/settings', () => {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-admin-token'
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
       },
       body: JSON.stringify({ pizzas: [{ id: 'no-name' }] })
     });
@@ -219,7 +227,8 @@ describe('Config uses D1 settings', () => {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-admin-token'
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
       },
       body: JSON.stringify({
         pizzas: [
@@ -245,7 +254,8 @@ describe('Config uses D1 settings', () => {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-admin-token'
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
       },
       body: JSON.stringify({
         max_team_size: 25,

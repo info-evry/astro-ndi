@@ -158,7 +158,8 @@ describe('Admin CRUD - Teams', () => {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-admin-token'
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
       },
       body: JSON.stringify({
         name: 'Updated Team Name',
@@ -193,7 +194,8 @@ describe('Admin CRUD - Teams', () => {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-admin-token'
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
       },
       body: JSON.stringify({
         password: 'newpassword'
@@ -233,7 +235,8 @@ describe('Admin CRUD - Teams', () => {
     const deleteResponse = await SELF.fetch(`http://localhost/api/admin/teams/${teamId}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': 'Bearer test-admin-token'
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
       }
     });
 
@@ -261,7 +264,8 @@ describe('Admin CRUD - Teams', () => {
       const deleteResponse = await SELF.fetch(`http://localhost/api/admin/teams/${orgTeam.id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': 'Bearer test-admin-token'
+          'Authorization': 'Bearer test-admin-token',
+          'Origin': 'http://localhost'
         }
       });
 
@@ -369,7 +373,8 @@ describe('Admin CRUD - Members', () => {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-admin-token'
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
       },
       body: JSON.stringify({
         firstName: 'Updated',
@@ -413,7 +418,8 @@ describe('Admin CRUD - Members', () => {
     const deleteResponse = await SELF.fetch(`http://localhost/api/admin/members/${memberId}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': 'Bearer test-admin-token'
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
       }
     });
 
@@ -618,7 +624,8 @@ describe('Member Movement Between Teams', () => {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-admin-token'
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
       },
       body: JSON.stringify({
         teamId: team2Id
