@@ -256,14 +256,17 @@
 }
 
 .checkbox-label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-2);
   cursor: pointer;
+  line-height: 1;
 }
 
 .checkbox-label input[type="checkbox"] {
-  /* Use base sizing from style.css */
+  /* Ensure proper flex alignment */
+  margin: 0;
+  align-self: center;
 }
 
 /* Selection */

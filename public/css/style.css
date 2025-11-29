@@ -817,8 +817,9 @@ input[type="radio"]:disabled {
 }
 
 .pizza-option input[type="radio"]:checked::after {
-  left: 2px;
-  top: 2px;
+  /* 16px - 2*2px border = 12px inner, (12-6)/2 = 3px offset for 6px dot */
+  left: 3px;
+  top: 3px;
   width: 6px;
   height: 6px;
 }
