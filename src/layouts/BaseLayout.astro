@@ -1,25 +1,39 @@
 ---
 import '../../design/src/index.css';
+import associationInfo from '../../knowledge/src/association/info.json';
 
 interface Props {
   title: string;
   description?: string;
   adminStyles?: boolean;
   showHeader?: boolean;
+  showFooter?: boolean;
 }
 
 const {
   title,
   description = "Inscription des équipes pour la Nuit de l'Info",
   adminStyles = false,
-  showHeader = true
+  showHeader = true,
+  showFooter = true
 } = Astro.props;
 
+const assoUrl = associationInfo.sites.asso.url;
+
 const navLinks = [
-  { href: 'https://info-evry.fr/#a-propos', label: 'À propos' },
-  { href: 'https://info-evry.fr/#ressources', label: 'Ressources' },
-  { href: 'https://info-evry.fr/#ndi', label: 'Nuit de l\'Info' },
+  { href: `${assoUrl}/#a-propos`, label: 'À propos' },
+  { href: `${assoUrl}/#ressources`, label: 'Ressources' },
+  { href: `${assoUrl}/#ndi`, label: 'Nuit de l\'Info' },
 ];
+
+const socialLinks = [
+  { name: 'Discord', href: associationInfo.social.discord.url },
+  { name: 'Telegram', href: associationInfo.social.telegram.url },
+  { name: 'Instagram', href: associationInfo.social.instagram.url },
+  { name: 'GitHub', href: associationInfo.social.github.url },
+];
+
+const currentYear = new Date().getFullYear();
 ---
 
 <!DOCTYPE html>
@@ -37,8 +51,8 @@ const navLinks = [
   {showHeader && (
     <header class="header">
       <div class="header-container container">
-        <a href="https://info-evry.fr" class="logo">
-          <span class="logo-text">Info</span>
+        <a href={assoUrl} class="logo">
+          <span class="logo-text">Asso Info</span>
           <span class="logo-accent">Évry</span>
         </a>
 
@@ -49,7 +63,7 @@ const navLinks = [
         </nav>
 
         <div class="header-actions">
-          <a href="https://info-evry.fr/#adhesion" class="btn btn-primary btn-header">Adhérer</a>
+          <a href={`${assoUrl}/#adhesion`} class="btn btn-primary btn-header">Adhérer</a>
         </div>
 
         <input type="checkbox" id="mobile-menu-toggle" class="mobile-menu-checkbox" aria-label="Menu" />
@@ -62,13 +76,40 @@ const navLinks = [
             {navLinks.map(link => (
               <a href={link.href} class="mobile-nav-link">{link.label}</a>
             ))}
-            <a href="https://info-evry.fr/#adhesion" class="btn btn-primary mobile-cta">Adhérer à l'association</a>
+            <a href={`${assoUrl}/#adhesion`} class="btn btn-primary mobile-cta">Adhérer à l'association</a>
           </nav>
         </div>
       </div>
     </header>
   )}
   <slot />
+  {showFooter && (
+    <footer class="ndi-footer">
+      <div class="container">
+        <div class="ndi-footer-content">
+          <div class="ndi-footer-brand">
+            <a href={assoUrl} class="footer-logo">
+              <span class="logo-text">Asso Info</span>
+              <span class="logo-accent">Évry</span>
+            </a>
+            <p class="footer-tagline">{associationInfo.description}</p>
+          </div>
+          <div class="ndi-footer-social">
+            <div class="social-links">
+              {socialLinks.map(social => (
+                <a href={social.href} class="social-link" target="_blank" rel="noopener noreferrer" title={social.name}>
+                  {social.name}
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div class="ndi-footer-bottom">
+          <p>© {currentYear} {associationInfo.fullName}</p>
+        </div>
+      </div>
+    </footer>
+  )}
 </body>
 </html>
 
@@ -581,5 +622,83 @@ a {
 a:hover {
   color: var(--color-primary-light);
   text-decoration: underline;
+}
+
+/* Footer */
+.ndi-footer {
+  margin-top: var(--space-16);
+  padding: var(--space-12) 0 var(--space-8);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--color-bg-subtle);
+}
+
+.ndi-footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
+}
+
+.footer-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: var(--tracking-tight);
+  margin-bottom: var(--space-3);
+  text-decoration: none;
+}
+
+.footer-logo:hover {
+  text-decoration: none;
+}
+
+.footer-tagline {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  max-width: 400px;
+}
+
+.ndi-footer-social .social-links {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.ndi-footer-social .social-link {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.ndi-footer-social .social-link:hover {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.ndi-footer-bottom {
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border-subtle);
+  text-align: center;
+}
+
+.ndi-footer-bottom p {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .ndi-footer-content {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .footer-tagline {
+    max-width: 100%;
+  }
 }
 </style>
