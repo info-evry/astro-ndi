@@ -1,4 +1,6 @@
 ---
+import '../../design/src/index.css';
+
 interface Props {
   title: string;
   description?: string;
@@ -25,9 +27,6 @@ const { title, description = "Inscription des équipes pour la Nuit de l'Info", 
 </html>
 
 <style is:global>
-/* Import shared design system */
-@import '../design/src/index.css';
-
 /* ===========================================
    NDI-Specific Styles
    Styles that extend or override the design system
