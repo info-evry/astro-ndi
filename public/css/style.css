@@ -217,7 +217,6 @@ body {
   border-radius: var(--radius-lg);
   margin-bottom: var(--space-6);
   box-shadow: var(--shadow);
-  overflow: hidden;
   transition: box-shadow var(--transition-base);
 }
 
@@ -273,15 +272,12 @@ body {
 }
 
 .disclosure-body {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height var(--transition-slow), padding var(--transition-slow);
+  display: none;
+  padding: var(--space-6);
 }
 
 .disclosure-group.open .disclosure-body {
-  max-height: 2000px;
-  padding: var(--space-6);
-  padding-top: var(--space-6);
+  display: block;
 }
 
 /* Teams Grid */
