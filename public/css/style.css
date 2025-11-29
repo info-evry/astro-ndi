@@ -280,7 +280,8 @@ body {
 
 .disclosure-group.open .disclosure-body {
   max-height: 2000px;
-  padding: 0 var(--space-6) var(--space-6);
+  padding: var(--space-6);
+  padding-top: var(--space-6);
 }
 
 /* Teams Grid */

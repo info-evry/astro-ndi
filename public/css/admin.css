@@ -79,12 +79,18 @@
 .teams-container {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .team-block {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
+}
+
+#teams-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .team-header {
@@ -359,7 +365,8 @@
 
 .disclosure-body {
   display: none;
-  padding: 1rem;
+  padding: 1.25rem;
+  padding-top: 1.5rem;
   border-top: 1px solid var(--color-border);
 }
 
