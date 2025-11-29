@@ -1006,8 +1006,8 @@ function renderPizzasList() {
         <span class="pizza-item-desc">${escapeHtml(pizza.description || '')}</span>
       </div>
       <div class="pizza-item-actions">
-        <button type="button" class="btn-icon edit-pizza-btn" data-index="${index}" title="Modifier">&#9998;</button>
-        <button type="button" class="btn-icon delete-pizza-btn" data-index="${index}" title="Supprimer">&#128465;</button>
+        <button type="button" class="btn btn-sm btn-secondary edit-pizza-btn" data-index="${index}">Modifier</button>
+        <button type="button" class="btn btn-sm btn-danger delete-pizza-btn" data-index="${index}">Supprimer</button>
       </div>
     </div>
   `).join('');

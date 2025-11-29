@@ -84,6 +84,12 @@ const navLinks = [
   padding: var(--space-8) var(--space-4);
 }
 
+/* Header container should not inherit page container padding */
+.header-container.container {
+  padding: 0 var(--space-4);
+  max-width: var(--container-max);
+}
+
 @media (max-width: 600px) {
   .container {
     padding: var(--space-6) var(--space-4);
