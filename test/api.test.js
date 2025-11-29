@@ -1187,3 +1187,88 @@ describe('Input Validation Edge Cases', () => {
     expect([400, 500]).toContain(response.status);
   });
 });
+
+describe('CSV Import', () => {
+  it('should require authorization', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ csv: 'test' })
+    });
+
+    expect(response.status).toBe(401);
+  });
+
+  it('should import members from CSV', async () => {
+    const csv = `id,firstname,lastname,email,fooddiet,baclevel,ismanager,teamName,date
+1,Jean,Dupont,jean@example.com,margherita,3,Yes,Import Team,2024-01-01
+2,Marie,Martin,marie@example.com,pepperoni,2,No,Import Team,2024-01-01
+3,Pierre,Bernard,pierre@example.com,4fromages,4,Yes,Other Import Team,2024-01-01`;
+
+    const response = await SELF.fetch('http://localhost/api/admin/import', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({ csv })
+    });
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.stats.membersImported).toBe(3);
+    expect(data.stats.teamsCreated).toBe(2);
+  });
+
+  it('should skip duplicate members', async () => {
+    // First import
+    const csv1 = `id,firstname,lastname,email,fooddiet,baclevel,ismanager,teamName,date
+1,Duplicate,User,dup@example.com,margherita,3,Yes,Dup Team,2024-01-01`;
+
+    await SELF.fetch('http://localhost/api/admin/import', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({ csv: csv1 })
+    });
+
+    // Second import with same member
+    const csv2 = `id,firstname,lastname,email,fooddiet,baclevel,ismanager,teamName,date
+1,Duplicate,User,different@example.com,pepperoni,4,No,Dup Team,2024-01-02`;
+
+    const response = await SELF.fetch('http://localhost/api/admin/import', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({ csv: csv2 })
+    });
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.stats.membersSkipped).toBe(1);
+    expect(data.stats.membersImported).toBe(0);
+  });
+
+  it('should reject missing required columns', async () => {
+    const csv = `id,firstname,email
+1,Jean,jean@example.com`;
+
+    const response = await SELF.fetch('http://localhost/api/admin/import', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({ csv })
+    });
+
+    expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.error).toContain('Missing required columns');
+  });
+});

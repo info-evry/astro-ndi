@@ -21,6 +21,7 @@ import {
   createTeamAdmin
 } from './api/admin.js';
 import { getSettings, updateSettings } from './features/admin/admin.settings.js';
+import { importCSV } from './features/admin/admin.import.js';
 
 export function createRouter() {
   const router = new Router();
@@ -44,6 +45,7 @@ export function createRouter() {
   router.post('/api/admin/teams', createTeamAdmin);
   router.post('/api/admin/members', addMemberManually);
   router.post('/api/admin/members/delete-batch', deleteMembersBatch);
+  router.post('/api/admin/import', importCSV);
 
   // Admin API routes - Update
   router.put('/api/admin/teams/:id', updateTeamAdmin);

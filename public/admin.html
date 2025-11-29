@@ -108,6 +108,37 @@
         </div>
       </div>
 
+      <!-- Import Section -->
+      <div class="disclosure-group" data-disclosure="import">
+        <div class="disclosure-header" onclick="toggleDisclosure('import')">
+          <h2>Importer des données</h2>
+        </div>
+        <div class="disclosure-body">
+          <div class="settings-card">
+            <h3>Import CSV</h3>
+            <p class="import-description">
+              Importez des membres depuis un fichier CSV. Les équipes seront créées automatiquement avec le nom de l'équipe comme mot de passe.
+            </p>
+            <div class="import-format">
+              <strong>Format attendu :</strong>
+              <code>id,firstname,lastname,email,fooddiet,baclevel,ismanager,teamName,date</code>
+            </div>
+            <div class="form-group">
+              <label for="import-file">Fichier CSV</label>
+              <input type="file" id="import-file" accept=".csv,text/csv">
+            </div>
+            <div id="import-preview" class="import-preview hidden">
+              <h4>Aperçu</h4>
+              <div id="import-preview-content"></div>
+            </div>
+            <div class="import-actions">
+              <button type="button" id="import-btn" class="btn btn-primary" disabled>Importer</button>
+              <span id="import-status" class="import-status"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Quick Actions -->
       <div class="disclosure-group open" data-disclosure="actions">
         <div class="disclosure-header" onclick="toggleDisclosure('actions')">

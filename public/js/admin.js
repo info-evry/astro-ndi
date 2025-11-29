@@ -4,6 +4,7 @@
  */
 
 import { initSettings, loadSettings } from './admin/admin-settings.js';
+import { initImport } from './admin/admin-import.js';
 
 // State
 let adminToken = localStorage.getItem('ndi_admin_token') || '';
@@ -484,6 +485,7 @@ async function handleAuth() {
     localStorage.setItem('ndi_admin_token', token);
     showAdmin();
     initSettings();
+    initImport();
   } catch (err) {
     if (err.message === 'Unauthorized') {
       showAuthError('Token invalide');
@@ -565,6 +567,7 @@ async function init() {
       await loadData();
       showAdmin();
       initSettings();
+      initImport();
     } catch (err) {
       showAuth();
       if (err.message === 'Unauthorized') {
@@ -576,5 +579,8 @@ async function init() {
     showAuth();
   }
 }
+
+// Expose loadData globally for import module refresh
+window.loadData = loadData;
 
 init();
