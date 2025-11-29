@@ -1,0 +1,10 @@
+# Robots.txt for NDI Registration
+# https://ndi.info-evry.fr
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://ndi.info-evry.fr/sitemap.xml

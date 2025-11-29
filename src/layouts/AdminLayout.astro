@@ -8,7 +8,7 @@ interface Props {
 const { title } = Astro.props;
 ---
 
-<BaseLayout title={title} description="Administration des équipes pour la Nuit de l'Info" showHeader={false}>
+<BaseLayout title={title} description="Administration des équipes pour la Nuit de l'Info" showHeader={false} showFooter={false} noindex={true}>
   <slot />
 </BaseLayout>
 

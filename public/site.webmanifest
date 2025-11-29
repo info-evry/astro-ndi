@@ -1,0 +1,16 @@
+{
+  "name": "NDI - Nuit de l'Info",
+  "short_name": "NDI",
+  "description": "Inscription des équipes pour la Nuit de l'Info - Asso Info Evry",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#0ea5e9",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

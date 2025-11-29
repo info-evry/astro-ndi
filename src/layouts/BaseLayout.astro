@@ -1,24 +1,32 @@
 ---
 import '../../design/src/index.css';
 import associationInfo from '../../knowledge/src/association/info.json';
+import ndiEvent from '../../knowledge/src/ndi/event.json';
 
 interface Props {
   title: string;
   description?: string;
+  image?: string;
   adminStyles?: boolean;
   showHeader?: boolean;
   showFooter?: boolean;
+  noindex?: boolean;
 }
 
 const {
   title,
-  description = "Inscription des équipes pour la Nuit de l'Info",
+  description = `Inscription des équipes pour la ${ndiEvent.name} ${ndiEvent.year} - ${ndiEvent.edition}`,
+  image = "/og-image.png",
   adminStyles = false,
   showHeader = true,
-  showFooter = true
+  showFooter = true,
+  noindex = false
 } = Astro.props;
 
 const assoUrl = associationInfo.sites.asso.url;
+const siteUrl = associationInfo.sites.ndi.url;
+const canonicalUrl = new URL(Astro.url.pathname, siteUrl).href;
+const ogImageUrl = new URL(image, siteUrl).href;
 
 const navLinks = [
   { href: `${assoUrl}/#a-propos`, label: 'À propos' },
@@ -41,11 +49,50 @@ const currentYear = new Date().getFullYear();
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content={description}>
-  <meta name="theme-color" content="#0ea5e9">
-  <link rel="preconnect" href="https://rsms.me/">
-  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+
+  <!-- Primary Meta Tags -->
   <title>{title}</title>
+  <meta name="title" content={title}>
+  <meta name="description" content={description}>
+  <meta name="author" content={associationInfo.fullName}>
+  <meta name="theme-color" content="#0ea5e9">
+  <meta name="color-scheme" content="dark">
+  {noindex && <meta name="robots" content="noindex, nofollow">}
+
+  <!-- Canonical URL -->
+  <link rel="canonical" href={canonicalUrl}>
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content={canonicalUrl}>
+  <meta property="og:title" content={title}>
+  <meta property="og:description" content={description}>
+  <meta property="og:image" content={ogImageUrl}>
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:site_name" content={`${ndiEvent.name} - ${associationInfo.name}`}>
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content={canonicalUrl}>
+  <meta name="twitter:title" content={title}>
+  <meta name="twitter:description" content={description}>
+  <meta name="twitter:image" content={ogImageUrl}>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+
+  <!-- Performance: Preconnect to external origins -->
+  <link rel="preconnect" href="https://rsms.me" crossorigin>
+  <link rel="dns-prefetch" href="https://rsms.me">
+
+  <!-- Inter Font -->
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
 </head>
 <body>
   {showHeader && (
@@ -125,9 +172,9 @@ const currentYear = new Date().getFullYear();
   padding: var(--space-8) var(--space-4);
 }
 
-/* Header container should not inherit page container padding */
+/* Header container should use design system defaults, not page overrides */
 .header-container.container {
-  padding: 0 var(--space-4);
+  padding: 0 var(--container-padding);
   max-width: var(--container-max);
 }
 
