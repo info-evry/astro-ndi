@@ -9,7 +9,8 @@ const state = {
   teams: [],
   stats: null,
   members: [],
-  isNewTeam: true
+  isNewTeam: true,
+  selectedTeamId: null
 };
 
 // DOM Elements
@@ -26,7 +27,20 @@ const elements = {
   submitBtn: document.getElementById('submit-btn'),
   errorsDiv: document.getElementById('form-errors'),
   successModal: document.getElementById('success-modal'),
-  successMessage: document.getElementById('success-message')
+  successMessage: document.getElementById('success-message'),
+  // Team view modal elements
+  teamViewModal: document.getElementById('team-view-modal'),
+  teamViewAuth: document.getElementById('team-view-auth'),
+  teamViewContent: document.getElementById('team-view-content'),
+  teamViewTitle: document.getElementById('team-view-title'),
+  teamViewPassword: document.getElementById('team-view-password'),
+  teamViewError: document.getElementById('team-view-error'),
+  teamViewSubmit: document.getElementById('team-view-submit'),
+  teamViewCancel: document.getElementById('team-view-cancel'),
+  teamViewClose: document.getElementById('team-view-close'),
+  teamDetailName: document.getElementById('team-detail-name'),
+  teamDetailDesc: document.getElementById('team-detail-desc'),
+  teamMembersList: document.getElementById('team-members-list')
 };
 
 // API Functions
@@ -65,6 +79,13 @@ async function submitRegistration(data) {
   });
 }
 
+async function viewTeamMembers(teamId, password) {
+  return api(`/teams/${teamId}/view`, {
+    method: 'POST',
+    body: JSON.stringify({ password })
+  });
+}
+
 // Render Functions
 function renderStats(stats) {
   elements.statsContainer.innerHTML = `
@@ -90,7 +111,7 @@ function renderTeams(teams) {
   }
 
   elements.teamsList.innerHTML = teams.map(team => `
-    <div class="team-card ${team.is_full ? 'full' : ''}">
+    <div class="team-card clickable ${team.is_full ? 'full' : ''}" data-team-id="${team.id}">
       <h3 class="team-name">${escapeHtml(team.name)}</h3>
       ${team.description ? `<p class="team-desc">${escapeHtml(team.description)}</p>` : ''}
       <div class="team-meta">
@@ -99,8 +120,17 @@ function renderTeams(teams) {
           ${team.is_full ? 'Complet' : `${team.available_slots} place${team.available_slots > 1 ? 's' : ''}`}
         </span>
       </div>
+      <div class="team-view-hint">Cliquez pour voir les membres</div>
     </div>
   `).join('');
+
+  // Add click event listeners to team cards
+  elements.teamsList.querySelectorAll('.team-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const teamId = parseInt(card.dataset.teamId, 10);
+      openTeamViewModal(teamId);
+    });
+  });
 }
 
 function renderTeamSelect(teams) {
@@ -406,6 +436,83 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+// Team View Modal Functions
+function openTeamViewModal(teamId) {
+  const team = state.teams.find(t => t.id === teamId);
+  if (!team) return;
+
+  state.selectedTeamId = teamId;
+  elements.teamViewTitle.textContent = `Voir l'équipe: ${team.name}`;
+  elements.teamViewPassword.value = '';
+  elements.teamViewError.classList.add('hidden');
+  elements.teamViewAuth.classList.remove('hidden');
+  elements.teamViewContent.classList.add('hidden');
+  elements.teamViewModal.classList.remove('hidden');
+  elements.teamViewPassword.focus();
+}
+
+function closeTeamViewModal() {
+  state.selectedTeamId = null;
+  elements.teamViewModal.classList.add('hidden');
+  elements.teamViewPassword.value = '';
+  elements.teamViewError.classList.add('hidden');
+}
+
+async function handleTeamViewSubmit() {
+  const password = elements.teamViewPassword.value.trim();
+  if (!password) {
+    elements.teamViewError.textContent = 'Veuillez entrer le mot de passe';
+    elements.teamViewError.classList.remove('hidden');
+    return;
+  }
+
+  elements.teamViewSubmit.disabled = true;
+  elements.teamViewSubmit.textContent = 'Chargement...';
+
+  try {
+    const result = await viewTeamMembers(state.selectedTeamId, password);
+    showTeamMembers(result.team);
+  } catch (err) {
+    elements.teamViewError.textContent = err.message;
+    elements.teamViewError.classList.remove('hidden');
+  } finally {
+    elements.teamViewSubmit.disabled = false;
+    elements.teamViewSubmit.textContent = 'Voir les membres';
+  }
+}
+
+function showTeamMembers(team) {
+  elements.teamDetailName.textContent = team.name;
+  elements.teamDetailDesc.textContent = team.description || '';
+
+  const bacLabels = {
+    0: 'Non bachelier',
+    1: 'BAC+1',
+    2: 'BAC+2',
+    3: 'BAC+3',
+    4: 'BAC+4',
+    5: 'BAC+5',
+    6: 'BAC+6+'
+  };
+
+  elements.teamMembersList.innerHTML = team.members.map(member => `
+    <div class="member-item ${member.isLeader ? 'leader' : ''}">
+      <div class="member-info">
+        <span class="member-name">${escapeHtml(member.firstName)} ${escapeHtml(member.lastName)}</span>
+        ${member.isLeader ? '<span class="badge-leader">Chef</span>' : ''}
+      </div>
+      <div class="member-details">
+        <span class="member-email">${escapeHtml(member.email)}</span>
+        <span class="member-bac">${bacLabels[member.bacLevel] || 'N/A'}</span>
+        ${member.foodDiet ? `<span class="member-food">${escapeHtml(member.foodDiet)}</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  elements.teamViewAuth.classList.add('hidden');
+  elements.teamViewContent.classList.remove('hidden');
+}
+
 // Event Listeners
 function setupEventListeners() {
   // Team mode toggle
@@ -422,6 +529,26 @@ function setupEventListeners() {
 
   // Form submission
   elements.form.addEventListener('submit', handleSubmit);
+
+  // Team view modal
+  elements.teamViewSubmit.addEventListener('click', handleTeamViewSubmit);
+  elements.teamViewCancel.addEventListener('click', closeTeamViewModal);
+  elements.teamViewClose.addEventListener('click', closeTeamViewModal);
+
+  // Allow Enter key to submit password
+  elements.teamViewPassword.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleTeamViewSubmit();
+    }
+  });
+
+  // Close modal on backdrop click
+  elements.teamViewModal.addEventListener('click', (e) => {
+    if (e.target === elements.teamViewModal) {
+      closeTeamViewModal();
+    }
+  });
 }
 
 // Initialize

@@ -93,6 +93,35 @@
         </button>
       </div>
     </div>
+
+    <!-- Team View Modal -->
+    <div id="team-view-modal" class="modal hidden">
+      <div class="modal-content modal-lg">
+        <div id="team-view-auth" class="team-view-section">
+          <h3 id="team-view-title">Voir l'équipe</h3>
+          <p class="team-view-desc">Entrez le mot de passe de l'équipe pour voir ses membres.</p>
+          <div class="form-group">
+            <label for="team-view-password">Mot de passe</label>
+            <input type="password" id="team-view-password" placeholder="Mot de passe de l'équipe">
+          </div>
+          <p id="team-view-error" class="error-text hidden"></p>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" id="team-view-cancel">Annuler</button>
+            <button type="button" class="btn btn-primary" id="team-view-submit">Voir les membres</button>
+          </div>
+        </div>
+        <div id="team-view-content" class="team-view-section hidden">
+          <div class="team-view-header">
+            <div>
+              <h3 id="team-detail-name"></h3>
+              <p id="team-detail-desc" class="team-view-desc"></p>
+            </div>
+            <button type="button" class="btn btn-secondary" id="team-view-close">Fermer</button>
+          </div>
+          <div id="team-members-list" class="team-members-list"></div>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script type="module" src="/js/app.js"></script>

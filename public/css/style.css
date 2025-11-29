@@ -448,6 +448,130 @@ body {
   color: var(--color-success);
 }
 
+/* Team Card Clickable */
+.team-card.clickable {
+  cursor: pointer;
+}
+
+.team-view-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 0.5rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.team-card.clickable:hover .team-view-hint {
+  opacity: 1;
+}
+
+/* Modal Variants */
+.modal-lg {
+  max-width: 600px;
+  width: 90%;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+.error-text {
+  color: var(--color-error);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+/* Team View Modal */
+.team-view-section {
+  text-align: left;
+}
+
+.team-view-desc {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  margin: 0.25rem 0 1rem;
+}
+
+.team-view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.team-view-header h3 {
+  margin: 0;
+  color: var(--color-text);
+}
+
+/* Team Members List */
+.team-members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.member-item {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+}
+
+.member-item.leader {
+  border-color: var(--color-primary);
+  background: rgba(37, 99, 235, 0.05);
+}
+
+.member-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.member-name {
+  font-weight: 600;
+}
+
+.badge-leader {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  background: var(--color-primary);
+  color: white;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.member-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.member-email {
+  flex: 1;
+  min-width: 150px;
+}
+
+.member-bac,
+.member-food {
+  background: var(--color-bg);
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius);
+  font-size: 0.75rem;
+}
+
 /* Utilities */
 .hidden {
   display: none !important;

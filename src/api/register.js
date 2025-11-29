@@ -136,6 +136,7 @@ export async function register(request, env) {
       message: `Successfully registered ${addedMembers.length} member(s) to team "${teamName}"`,
       team: { id: teamId, name: teamName, isNew: isNewTeam },
       members: addedMembers.map(m => ({
+        id: m.id,
         firstName: m.firstName,
         lastName: m.lastName
       }))

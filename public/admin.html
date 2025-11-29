@@ -25,30 +25,135 @@
     </section>
 
     <div id="admin-content" class="hidden">
+      <!-- Stats Section -->
       <section class="section">
         <div class="admin-header">
           <h2>Vue d'ensemble</h2>
           <div class="actions">
-            <button type="button" id="export-all-btn" class="btn btn-secondary">
-              Exporter tout (CSV)
-            </button>
-            <button type="button" id="refresh-btn" class="btn btn-secondary">
-              Rafraîchir
-            </button>
+            <button type="button" id="export-all-btn" class="btn btn-secondary">Exporter CSV</button>
+            <button type="button" id="refresh-btn" class="btn btn-secondary">Rafraîchir</button>
           </div>
         </div>
         <div id="stats-grid" class="stats-grid"></div>
       </section>
 
+      <!-- Food Stats -->
       <section class="section">
         <h2>Préférences alimentaires</h2>
         <div id="food-stats" class="food-stats"></div>
       </section>
 
+      <!-- Quick Actions -->
+      <section class="section">
+        <div class="admin-header">
+          <h2>Actions rapides</h2>
+        </div>
+        <div class="quick-actions">
+          <button type="button" id="add-team-btn" class="btn btn-primary">+ Nouvelle équipe</button>
+          <button type="button" id="add-member-btn" class="btn btn-primary">+ Nouveau membre</button>
+          <button type="button" id="delete-selected-btn" class="btn btn-danger" disabled>Supprimer sélection</button>
+        </div>
+      </section>
+
+      <!-- Teams Section -->
       <section class="section">
         <h2>Équipes et membres</h2>
         <div id="teams-container"></div>
       </section>
+    </div>
+
+    <!-- Add/Edit Team Modal -->
+    <div id="team-modal" class="modal hidden">
+      <div class="modal-content">
+        <h3 id="team-modal-title">Nouvelle équipe</h3>
+        <form id="team-form">
+          <input type="hidden" id="team-form-id">
+          <div class="form-group">
+            <label for="team-form-name">Nom de l'équipe *</label>
+            <input type="text" id="team-form-name" required>
+          </div>
+          <div class="form-group">
+            <label for="team-form-desc">Description</label>
+            <textarea id="team-form-desc" rows="2"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="team-form-password">Mot de passe (laisser vide pour ne pas changer)</label>
+            <input type="text" id="team-form-password" placeholder="Nouveau mot de passe">
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('team-modal')">Annuler</button>
+            <button type="submit" class="btn btn-primary">Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add/Edit Member Modal -->
+    <div id="member-modal" class="modal hidden">
+      <div class="modal-content">
+        <h3 id="member-modal-title">Nouveau membre</h3>
+        <form id="member-form">
+          <input type="hidden" id="member-form-id">
+          <div class="form-group">
+            <label for="member-form-team">Équipe *</label>
+            <select id="member-form-team" required></select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="member-form-firstname">Prénom *</label>
+              <input type="text" id="member-form-firstname" required>
+            </div>
+            <div class="form-group">
+              <label for="member-form-lastname">Nom *</label>
+              <input type="text" id="member-form-lastname" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="member-form-email">Email *</label>
+            <input type="email" id="member-form-email" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="member-form-bac">Niveau BAC</label>
+              <select id="member-form-bac">
+                <option value="0">Non bachelier</option>
+                <option value="1">BAC+1</option>
+                <option value="2">BAC+2</option>
+                <option value="3">BAC+3</option>
+                <option value="4">BAC+4</option>
+                <option value="5">BAC+5</option>
+                <option value="6">BAC+6+</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="member-form-food">Pizza</label>
+              <input type="text" id="member-form-food" placeholder="Ex: margherita">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="member-form-leader">
+              Chef d'équipe
+            </label>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('member-modal')">Annuler</button>
+            <button type="submit" class="btn btn-primary">Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div id="confirm-modal" class="modal hidden">
+      <div class="modal-content">
+        <h3>Confirmer la suppression</h3>
+        <p id="confirm-message"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('confirm-modal')">Annuler</button>
+          <button type="button" id="confirm-delete-btn" class="btn btn-danger">Supprimer</button>
+        </div>
+      </div>
     </div>
   </main>
 

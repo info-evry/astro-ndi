@@ -405,3 +405,492 @@ describe('CORS', () => {
     expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
   });
 });
+
+describe('POST /api/teams/:id/view - Public Team View', () => {
+  it('should return team members with correct password', async () => {
+    // First create a team
+    const createResponse = await SELF.fetch('http://localhost/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        createNewTeam: true,
+        teamName: 'Viewable Team',
+        teamPassword: 'viewpass123',
+        members: [
+          {
+            firstName: 'View',
+            lastName: 'Leader',
+            email: 'viewleader@example.com',
+            bacLevel: 3,
+            isLeader: true,
+            foodDiet: 'margherita'
+          }
+        ]
+      })
+    });
+
+    const createData = await createResponse.json();
+    const teamId = createData.team.id;
+
+    // View team with correct password
+    const viewResponse = await SELF.fetch(`http://localhost/api/teams/${teamId}/view`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: 'viewpass123' })
+    });
+
+    expect(viewResponse.status).toBe(200);
+    const viewData = await viewResponse.json();
+    expect(viewData.team).toBeDefined();
+    expect(viewData.team.name).toBe('Viewable Team');
+    expect(viewData.team.members).toHaveLength(1);
+    expect(viewData.team.members[0].firstName).toBe('View');
+  });
+
+  it('should reject view with wrong password', async () => {
+    // First create a team
+    const createResponse = await SELF.fetch('http://localhost/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        createNewTeam: true,
+        teamName: 'Private Team',
+        teamPassword: 'secretpass',
+        members: [
+          {
+            firstName: 'Private',
+            lastName: 'Member',
+            email: 'private@example.com',
+            bacLevel: 2,
+            isLeader: true,
+            foodDiet: 'none'
+          }
+        ]
+      })
+    });
+
+    const createData = await createResponse.json();
+    const teamId = createData.team.id;
+
+    // Try to view with wrong password
+    const viewResponse = await SELF.fetch(`http://localhost/api/teams/${teamId}/view`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: 'wrongpass' })
+    });
+
+    expect(viewResponse.status).toBe(403);
+    const viewData = await viewResponse.json();
+    expect(viewData.error).toContain('incorrect');
+  });
+
+  it('should require password', async () => {
+    const viewResponse = await SELF.fetch('http://localhost/api/teams/1/view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+
+    expect(viewResponse.status).toBe(400);
+    const viewData = await viewResponse.json();
+    expect(viewData.error).toContain('required');
+  });
+
+  it('should return 404 for non-existent team', async () => {
+    const viewResponse = await SELF.fetch('http://localhost/api/teams/99999/view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: 'anypass' })
+    });
+
+    expect(viewResponse.status).toBe(404);
+  });
+});
+
+describe('Admin CRUD - Teams', () => {
+  it('should create a new team', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/teams', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({
+        name: 'Admin Created Team',
+        description: 'Created by admin',
+        password: 'adminpass'
+      })
+    });
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.team.name).toBe('Admin Created Team');
+    expect(data.team.id).toBeDefined();
+  });
+
+  it('should update a team', async () => {
+    // First create a team
+    const createResponse = await SELF.fetch('http://localhost/api/admin/teams', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({
+        name: 'Team To Update',
+        description: 'Original description',
+        password: 'original'
+      })
+    });
+
+    const createData = await createResponse.json();
+    const teamId = createData.team.id;
+
+    // Update the team
+    const updateResponse = await SELF.fetch(`http://localhost/api/admin/teams/${teamId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({
+        name: 'Updated Team Name',
+        description: 'Updated description'
+      })
+    });
+
+    expect(updateResponse.status).toBe(200);
+    const updateData = await updateResponse.json();
+    expect(updateData.success).toBe(true);
+  });
+
+  it('should update team password', async () => {
+    // First create a team
+    const createResponse = await SELF.fetch('http://localhost/api/admin/teams', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({
+        name: 'Password Update Team',
+        password: 'oldpass'
+      })
+    });
+
+    const createData = await createResponse.json();
+    const teamId = createData.team.id;
+
+    // Update password
+    const updateResponse = await SELF.fetch(`http://localhost/api/admin/teams/${teamId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({
+        password: 'newpassword'
+      })
+    });
+
+    expect(updateResponse.status).toBe(200);
+
+    // Verify new password works
+    const viewResponse = await SELF.fetch(`http://localhost/api/teams/${teamId}/view`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: 'newpassword' })
+    });
+
+    expect(viewResponse.status).toBe(200);
+  });
+
+  it('should delete a team', async () => {
+    // First create a team
+    const createResponse = await SELF.fetch('http://localhost/api/admin/teams', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({
+        name: 'Team To Delete',
+        password: 'deleteme'
+      })
+    });
+
+    const createData = await createResponse.json();
+    const teamId = createData.team.id;
+
+    // Delete the team
+    const deleteResponse = await SELF.fetch(`http://localhost/api/admin/teams/${teamId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+
+    expect(deleteResponse.status).toBe(200);
+    const deleteData = await deleteResponse.json();
+    expect(deleteData.success).toBe(true);
+
+    // Verify team no longer exists
+    const viewResponse = await SELF.fetch(`http://localhost/api/teams/${teamId}/view`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: 'deleteme' })
+    });
+
+    expect(viewResponse.status).toBe(404);
+  });
+
+  it('should require authorization for team operations', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/teams', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Unauthorized Team', password: 'test' })
+    });
+
+    expect(response.status).toBe(401);
+  });
+});
+
+describe('Admin CRUD - Members', () => {
+  it('should add a member manually', async () => {
+    // First create a team
+    const createResponse = await SELF.fetch('http://localhost/api/admin/teams', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({
+        name: 'Member Add Team',
+        password: 'memberteam'
+      })
+    });
+
+    const createData = await createResponse.json();
+    const teamId = createData.team.id;
+
+    // Add a member
+    const addResponse = await SELF.fetch('http://localhost/api/admin/members', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({
+        teamId: teamId,
+        firstName: 'Manual',
+        lastName: 'Addition',
+        email: 'manual@example.com',
+        bacLevel: 2,
+        isLeader: false,
+        foodDiet: 'regina'
+      })
+    });
+
+    expect(addResponse.status).toBe(200);
+    const addData = await addResponse.json();
+    expect(addData.success).toBe(true);
+    expect(addData.member.firstName).toBe('Manual');
+  });
+
+  it('should update a member', async () => {
+    // First create team and member
+    const createResponse = await SELF.fetch('http://localhost/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        createNewTeam: true,
+        teamName: 'Member Update Team',
+        teamPassword: 'updatetest',
+        members: [
+          {
+            firstName: 'Original',
+            lastName: 'Name',
+            email: 'original@example.com',
+            bacLevel: 1,
+            isLeader: true,
+            foodDiet: 'none'
+          }
+        ]
+      })
+    });
+
+    const createData = await createResponse.json();
+    const memberId = createData.members[0].id;
+
+    // Update the member
+    const updateResponse = await SELF.fetch(`http://localhost/api/admin/members/${memberId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({
+        firstName: 'Updated',
+        lastName: 'Person',
+        email: 'updated@example.com',
+        bacLevel: 5
+      })
+    });
+
+    expect(updateResponse.status).toBe(200);
+    const updateData = await updateResponse.json();
+    expect(updateData.success).toBe(true);
+  });
+
+  it('should delete a member', async () => {
+    // First create team and member
+    const createResponse = await SELF.fetch('http://localhost/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        createNewTeam: true,
+        teamName: 'Member Delete Team',
+        teamPassword: 'deletetest',
+        members: [
+          {
+            firstName: 'ToDelete',
+            lastName: 'Member',
+            email: 'todelete@example.com',
+            bacLevel: 1,
+            isLeader: true,
+            foodDiet: 'none'
+          }
+        ]
+      })
+    });
+
+    const createData = await createResponse.json();
+    const memberId = createData.members[0].id;
+
+    // Delete the member
+    const deleteResponse = await SELF.fetch(`http://localhost/api/admin/members/${memberId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+
+    expect(deleteResponse.status).toBe(200);
+    const deleteData = await deleteResponse.json();
+    expect(deleteData.success).toBe(true);
+  });
+
+  it('should batch delete members', async () => {
+    // Create team with multiple members
+    const createResponse = await SELF.fetch('http://localhost/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        createNewTeam: true,
+        teamName: 'Batch Delete Team',
+        teamPassword: 'batchtest',
+        members: [
+          {
+            firstName: 'Batch',
+            lastName: 'Leader',
+            email: 'batchleader@example.com',
+            bacLevel: 3,
+            isLeader: true,
+            foodDiet: 'none'
+          }
+        ]
+      })
+    });
+
+    const createData = await createResponse.json();
+    const teamId = createData.team.id;
+
+    // Add more members via admin
+    const add1 = await SELF.fetch('http://localhost/api/admin/members', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({
+        teamId: teamId,
+        firstName: 'BatchOne',
+        lastName: 'Delete',
+        email: 'batch1@example.com',
+        bacLevel: 1
+      })
+    });
+
+    const add2 = await SELF.fetch('http://localhost/api/admin/members', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({
+        teamId: teamId,
+        firstName: 'BatchTwo',
+        lastName: 'Delete',
+        email: 'batch2@example.com',
+        bacLevel: 2
+      })
+    });
+
+    const addData1 = await add1.json();
+    const addData2 = await add2.json();
+
+    // Batch delete both
+    const batchResponse = await SELF.fetch('http://localhost/api/admin/members/delete-batch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({
+        memberIds: [addData1.member.id, addData2.member.id]
+      })
+    });
+
+    expect(batchResponse.status).toBe(200);
+    const batchData = await batchResponse.json();
+    expect(batchData.success).toBe(true);
+    expect(batchData.deleted).toBe(2);
+  });
+
+  it('should require authorization for member operations', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/members', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        teamId: 1,
+        firstName: 'Unauthorized',
+        lastName: 'Member',
+        email: 'unauth@example.com'
+      })
+    });
+
+    expect(response.status).toBe(401);
+  });
+});
+
+describe('Admin - List Members', () => {
+  it('should list all members with authorization', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/members', {
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.members).toBeDefined();
+    expect(Array.isArray(data.members)).toBe(true);
+  });
+
+  it('should reject unauthorized access to member list', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/members');
+
+    expect(response.status).toBe(401);
+  });
+});
