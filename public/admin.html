@@ -28,7 +28,7 @@
       <!-- Stats Section -->
       <div class="disclosure-group open" data-disclosure="stats">
         <div class="disclosure-header" onclick="toggleDisclosure('stats')">
-          <h2>Vue d'ensemble</h2>
+          <h2><span class="disclosure-chevron">&#9654;</span> Vue d'ensemble</h2>
           <div class="header-actions" onclick="event.stopPropagation()">
             <button type="button" id="export-all-btn" class="btn btn-secondary btn-sm">Exporter CSV</button>
             <button type="button" id="refresh-btn" class="btn btn-secondary btn-sm">Rafraîchir</button>
@@ -42,7 +42,7 @@
       <!-- Food Stats -->
       <div class="disclosure-group open" data-disclosure="food">
         <div class="disclosure-header" onclick="toggleDisclosure('food')">
-          <h2>Préférences alimentaires</h2>
+          <h2><span class="disclosure-chevron">&#9654;</span> Préférences alimentaires</h2>
         </div>
         <div class="disclosure-body">
           <div id="food-stats" class="food-stats"></div>
@@ -52,7 +52,7 @@
       <!-- Settings Section -->
       <div class="disclosure-group" data-disclosure="settings" id="settings-section">
         <div class="disclosure-header" onclick="toggleDisclosure('settings')">
-          <h2>Paramètres</h2>
+          <h2><span class="disclosure-chevron">&#9654;</span> Paramètres</h2>
           <div class="header-actions" onclick="event.stopPropagation()">
             <button type="button" id="save-settings-btn" class="btn btn-primary btn-sm" disabled>
               Enregistrer
@@ -111,7 +111,7 @@
       <!-- Import Section -->
       <div class="disclosure-group" data-disclosure="import">
         <div class="disclosure-header" onclick="toggleDisclosure('import')">
-          <h2>Importer des données</h2>
+          <h2><span class="disclosure-chevron">&#9654;</span> Importer des données</h2>
         </div>
         <div class="disclosure-body">
           <div class="settings-card">
@@ -142,7 +142,7 @@
       <!-- Quick Actions -->
       <div class="disclosure-group open" data-disclosure="actions">
         <div class="disclosure-header" onclick="toggleDisclosure('actions')">
-          <h2>Actions rapides</h2>
+          <h2><span class="disclosure-chevron">&#9654;</span> Actions rapides</h2>
         </div>
         <div class="disclosure-body">
           <div class="quick-actions">
@@ -156,7 +156,7 @@
       <!-- Teams Section -->
       <div class="disclosure-group open" data-disclosure="teams">
         <div class="disclosure-header" onclick="toggleDisclosure('teams')">
-          <h2>Équipes et membres</h2>
+          <h2><span class="disclosure-chevron">&#9654;</span> Équipes et membres</h2>
         </div>
         <div class="disclosure-body">
           <div id="teams-container"></div>

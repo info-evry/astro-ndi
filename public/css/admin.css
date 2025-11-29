@@ -76,11 +76,15 @@
 }
 
 /* Teams */
+.teams-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .team-block {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  margin-bottom: 1rem;
-  overflow: hidden;
 }
 
 .team-header {
@@ -145,6 +149,15 @@
 
 .members-table tr:hover td {
   background: var(--color-bg);
+}
+
+.members-table a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.members-table a:hover {
+  text-decoration: underline;
 }
 
 .members-table .checkbox-col {
@@ -299,7 +312,6 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   margin-bottom: 1rem;
-  overflow: hidden;
 }
 
 .disclosure-header {
@@ -310,6 +322,7 @@
   align-items: center;
   cursor: pointer;
   user-select: none;
+  transition: background 0.15s ease;
 }
 
 .disclosure-header:hover {
@@ -324,13 +337,18 @@
   gap: 0.5rem;
 }
 
-.disclosure-header h2::before {
-  content: '▶';
-  font-size: 0.75rem;
+.disclosure-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 0.625rem;
+  color: var(--color-text-muted);
   transition: transform 0.2s ease;
 }
 
-.disclosure-group.open .disclosure-header h2::before {
+.disclosure-group.open .disclosure-chevron {
   transform: rotate(90deg);
 }
 
