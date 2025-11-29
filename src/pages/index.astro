@@ -3,137 +3,238 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout title="Nuit de l'Info - Inscription">
-  <main class="container">
-    <header class="page-header">
-      <h1>Nuit de l'Info</h1>
-      <p class="subtitle">Inscription des équipes</p>
-      <div id="stats" class="stats"></div>
-    </header>
-
-    <!-- Capacity Warning (shown when close to or at capacity) -->
-    <div id="capacity-warning" class="capacity-warning hidden">
-      <span class="capacity-warning-icon">&#9888;</span>
-      <span class="capacity-warning-text" id="capacity-warning-text"></span>
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="orb orb-blue"></div>
+      <div class="orb orb-cyan"></div>
+      <div class="orb orb-indigo"></div>
+      <div class="grid-overlay"></div>
     </div>
 
-    <!-- Teams Section with Disclosure -->
-    <div id="teams-section" class="disclosure-group open" data-disclosure="teams">
-      <div class="disclosure-header" onclick="toggleDisclosure('teams')">
-        <h2><span class="disclosure-chevron">&#9654;</span> Équipes Inscrites</h2>
-        <span class="disclosure-badge" id="teams-badge">0</span>
+    <div class="hero-content container">
+      <p class="hero-badge">
+        <span class="badge-dot"></span>
+        <span>Édition 2024</span>
+      </p>
+
+      <h1 class="hero-title large">
+        <span class="title-line">Nuit de</span>
+        <span class="title-line gradient-text">l'Info</span>
+      </h1>
+
+      <p class="hero-description">
+        Inscrivez votre équipe pour la plus grande compétition de développement web de France.
+        24 heures pour relever des défis techniques.
+      </p>
+
+      <!-- Modern KPI Stats -->
+      <div id="hero-stats" class="hero-stats">
+        <div class="kpi-card">
+          <span class="kpi-value" id="kpi-teams">-</span>
+          <span class="kpi-label">équipes</span>
+        </div>
+        <div class="kpi-divider"></div>
+        <div class="kpi-card">
+          <span class="kpi-value" id="kpi-participants">-</span>
+          <span class="kpi-label">participants</span>
+        </div>
+        <div class="kpi-divider"></div>
+        <div class="kpi-card">
+          <span class="kpi-value" id="kpi-spots">-</span>
+          <span class="kpi-label">places restantes</span>
+        </div>
       </div>
-      <div class="disclosure-body">
+
+      <div class="hero-actions">
+        <a href="#inscription" class="btn btn-primary btn-lg">
+          S'inscrire maintenant
+        </a>
+        <a href="#teams" class="btn btn-secondary btn-lg">
+          Voir les équipes
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="container">
+      <!-- Capacity Warning -->
+      <div id="capacity-warning" class="capacity-warning hidden">
+        <span class="capacity-warning-icon">&#9888;</span>
+        <span class="capacity-warning-text" id="capacity-warning-text"></span>
+      </div>
+
+      <!-- Teams Section -->
+      <section id="teams" class="content-section">
+        <div class="section-header-row">
+          <h2>Équipes inscrites <span class="team-count-badge" id="teams-badge">0</span></h2>
+        </div>
         <div id="teams-list" class="teams-grid"></div>
-      </div>
-    </div>
+      </section>
 
-    <!-- Registration Form Section -->
-    <section id="form-section" class="section">
-      <h2>Formulaire d'Inscription</h2>
+      <!-- Registration Form Section -->
+      <section id="inscription" class="content-section">
+        <h2>Formulaire d'inscription</h2>
 
-      <form id="registration-form" class="form">
-        <div class="form-card">
-          <h3 class="form-card-title">Équipe</h3>
+        <form id="registration-form" class="form">
+          <div class="form-card">
+            <h3 class="form-card-title">Équipe</h3>
 
-          <div class="radio-group">
-            <label class="radio-label">
-              <input type="radio" name="team-mode" value="new" checked>
-              <span>Créer une nouvelle équipe</span>
-            </label>
-            <label class="radio-label">
-              <input type="radio" name="team-mode" value="join">
-              <span>Rejoindre une équipe existante</span>
-            </label>
-          </div>
-
-          <div id="new-team-fields" class="team-fields">
-            <div class="form-group">
-              <label for="team-name">Nom de l'équipe *</label>
-              <input type="text" id="team-name" name="teamName" maxlength="128">
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" name="team-mode" value="new" checked>
+                <span>Créer une nouvelle équipe</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="team-mode" value="join">
+                <span>Rejoindre une équipe existante</span>
+              </label>
             </div>
-            <div class="form-group">
-              <label for="team-desc">Description (optionnelle)</label>
-              <textarea id="team-desc" name="teamDescription" maxlength="256" rows="2"></textarea>
+
+            <div id="new-team-fields" class="team-fields">
+              <div class="form-group">
+                <label for="team-name">Nom de l'équipe *</label>
+                <input type="text" id="team-name" name="teamName" maxlength="128">
+              </div>
+              <div class="form-group">
+                <label for="team-desc">Description (optionnelle)</label>
+                <textarea id="team-desc" name="teamDescription" maxlength="256" rows="2"></textarea>
+              </div>
+              <div class="form-group">
+                <label for="team-password">Mot de passe de l'équipe *</label>
+                <input type="password" id="team-password" name="teamPassword" maxlength="64" placeholder="Les autres membres en auront besoin pour rejoindre">
+              </div>
             </div>
-            <div class="form-group">
-              <label for="team-password">Mot de passe de l'équipe *</label>
-              <input type="password" id="team-password" name="teamPassword" maxlength="64" placeholder="Les autres membres en auront besoin pour rejoindre">
+
+            <div id="join-team-fields" class="team-fields hidden">
+              <div class="form-group">
+                <label for="team-select">Sélectionner une équipe *</label>
+                <select id="team-select" name="teamId">
+                  <option value="">-- Choisir une équipe --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="join-password">Mot de passe de l'équipe *</label>
+                <input type="password" id="join-password" name="joinPassword" maxlength="64" placeholder="Demandez-le au chef d'équipe">
+              </div>
             </div>
           </div>
 
-          <div id="join-team-fields" class="team-fields hidden">
-            <div class="form-group">
-              <label for="team-select">Sélectionner une équipe *</label>
-              <select id="team-select" name="teamId">
-                <option value="">-- Choisir une équipe --</option>
-              </select>
+          <div class="form-card">
+            <div class="form-card-header">
+              <h3 class="form-card-title">Membres <span id="member-count">(1)</span></h3>
+              <button type="button" id="add-member" class="btn btn-secondary btn-sm">
+                + Ajouter un membre
+              </button>
             </div>
-            <div class="form-group">
-              <label for="join-password">Mot de passe de l'équipe *</label>
-              <input type="password" id="join-password" name="joinPassword" maxlength="64" placeholder="Demandez-le au chef d'équipe">
-            </div>
-          </div>
-        </div>
 
-        <div class="form-card">
-          <div class="form-card-header">
-            <h3 class="form-card-title">Membres <span id="member-count">(1)</span></h3>
-            <button type="button" id="add-member" class="btn btn-secondary btn-sm">
-              + Ajouter un membre
-            </button>
+            <div id="members-container"></div>
           </div>
 
-          <div id="members-container"></div>
-        </div>
+          <div id="form-errors" class="errors hidden"></div>
 
-        <div id="form-errors" class="errors hidden"></div>
-
-        <button type="submit" id="submit-btn" class="btn btn-primary">
-          S'inscrire
-        </button>
-      </form>
-    </section>
-
-    <div id="success-modal" class="modal hidden">
-      <div class="modal-content">
-        <h3>Inscription réussie!</h3>
-        <p id="success-message"></p>
-        <button type="button" class="btn btn-primary" onclick="location.reload()">
-          Fermer
-        </button>
-      </div>
-    </div>
-
-    <!-- Team View Modal -->
-    <div id="team-view-modal" class="modal hidden">
-      <div class="modal-content modal-lg">
-        <div id="team-view-auth" class="team-view-section">
-          <h3 id="team-view-title">Voir l'équipe</h3>
-          <p class="team-view-desc">Entrez le mot de passe de l'équipe pour voir ses membres.</p>
-          <div class="form-group">
-            <label for="team-view-password">Mot de passe</label>
-            <input type="password" id="team-view-password" placeholder="Mot de passe de l'équipe">
-          </div>
-          <p id="team-view-error" class="error-text hidden"></p>
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" id="team-view-cancel">Annuler</button>
-            <button type="button" class="btn btn-primary" id="team-view-submit">Voir les membres</button>
-          </div>
-        </div>
-        <div id="team-view-content" class="team-view-section hidden">
-          <div class="team-view-header">
-            <div>
-              <h3 id="team-detail-name"></h3>
-              <p id="team-detail-desc" class="team-view-desc"></p>
-            </div>
-            <button type="button" class="btn btn-secondary" id="team-view-close">Fermer</button>
-          </div>
-          <div id="team-members-list" class="team-members-list"></div>
-        </div>
-      </div>
+          <button type="submit" id="submit-btn" class="btn btn-primary btn-lg">
+            S'inscrire
+          </button>
+        </form>
+      </section>
     </div>
   </main>
+
+  <!-- Modals -->
+  <div id="success-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Inscription réussie!</h3>
+      <p id="success-message"></p>
+      <button type="button" class="btn btn-primary" onclick="location.reload()">
+        Fermer
+      </button>
+    </div>
+  </div>
+
+  <div id="team-view-modal" class="modal hidden">
+    <div class="modal-content modal-lg">
+      <div id="team-view-auth" class="team-view-section">
+        <h3 id="team-view-title">Voir l'équipe</h3>
+        <p class="team-view-desc">Entrez le mot de passe de l'équipe pour voir ses membres.</p>
+        <div class="form-group">
+          <label for="team-view-password">Mot de passe</label>
+          <input type="password" id="team-view-password" placeholder="Mot de passe de l'équipe">
+        </div>
+        <p id="team-view-error" class="error-text hidden"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="team-view-cancel">Annuler</button>
+          <button type="button" class="btn btn-primary" id="team-view-submit">Voir les membres</button>
+        </div>
+      </div>
+      <div id="team-view-content" class="team-view-section hidden">
+        <div class="team-view-header">
+          <div>
+            <h3 id="team-detail-name"></h3>
+            <p id="team-detail-desc" class="team-view-desc"></p>
+          </div>
+          <button type="button" class="btn btn-secondary" id="team-view-close">Fermer</button>
+        </div>
+        <div id="team-members-list" class="team-members-list"></div>
+      </div>
+    </div>
+  </div>
 </BaseLayout>
+
+<style>
+  /* Page-Specific Styles (Hero styles from shared design system) */
+
+  /* Main Content */
+  .main-content {
+    background: var(--color-bg);
+    position: relative;
+    z-index: 1;
+  }
+
+  .main-content .container {
+    max-width: 960px;
+    padding: var(--space-16) var(--space-4);
+  }
+
+  .content-section {
+    margin-bottom: var(--space-16);
+  }
+
+  .content-section h2 {
+    font-size: var(--text-2xl);
+    margin-bottom: var(--space-6);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .section-header-row {
+    margin-bottom: var(--space-6);
+  }
+
+  .team-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 var(--space-2);
+    background: var(--color-primary);
+    color: white;
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .main-content .container {
+      padding: var(--space-10) var(--space-4);
+    }
+  }
+</style>
 
 <script>
 /**
@@ -154,17 +255,21 @@ const state = {
 
 // DOM Elements
 const elements = {
-  statsContainer: document.getElementById('stats'),
+  // Hero KPIs
+  kpiTeams: document.getElementById('kpi-teams'),
+  kpiParticipants: document.getElementById('kpi-participants'),
+  kpiSpots: document.getElementById('kpi-spots'),
+  // Teams
   teamsList: document.getElementById('teams-list'),
   teamsBadge: document.getElementById('teams-badge'),
   teamSelect: document.getElementById('team-select'),
+  // Form
   newTeamFields: document.getElementById('new-team-fields'),
   joinTeamFields: document.getElementById('join-team-fields'),
   membersContainer: document.getElementById('members-container'),
   memberCount: document.getElementById('member-count'),
   addMemberBtn: document.getElementById('add-member'),
   form: document.getElementById('registration-form'),
-  formSection: document.getElementById('form-section'),
   submitBtn: document.getElementById('submit-btn'),
   errorsDiv: document.getElementById('form-errors'),
   successModal: document.getElementById('success-modal'),
@@ -184,14 +289,6 @@ const elements = {
   teamDetailName: document.getElementById('team-detail-name'),
   teamDetailDesc: document.getElementById('team-detail-desc'),
   teamMembersList: document.getElementById('team-members-list')
-};
-
-// Disclosure toggle function (global for onclick)
-window.toggleDisclosure = function(name) {
-  const group = document.querySelector(`[data-disclosure="${name}"]`);
-  if (group) {
-    group.classList.toggle('open');
-  }
 };
 
 // API Functions
@@ -245,20 +342,10 @@ function renderStats(stats) {
 
   state.isAtCapacity = isAtCapacity;
 
-  elements.statsContainer.innerHTML = `
-    <div class="stat">
-      <span class="stat-value">${stats.total_teams}</span>
-      <span class="stat-label">équipes</span>
-    </div>
-    <div class="stat">
-      <span class="stat-value">${stats.total_participants}/${stats.max_participants}</span>
-      <span class="stat-label">participants</span>
-    </div>
-    <div class="stat">
-      <span class="stat-value">${stats.available_spots}</span>
-      <span class="stat-label">places disponibles</span>
-    </div>
-  `;
+  // Update hero KPIs
+  elements.kpiTeams.textContent = stats.total_teams;
+  elements.kpiParticipants.textContent = `${stats.total_participants}/${stats.max_participants}`;
+  elements.kpiSpots.textContent = stats.available_spots;
 
   // Handle capacity warning
   if (isAtCapacity) {
@@ -476,7 +563,7 @@ function removeMember(index) {
 
   const card = elements.membersContainer.querySelector(`[data-index="${index}"]`);
   if (card) {
-    card.style.animation = 'fadeIn 0.2s ease-out reverse';
+    card.style.animation = 'fadeInUp 0.2s ease-out reverse';
     setTimeout(() => {
       card.remove();
       state.members = state.members.filter(m => m.index !== index);
