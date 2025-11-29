@@ -3,6 +3,8 @@
  * Full CRUD functionality for teams and members
  */
 
+import { initSettings, loadSettings } from './admin/admin-settings.js';
+
 // State
 let adminToken = localStorage.getItem('ndi_admin_token') || '';
 let teamsData = [];
@@ -78,6 +80,14 @@ window.closeModal = function(modalId) {
 function openModal(modalId) {
   document.getElementById(modalId).classList.remove('hidden');
 }
+
+// Disclosure group toggle
+window.toggleDisclosure = function(name) {
+  const group = document.querySelector(`[data-disclosure="${name}"]`);
+  if (group) {
+    group.classList.toggle('open');
+  }
+};
 
 // Render Functions
 function renderStats(stats) {
@@ -473,6 +483,7 @@ async function handleAuth() {
     await loadData();
     localStorage.setItem('ndi_admin_token', token);
     showAdmin();
+    initSettings();
   } catch (err) {
     if (err.message === 'Unauthorized') {
       showAuthError('Token invalide');
@@ -489,6 +500,8 @@ async function loadData() {
   renderStats(stats);
   renderFoodStats(stats.food_preferences);
   renderTeams(teams);
+  // Refresh settings data
+  await loadSettings();
 }
 
 async function handleExportAll() {
@@ -551,6 +564,7 @@ async function init() {
     try {
       await loadData();
       showAdmin();
+      initSettings();
     } catch (err) {
       showAuth();
       if (err.message === 'Unauthorized') {

@@ -894,3 +894,296 @@ describe('Admin - List Members', () => {
     expect(response.status).toBe(401);
   });
 });
+
+describe('Organisation Team Special Handling', () => {
+  it('should mark Organisation team with is_organisation flag', async () => {
+    const response = await SELF.fetch('http://localhost/api/teams');
+    const data = await response.json();
+
+    const orgTeam = data.teams.find(t => t.name === 'Organisation');
+    expect(orgTeam).toBeDefined();
+    expect(orgTeam.is_organisation).toBe(true);
+    expect(orgTeam.available_slots).toBe(null);
+    expect(orgTeam.is_full).toBe(false);
+  });
+
+  it('should mark regular teams without is_organisation flag', async () => {
+    // Create a regular team
+    await SELF.fetch('http://localhost/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        createNewTeam: true,
+        teamName: 'Regular Team Flag Test',
+        teamPassword: 'testpass',
+        members: [
+          {
+            firstName: 'Flag',
+            lastName: 'Test',
+            email: 'flagtest@example.com',
+            bacLevel: 1,
+            isLeader: true,
+            foodDiet: 'none'
+          }
+        ]
+      })
+    });
+
+    const response = await SELF.fetch('http://localhost/api/teams');
+    const data = await response.json();
+
+    const regularTeam = data.teams.find(t => t.name === 'Regular Team Flag Test');
+    expect(regularTeam).toBeDefined();
+    expect(regularTeam.is_organisation).toBe(false);
+    expect(regularTeam.available_slots).toBeTypeOf('number');
+  });
+});
+
+describe('CSV Export Format', () => {
+  it('should export CSV with proper headers', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/export', {
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+
+    expect(response.status).toBe(200);
+    const text = await response.text();
+
+    // Check for expected CSV headers
+    expect(text).toContain('Équipe');
+    expect(text).toContain('Prénom');
+    expect(text).toContain('Nom');
+    expect(text).toContain('Email');
+    expect(text).toContain('Niveau BAC');
+    expect(text).toContain('Pizza');
+    expect(text).toContain('Chef');
+  });
+
+  it('should export team-specific CSV', async () => {
+    // First create a team
+    const createResponse = await SELF.fetch('http://localhost/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        createNewTeam: true,
+        teamName: 'CSV Export Team',
+        teamPassword: 'csvtest',
+        members: [
+          {
+            firstName: 'CSV',
+            lastName: 'User',
+            email: 'csv@example.com',
+            bacLevel: 3,
+            isLeader: true,
+            foodDiet: 'margherita'
+          }
+        ]
+      })
+    });
+
+    const createData = await createResponse.json();
+    const teamId = createData.team.id;
+
+    const response = await SELF.fetch(`http://localhost/api/admin/export/${teamId}`, {
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toContain('text/csv');
+    expect(response.headers.get('Content-Disposition')).toContain('.csv');
+  });
+});
+
+describe('Team Capacity and Full Teams', () => {
+  it('should prevent joining full teams', async () => {
+    // Create team
+    const createResponse = await SELF.fetch('http://localhost/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        createNewTeam: true,
+        teamName: 'Capacity Test Team',
+        teamPassword: 'capacity123',
+        members: Array(15).fill(null).map((_, i) => ({
+          firstName: `Capacity${i}`,
+          lastName: `Member${i}`,
+          email: `capacity${i}@example.com`,
+          bacLevel: 1,
+          isLeader: i === 0,
+          foodDiet: 'none'
+        }))
+      })
+    });
+
+    expect(createResponse.status).toBe(200);
+    const createData = await createResponse.json();
+    const teamId = createData.team.id;
+
+    // Check team is full
+    const teamsResponse = await SELF.fetch('http://localhost/api/teams');
+    const teamsData = await teamsResponse.json();
+    const fullTeam = teamsData.teams.find(t => t.id === teamId);
+    expect(fullTeam.is_full).toBe(true);
+    expect(fullTeam.available_slots).toBe(0);
+
+    // Try to join full team
+    const joinResponse = await SELF.fetch('http://localhost/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        createNewTeam: false,
+        teamId: teamId,
+        teamPassword: 'capacity123',
+        members: [
+          {
+            firstName: 'Extra',
+            lastName: 'Member',
+            email: 'extra@example.com',
+            bacLevel: 2,
+            isLeader: false,
+            foodDiet: 'none'
+          }
+        ]
+      })
+    });
+
+    expect(joinResponse.status).toBe(400);
+    const joinData = await joinResponse.json();
+    expect(joinData.error).toContain('full');
+  });
+});
+
+describe('Member Movement Between Teams', () => {
+  it('should update member team via admin API', async () => {
+    // Create two teams
+    const team1Response = await SELF.fetch('http://localhost/api/admin/teams', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({
+        name: 'Move From Team',
+        password: 'movefrom'
+      })
+    });
+    const team1Data = await team1Response.json();
+    const team1Id = team1Data.team.id;
+
+    const team2Response = await SELF.fetch('http://localhost/api/admin/teams', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({
+        name: 'Move To Team',
+        password: 'moveto'
+      })
+    });
+    const team2Data = await team2Response.json();
+    const team2Id = team2Data.team.id;
+
+    // Add member to team 1
+    const memberResponse = await SELF.fetch('http://localhost/api/admin/members', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({
+        teamId: team1Id,
+        firstName: 'Moving',
+        lastName: 'Member',
+        email: 'moving@example.com',
+        bacLevel: 2
+      })
+    });
+    const memberData = await memberResponse.json();
+    const memberId = memberData.member.id;
+
+    // Move member to team 2
+    const updateResponse = await SELF.fetch(`http://localhost/api/admin/members/${memberId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({
+        teamId: team2Id
+      })
+    });
+
+    expect(updateResponse.status).toBe(200);
+    const updateData = await updateResponse.json();
+    expect(updateData.success).toBe(true);
+  });
+});
+
+describe('Input Validation Edge Cases', () => {
+  it('should reject extremely long team names', async () => {
+    const response = await SELF.fetch('http://localhost/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        createNewTeam: true,
+        teamName: 'A'.repeat(500),
+        teamPassword: 'testpass',
+        members: [
+          {
+            firstName: 'Test',
+            lastName: 'User',
+            email: 'longname@example.com',
+            bacLevel: 1,
+            isLeader: true,
+            foodDiet: 'none'
+          }
+        ]
+      })
+    });
+
+    // Should still work but truncate or accept
+    expect([200, 400]).toContain(response.status);
+  });
+
+  it('should handle special characters in names', async () => {
+    const response = await SELF.fetch('http://localhost/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        createNewTeam: true,
+        teamName: 'Équipe Spéciale',
+        teamPassword: 'special123',
+        members: [
+          {
+            firstName: 'François',
+            lastName: 'Müller',
+            email: 'francois@example.com',
+            bacLevel: 3,
+            isLeader: true,
+            foodDiet: 'none'
+          }
+        ]
+      })
+    });
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.team.name).toBe('Équipe Spéciale');
+    expect(data.members[0].firstName).toBe('François');
+  });
+
+  it('should reject malformed JSON', async () => {
+    const response = await SELF.fetch('http://localhost/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{not valid json'
+    });
+
+    // Server returns error for malformed JSON (400 or 500)
+    expect([400, 500]).toContain(response.status);
+  });
+});

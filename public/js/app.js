@@ -117,7 +117,7 @@ function renderTeams(teams) {
       <div class="team-meta">
         <span class="team-members">${team.member_count} membre${team.member_count > 1 ? 's' : ''}</span>
         <span class="team-spots ${team.is_full ? 'full' : ''}">
-          ${team.is_full ? 'Complet' : `${team.available_slots} place${team.available_slots > 1 ? 's' : ''}`}
+          ${team.is_organisation ? 'Illimité' : (team.is_full ? 'Complet' : `${team.available_slots} place${team.available_slots > 1 ? 's' : ''}`)}
         </span>
       </div>
       <div class="team-view-hint">Cliquez pour voir les membres</div>
@@ -134,7 +134,7 @@ function renderTeams(teams) {
 }
 
 function renderTeamSelect(teams) {
-  const availableTeams = teams.filter(t => !t.is_full);
+  const availableTeams = teams.filter(t => !t.is_full && !t.is_organisation);
   elements.teamSelect.innerHTML = `
     <option value="">-- Choisir une équipe --</option>
     ${availableTeams.map(team => `

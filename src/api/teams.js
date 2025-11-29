@@ -16,11 +16,11 @@ export async function listTeams(request, env) {
     // Add available slots info
     const teamsWithSlots = teams.map(team => {
       const isOrganisation = team.name === 'Organisation';
-      const availableSlots = isOrganisation ? Infinity : maxTeamSize - team.member_count;
       return {
         ...team,
-        available_slots: availableSlots,
-        is_full: !isOrganisation && team.member_count >= maxTeamSize
+        available_slots: isOrganisation ? null : maxTeamSize - team.member_count,
+        is_full: !isOrganisation && team.member_count >= maxTeamSize,
+        is_organisation: isOrganisation
       };
     });
 
