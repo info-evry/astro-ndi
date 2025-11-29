@@ -1,3 +1,28 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  adminStyles?: boolean;
+}
+
+const { title, description = "Inscription des équipes pour la Nuit de l'Info", adminStyles = false } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content={description}>
+  <meta name="theme-color" content="#2563eb">
+  <title>{title}</title>
+</head>
+<body>
+  <slot />
+</body>
+</html>
+
+<style is:global>
 /* Nuit de l'Info - Registration System Styles */
 /* Design System: 4px base unit, consistent radii, accessible contrast */
 
@@ -1186,3 +1211,4 @@ input:focus:not(:focus-visible),
 select:focus:not(:focus-visible) {
   outline: none;
 }
+</style>

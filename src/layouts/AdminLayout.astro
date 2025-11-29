@@ -1,3 +1,18 @@
+---
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<BaseLayout title={title} description="Administration des équipes pour la Nuit de l'Info">
+  <slot />
+</BaseLayout>
+
+<style is:global>
 /* Admin Dashboard Styles */
 
 .admin .header {
@@ -582,3 +597,4 @@
     width: 100%;
   }
 }
+</style>
