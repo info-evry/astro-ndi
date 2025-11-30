@@ -26,7 +26,8 @@ import { getSettings, updateSettings } from './features/admin/admin.settings.js'
 import { importCSV } from './features/admin/admin.import.js';
 
 export function createRouter() {
-  const router = new Router();
+  // Pass base path to handle subpath deployments
+  const router = new Router('/nuit-de-linfo');
 
   // Public API routes
   router.get('/api/config', getConfig);
