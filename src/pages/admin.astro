@@ -335,7 +335,7 @@ function toastError(message) {
 let adminToken = localStorage.getItem('ndi_admin_token') || '';
 
 async function api(endpoint, options = {}) {
-  const response = await fetch(`/api${endpoint}`, {
+  const response = await fetch(`./api${endpoint}`, {
     headers: {
       'Authorization': `Bearer ${adminToken}`,
       'Content-Type': 'application/json',
@@ -886,7 +886,7 @@ async function loadData() {
 
 async function loadPizzasConfig() {
   try {
-    const response = await fetch('/api/config');
+    const response = await fetch('./api/config');
     const { config } = await response.json();
     pizzasConfig = config.pizzas || [];
     updatePizzaSelect();
