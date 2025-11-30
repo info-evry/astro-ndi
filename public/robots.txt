@@ -1,5 +1,5 @@
 # Robots.txt for NDI Registration
-# https://ndi.info-evry.fr
+# https://asso.info-evry.fr/nuit-de-linfo
 
 User-agent: *
 Allow: /
@@ -7,4 +7,4 @@ Disallow: /admin
 Disallow: /api/
 
 # Sitemap
-Sitemap: https://ndi.info-evry.fr/sitemap.xml
+Sitemap: https://asso.info-evry.fr/nuit-de-linfo/sitemap.xml

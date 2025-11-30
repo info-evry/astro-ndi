@@ -3,6 +3,7 @@ import cloudflare from '@astrojs/cloudflare';
 
 export default defineConfig({
   output: 'server',
+  base: '/nuit-de-linfo',
   adapter: cloudflare({
     platformProxy: {
       enabled: true
