@@ -23,14 +23,15 @@ interface Props {
 const {
   title,
   description = `Inscription des équipes pour la ${ndiEvent.name} ${ndiEvent.year} - ${ndiEvent.edition}`,
-  image = "/og.png",
+  image = "og.png",
   adminStyles = false,
   showHeader = true,
   showFooter = true,
   noindex = false
 } = Astro.props;
 
-const siteUrl = associationInfo.sites.ndi.url;
+// Ensure siteUrl has trailing slash for relative URL resolution
+const siteUrl = associationInfo.sites.ndi.url.replace(/\/?$/, '/');
 const canonicalUrl = new URL(Astro.url.pathname, siteUrl).href;
 const ogImageUrl = new URL(image, siteUrl).href;
 ---
