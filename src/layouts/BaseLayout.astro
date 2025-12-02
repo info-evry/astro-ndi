@@ -8,7 +8,7 @@ import ndiEvent from '../../knowledge/src/ndi/event.json';
 
 const mobileNavItems = [
   { href: '/#teams', label: 'Équipes', icon: 'person.3' },
-  { href: '/#register', label: 'Inscription', icon: 'square.and.pencil' },
+  { href: '/#inscription', label: 'Inscription', icon: 'square.and.pencil' },
 ];
 
 interface Props {
@@ -95,7 +95,7 @@ const ogImageUrl = new URL(image, siteUrl).href;
 
   <MobileNav
     items={mobileNavItems}
-    ctaHref="/#register"
+    ctaHref="/#inscription"
     ctaLabel="S'inscrire"
     ctaIcon="person.badge.plus"
   />
