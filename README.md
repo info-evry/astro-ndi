@@ -1,39 +1,83 @@
 # NDI Registration - Nuit de l'Info
 
-Registration platform for the "Nuit de l'Info" event organized by Asso Info Evry at Université d'Évry.
+Registration platform for the "Nuit de l'Info" event organized by Asso Info Evry at Université d'Évry Val-d'Essonne.
+
+**Live site**: https://asso.info-evry.fr/nuit-de-linfo
 
 ## Features
 
+### Public
 - Team registration with password protection
-- Member management (BAC level, food preferences)
-- Admin dashboard with full CRUD operations
-- Real-time capacity tracking
-- CSV export (standard + official NDI format)
+- Join existing teams with team password
+- View team members (password protected)
+- Real-time capacity and team statistics
 - Mobile-responsive glassmorphism design
+- SF Symbols icons
+
+### Admin Dashboard (`/admin`)
+- Secure authentication with admin token
+- Full CRUD for teams and members
+- Dynamic settings management (capacity, deadlines, pizza menu)
+- CSV export (standard format + official NDI format)
+- Import members from CSV
+- Batch operations
 
 ## Tech Stack
 
-- **Frontend**: Astro 5.x with vanilla JavaScript
-- **Backend**: Cloudflare Workers (serverless)
+- **Framework**: Astro 5.x (SSR mode)
+- **Runtime**: Cloudflare Workers
 - **Database**: Cloudflare D1 (SQLite)
-- **Storage**: Cloudflare KV (config/sessions)
+- **Storage**: Cloudflare KV (configuration)
 - **Design**: Shared design system via git submodule
+- **Content**: Shared knowledge base via git submodule
+- **Testing**: Vitest with Cloudflare Workers pool
 
 ## Project Structure
 
 ```
-ndi/
+astro-ndi/
 ├── src/
-│   ├── pages/           # Astro pages (index, admin)
-│   ├── layouts/         # Page layouts
-│   └── api/             # API routes (Cloudflare Workers)
-├── design/              # Shared design system (submodule)
-├── knowledge/           # Shared content (submodule)
-├── migrations/          # D1 database migrations
-├── docs/                # Documentation
-│   ├── setup.md         # Initial setup guide
-│   └── deploy.md        # Deployment guide
-└── wrangler.jsonc       # Cloudflare config
+│   ├── pages/
+│   │   ├── index.astro       # Public registration page
+│   │   ├── admin.astro       # Admin dashboard
+│   │   └── api/[...slug].ts  # API route handler
+│   ├── api/                  # API handlers
+│   │   ├── admin.js          # Admin CRUD operations
+│   │   ├── config.js         # Public config endpoint
+│   │   ├── register.js       # Registration handler
+│   │   ├── teams.js          # Team listing
+│   │   └── team-view.js      # View team members
+│   ├── database/             # Database helpers
+│   │   ├── db.teams.js       # Team queries
+│   │   ├── db.members.js     # Member queries
+│   │   └── db.settings.js    # Settings queries
+│   ├── features/admin/       # Admin features
+│   │   ├── admin.import.js   # CSV import
+│   │   └── admin.settings.js # Settings management
+│   ├── lib/                  # Utilities
+│   │   ├── router.js         # API router
+│   │   ├── validation.js     # Input validation
+│   │   └── db.js             # D1 helpers
+│   ├── shared/               # Shared utilities
+│   │   ├── auth.js           # Admin authentication
+│   │   ├── crypto.js         # Password hashing
+│   │   └── response.js       # JSON responses
+│   ├── layouts/
+│   │   ├── BaseLayout.astro  # Public layout
+│   │   └── AdminLayout.astro # Admin layout
+│   └── components/
+│       ├── Header.astro      # Site header
+│       └── Footer.astro      # Site footer
+├── db/
+│   ├── schema.sql            # Database schema
+│   ├── seed.sql              # Test data
+│   └── migrate-*.sql         # Migrations
+├── design/                   # Shared design system (submodule)
+├── knowledge/                # Shared content (submodule)
+├── test/                     # API tests
+├── public/                   # Static assets
+└── docs/
+    └── setup.md              # Cloudflare setup guide
 ```
 
 ## Quick Start
@@ -48,11 +92,8 @@ ndi/
 
 ```bash
 # Clone with submodules
-git clone --recursive git@github.com:info-evry/astro-ndi.git
+git clone --recursive https://github.com/info-evry/astro-ndi.git
 cd astro-ndi
-
-# Or init submodules if already cloned
-git submodule update --init --recursive
 
 # Install dependencies
 bun install
@@ -61,40 +102,50 @@ bun install
 ### Local Development
 
 ```bash
-# Start dev server with Wrangler
 bun run dev
 ```
 
 Visit `http://localhost:4321`
 
-### Build & Deploy
+### Database Setup
+
+See [docs/setup.md](./docs/setup.md) for Cloudflare D1 and KV configuration.
+
+### Testing
 
 ```bash
-# Build and deploy to Cloudflare
-bun run deploy
+# Build first (required for Workers tests)
+bun run build
 
-# Or use the deploy script
-./deploy.sh
+# Run tests
+bun run test
 ```
 
-## Documentation
+## Environment Configuration
 
-- [Setup Guide](./docs/setup.md) - Initial Cloudflare configuration
-- [Deployment Guide](./docs/deploy.md) - Deployment instructions
-
-## Environment Variables
-
-Required Cloudflare bindings (configured via wrangler.jsonc):
+### Cloudflare Bindings
 
 | Binding | Type | Description |
 |---------|------|-------------|
-| `DB` | D1 Database | Main database |
-| `CONFIG` | KV Namespace | Configuration storage |
-| `ADMIN_TOKEN` | Secret | Admin authentication token |
-| `ADMIN_EMAIL` | Variable | Admin contact email |
-| `REPLY_TO_EMAIL` | Variable | Reply-to email |
-| `MAX_TEAM_SIZE` | Variable | Max members per team |
-| `MAX_TOTAL_PARTICIPANTS` | Variable | Total capacity |
+| `DB` | D1 Database | SQLite database for teams/members |
+| `CONFIG` | KV Namespace | Dynamic configuration storage |
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `ADMIN_TOKEN` | Secret token for admin authentication |
+| `ADMIN_EMAIL` | Email for admin notifications |
+| `REPLY_TO_EMAIL` | Reply-to email for notifications |
+| `MAX_TEAM_SIZE` | Maximum members per team (default: 15) |
+| `MAX_TOTAL_PARTICIPANTS` | Total event capacity (default: 200) |
+| `MIN_TEAM_SIZE` | Minimum team size (default: 1) |
+
+### Setting Secrets
+
+```bash
+wrangler secret put ADMIN_TOKEN
+```
 
 ## API Endpoints
 
@@ -102,28 +153,55 @@ Required Cloudflare bindings (configured via wrangler.jsonc):
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/config` | Get configuration |
-| GET | `/api/teams` | List teams |
-| GET | `/api/stats` | Registration statistics |
-| POST | `/api/register` | Register members |
-| POST | `/api/teams/:id/view` | View team members |
+| `GET` | `/api/config` | Event configuration and pizza menu |
+| `GET` | `/api/teams` | List all teams with member counts |
+| `GET` | `/api/stats` | Registration statistics |
+| `POST` | `/api/register` | Register new team or join existing |
+| `POST` | `/api/teams/:id/view` | View team members (requires password) |
 
 ### Admin (Bearer token required)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/admin/stats` | Detailed statistics |
-| GET | `/api/admin/settings` | Get settings |
-| PUT | `/api/admin/settings` | Update settings |
-| GET | `/api/admin/export` | Export all to CSV |
-| POST/PUT/DELETE | `/api/admin/teams/*` | Team CRUD |
-| POST/PUT/DELETE | `/api/admin/members/*` | Member CRUD |
+| `GET` | `/api/admin/stats` | Detailed statistics |
+| `GET` | `/api/admin/settings` | Get all settings |
+| `PUT` | `/api/admin/settings` | Update settings |
+| `GET` | `/api/admin/export` | Export all data to CSV |
+| `GET` | `/api/admin/export/ndi` | Export in official NDI format |
+| `POST` | `/api/admin/import` | Import members from CSV |
+| `GET` | `/api/admin/teams` | List all teams with members |
+| `POST` | `/api/admin/teams` | Create team |
+| `PUT` | `/api/admin/teams/:id` | Update team |
+| `DELETE` | `/api/admin/teams/:id` | Delete team |
+| `POST` | `/api/admin/members` | Add member |
+| `PUT` | `/api/admin/members/:id` | Update member |
+| `DELETE` | `/api/admin/members/:id` | Delete member |
+| `PUT` | `/api/admin/members/:id/move` | Move member to different team |
+
+## Database Schema
+
+### Teams
+- `id`, `name`, `description`, `password_hash`
+- `is_orga` (organization team flag)
+- `created_at`
+
+### Members
+- `id`, `team_id`, `first_name`, `last_name`, `email`
+- `bac_level` (education level)
+- `pizza_choice`, `is_leader`
+- `created_at`
+
+### Settings
+- Key-value store for dynamic configuration
+- `registration_open`, `pizza_enabled`, `pizza_menu`, etc.
 
 ## Related Repositories
 
 - [astro-design](https://github.com/info-evry/astro-design) - Shared design system
 - [astro-knowledge](https://github.com/info-evry/astro-knowledge) - Shared content
 - [astro-asso](https://github.com/info-evry/astro-asso) - Association website
+- [astro-join](https://github.com/info-evry/astro-join) - Membership portal
+- [astro-maestro](https://github.com/info-evry/astro-maestro) - Deployment orchestrator (private)
 
 ## License
 
