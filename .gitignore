@@ -5,7 +5,13 @@ node_modules/
 dist/
 .astro/
 
-# Environment variables
+# Lock files
+bun.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Environment
 .env
 .env.*
 .dev.vars
@@ -19,6 +25,9 @@ wrangler.toml
 .vscode/
 .idea/
 *.sublime-*
+*.swp
+*.swo
+*~
 
 # OS
 .DS_Store
@@ -40,8 +49,6 @@ coverage/
 *.local
 *.bak
 *.tmp
-*.swp
-*~
 
 # Claude Code
 .claude/
