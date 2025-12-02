@@ -201,8 +201,7 @@ wrangler secret put ADMIN_TOKEN
 - [astro-knowledge](https://github.com/info-evry/astro-knowledge) - Shared content
 - [astro-asso](https://github.com/info-evry/astro-asso) - Association website
 - [astro-join](https://github.com/info-evry/astro-join) - Membership portal
-- [astro-maestro](https://github.com/info-evry/astro-maestro) - Deployment orchestrator (private)
 
 ## License
 
-MIT - Asso Info Evry
+AGPL-3.0 - Asso Info Evry
