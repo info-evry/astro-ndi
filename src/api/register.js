@@ -144,7 +144,7 @@ export async function register(request, env) {
 
   } catch (err) {
     console.error('Registration error:', err);
-    return error('Registration failed: ' + err.message, 500);
+    return error('Une erreur est survenue lors de l\'inscription. Veuillez réessayer.', 500);
   }
 }
 
