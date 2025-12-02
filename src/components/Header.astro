@@ -3,6 +3,7 @@ import Header from '../../design/src/components/Header.astro';
 import associationInfo from '../../knowledge/src/association/info.json';
 
 const assoUrl = associationInfo.sites.asso.url;
+const joinUrl = associationInfo.sites.join.url;
 
 const navLinks = [
   { href: `${assoUrl}/#a-propos`, label: 'À propos' },
@@ -14,7 +15,7 @@ const navLinks = [
 <Header
   homeUrl={assoUrl}
   navLinks={navLinks}
-  ctaHref={`${assoUrl}/#adhesion`}
+  ctaHref={joinUrl}
   ctaLabel="Adhérer"
   mobileCta="Adhérer à l'association"
 />
