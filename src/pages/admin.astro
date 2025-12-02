@@ -163,6 +163,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
           <div class="quick-actions">
             <button type="button" id="add-team-btn" class="btn btn-primary">+ Nouvelle équipe</button>
             <button type="button" id="add-member-btn" class="btn btn-primary">+ Nouveau membre</button>
+            <button type="button" id="select-all-btn" class="btn btn-secondary">Tout sélectionner</button>
             <button type="button" id="delete-selected-btn" class="btn btn-danger" disabled>Supprimer sélection</button>
           </div>
         </div>
@@ -414,6 +415,7 @@ const elements = {
   refreshBtn: $('refresh-btn'),
   addTeamBtn: $('add-team-btn'),
   addMemberBtn: $('add-member-btn'),
+  selectAllBtn: $('select-all-btn'),
   deleteSelectedBtn: $('delete-selected-btn'),
   teamModal: $('team-modal'),
   memberModal: $('member-modal'),
@@ -781,6 +783,40 @@ async function deleteSelectedMembers() {
     }
   };
   openModal('confirm-modal');
+}
+
+function selectAllParticipants() {
+  // Get all member checkboxes across all teams
+  const allCheckboxes = document.querySelectorAll('.member-row input[type="checkbox"]');
+  const allSelected = selectedMembers.size === allCheckboxes.length && allCheckboxes.length > 0;
+
+  // Toggle: if all are selected, deselect all; otherwise select all
+  allCheckboxes.forEach(cb => {
+    const memberId = parseInt(cb.closest('.member-row').dataset.memberId);
+    if (allSelected) {
+      cb.checked = false;
+      selectedMembers.delete(memberId);
+    } else {
+      cb.checked = true;
+      selectedMembers.add(memberId);
+    }
+  });
+
+  // Also update the team-level "select all" checkboxes
+  document.querySelectorAll('.team-block input[type="checkbox"]').forEach(cb => {
+    if (!cb.closest('.member-row')) {
+      cb.checked = !allSelected;
+    }
+  });
+
+  updateDeleteButton();
+  updateSelectAllButton();
+}
+
+function updateSelectAllButton() {
+  const allCheckboxes = document.querySelectorAll('.member-row input[type="checkbox"]');
+  const allSelected = selectedMembers.size === allCheckboxes.length && allCheckboxes.length > 0;
+  elements.selectAllBtn.textContent = allSelected ? 'Tout désélectionner' : 'Tout sélectionner';
 }
 
 // ============================================================
@@ -1389,6 +1425,7 @@ async function init() {
   elements.refreshBtn.addEventListener('click', handleRefresh);
   elements.addTeamBtn.addEventListener('click', openAddTeamModal);
   elements.addMemberBtn.addEventListener('click', openAddMemberModal);
+  elements.selectAllBtn.addEventListener('click', selectAllParticipants);
   elements.deleteSelectedBtn.addEventListener('click', deleteSelectedMembers);
   elements.teamForm.addEventListener('submit', handleTeamSubmit);
   elements.memberForm.addEventListener('submit', handleMemberSubmit);
