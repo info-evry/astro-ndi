@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import Badge from '../../design/src/components/Badge.astro';
 import ndiEvent from '../../knowledge/src/ndi/event.json';
 import ndiInfoEvry from '../../knowledge/src/ndi/info-evry.json';
 
@@ -34,10 +35,7 @@ function formatTime(dateString: string) {
     </div>
 
     <div class="hero-content container">
-      <p class="hero-badge">
-        <span class="badge-dot"></span>
-        <span>{ndiEvent.edition}</span>
-      </p>
+      <Badge text={ndiEvent.edition} variant="hero" showDot animated />
 
       <h1 class="hero-title large">
         <span class="title-line">Nuit de</span>
@@ -396,8 +394,8 @@ function formatTime(dateString: string) {
   .last-year-stats {
     text-align: center;
     padding: var(--space-4);
-    background: rgba(14, 165, 233, 0.1);
-    border: 1px solid rgba(14, 165, 233, 0.2);
+    background: rgba(0, 27, 165, 0.1);
+    border: 1px solid rgba(0, 27, 165, 0.2);
     border-radius: var(--radius-lg);
   }
 
@@ -521,7 +519,7 @@ function formatTime(dateString: string) {
 
   .pricing-card.featured {
     border-color: var(--color-primary);
-    background: rgba(14, 165, 233, 0.1);
+    background: rgba(0, 27, 165, 0.1);
   }
 
   .pricing-amount {
