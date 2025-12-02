@@ -6,12 +6,9 @@ import MobileNav from '../../design/src/components/MobileNav.astro';
 import associationInfo from '../../knowledge/src/association/info.json';
 import ndiEvent from '../../knowledge/src/ndi/event.json';
 
-const assoUrl = associationInfo.sites.asso.url;
-
 const mobileNavItems = [
-  { href: assoUrl, label: 'Asso', icon: 'house' },
-  { href: '/', label: 'NDI', icon: 'moon.stars' },
   { href: '/#teams', label: 'Équipes', icon: 'person.3' },
+  { href: '/#register', label: 'Inscription', icon: 'square.and.pencil' },
 ];
 
 interface Props {
