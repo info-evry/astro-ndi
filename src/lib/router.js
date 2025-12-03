@@ -11,18 +11,32 @@ export class Router {
   }
 
   add(method, path, handler) {
-    // Convert path pattern to regex
-    // Escape backslashes first, then forward slashes, then convert :params
-    const pattern = path
-      .replace(/\\/g, '\\\\')
-      .replace(/\//g, '\\/')
-      .replace(/:(\w+)/g, '(?<$1>[^/]+)');
+    if (typeof method !== 'string') {
+      throw new TypeError('Router.add: "method" must be a string');
+    }
+    if (typeof path !== 'string') {
+      throw new TypeError('Router.add: "path" must be a string');
+    }
+    if (typeof handler !== 'function') {
+      throw new TypeError('Router.add: "handler" must be a function');
+    }
+    // Convert path pattern to regex via helper for clarity
+    const pattern = this.pathToRegex(path);
     this.routes.push({
       method: method.toUpperCase(),
       pattern: new RegExp(`^${pattern}$`),
       handler
     });
     return this;
+  }
+
+  // Extracted helper for building route regex from path pattern
+  pathToRegex(path) {
+    // Escape backslashes first, then forward slashes, then convert :params
+    return path
+      .replace(/\\/g, '\\\\')
+      .replace(/\//g, '\\/')
+      .replace(/:(\w+)/g, '(?<$1>[^/]+)');
   }
 
   get(path, handler) { return this.add('GET', path, handler); }
@@ -48,7 +62,7 @@ export class Router {
         return route.handler(request, env, ctx, params);
       }
     }
-    return null; // No route matched
+    return error('Not Found', 404); // No route matched
   }
 }
 
@@ -75,7 +89,7 @@ export function error(message, status = 400) {
 /**
  * CORS headers for cross-origin requests
  */
-export function corsHeaders(origin = '*') {
+export function corsHeaders(origin) {
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',

@@ -84,7 +84,7 @@ export async function register(request, env) {
       // Verify password
       const passwordValid = await db.verifyTeamPassword(env.DB, teamId, passwordHash);
       if (!passwordValid) {
-        return error('Mot de passe incorrect', 403);
+        return error('Incorrect password', 403);
       }
 
       teamName = team.name;
@@ -144,7 +144,7 @@ export async function register(request, env) {
 
   } catch (err) {
     console.error('Registration error:', err);
-    return error('Une erreur est survenue lors de l\'inscription. Veuillez réessayer.', 500);
+    return error('An error occurred during registration. Please try again.', 500);
   }
 }
 
@@ -188,17 +188,22 @@ L'équipe d'organisation
   const firstMemberEmail = members[0]?.email;
 
   // Send to admin
-  await fetch('https://api.mailchannels.net/tx/v1/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      personalizations: [{ to: [{ email: adminEmail }] }],
-      from: { email: replyTo, name: 'Nuit de l\'Info' },
-      reply_to: { email: replyTo },
-      subject,
-      content: [{ type: 'text/plain', value: body }]
-    })
-  });
+  try {
+    await fetch('https://api.mailchannels.net/tx/v1/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: adminEmail }] }],
+        from: { email: replyTo, name: 'Nuit de l\'Info' },
+        reply_to: { email: replyTo },
+        subject,
+        content: [{ type: 'text/plain', value: body }]
+      })
+    });
+  } catch (err) {
+    console.error('Error sending admin notification email:', err);
+    // Optionally, handle the error, e.g. add fallback or response status
+  }
 
   // Send confirmation to first member
   if (firstMemberEmail) {
@@ -216,16 +221,21 @@ ${memberList}
 L'équipe d'organisation
 `.trim();
 
-    await fetch('https://api.mailchannels.net/tx/v1/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        personalizations: [{ to: [{ email: firstMemberEmail }] }],
-        from: { email: replyTo, name: 'Nuit de l\'Info' },
-        reply_to: { email: replyTo },
-        subject: '[NDI] Confirmation d\'inscription',
-        content: [{ type: 'text/plain', value: participantBody }]
-      })
-    });
+    try {
+      await fetch('https://api.mailchannels.net/tx/v1/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          personalizations: [{ to: [{ email: firstMemberEmail }] }],
+          from: { email: replyTo, name: 'Nuit de l\'Info' },
+          reply_to: { email: replyTo },
+          subject: '[NDI] Confirmation d\'inscription',
+          content: [{ type: 'text/plain', value: participantBody }]
+        })
+      });
+    } catch (err) {
+      console.error('Error sending participant confirmation email:', err);
+      // Optionally, handle the error as needed
+    }
   }
 }
