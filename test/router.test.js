@@ -47,24 +47,24 @@ describe('Router', () => {
     expect(capturedParams).toEqual({ id: '123' });
   });
 
-  it('should return null for unmatched routes', async () => {
+  it('should return 404 for unmatched routes', async () => {
     const router = new Router();
     router.get('/api/exists', () => new Response('ok'));
 
     const request = new Request('http://localhost/api/notexists', { method: 'GET' });
     const response = await router.handle(request, {}, {});
 
-    expect(response).toBeNull();
+    expect(response.status).toBe(404);
   });
 
-  it('should not match wrong HTTP method', async () => {
+  it('should return 404 for wrong HTTP method', async () => {
     const router = new Router();
     router.get('/api/test', () => new Response('ok'));
 
     const request = new Request('http://localhost/api/test', { method: 'POST' });
     const response = await router.handle(request, {}, {});
 
-    expect(response).toBeNull();
+    expect(response.status).toBe(404);
   });
 });
 

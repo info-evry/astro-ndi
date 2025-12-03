@@ -89,7 +89,7 @@ export function error(message, status = 400) {
 /**
  * CORS headers for cross-origin requests
  */
-export function corsHeaders(origin) {
+export function corsHeaders(origin = '*') {
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',

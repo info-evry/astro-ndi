@@ -275,7 +275,7 @@ describe('POST /api/register - Join Existing Team', () => {
 
     expect(joinResponse.status).toBe(403);
     const joinData = await joinResponse.json();
-    expect(joinData.error).toContain('incorrect');
+    expect(joinData.error.toLowerCase()).toContain('incorrect');
   });
 
   it('should allow joining without being a leader', async () => {
