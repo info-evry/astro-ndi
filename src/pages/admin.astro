@@ -504,10 +504,10 @@ function renderTeams(teams) {
       <div class="team-body">
         ${team.description ? `<p><em>${escapeHtml(team.description)}</em></p>` : ''}
         <div class="team-actions">
-          <button type="button" class="icon-btn icon-btn-sm icon-btn-secondary" onclick="editTeam(${team.id})" title="Modifier" aria-label="Modifier l'équipe">􀈊</button>
+          <button type="button" class="icon-btn" onclick="editTeam(${team.id})" title="Modifier" aria-label="Modifier l'équipe">􀈊</button>
           <button type="button" class="btn btn-sm btn-secondary" onclick="exportTeam(${team.id}, '${escapeHtml(team.name)}')">Exporter CSV</button>
           <button type="button" class="btn btn-sm btn-primary" onclick="exportTeamOfficial(${team.id}, '${escapeHtml(team.name)}')">Export Officiel</button>
-          ${team.name !== 'Organisation' ? `<button type="button" class="icon-btn icon-btn-sm icon-btn-danger" onclick="confirmDeleteTeam(${team.id}, '${escapeHtml(team.name)}')" title="Supprimer" aria-label="Supprimer l'équipe">􀈑</button>` : ''}
+          ${team.name !== 'Organisation' ? `<button type="button" class="icon-btn danger" onclick="confirmDeleteTeam(${team.id}, '${escapeHtml(team.name)}')" title="Supprimer" aria-label="Supprimer l'équipe">􀈑</button>` : ''}
         </div>
         ${renderMembersTable(team.members, team.id)}
       </div>
@@ -550,8 +550,8 @@ function renderMembersTable(members, teamId) {
             <td>${m.is_leader ? '<span class="badge badge-leader">Chef</span>' : ''}</td>
             <td class="actions-col">
               <div class="action-buttons">
-                <button type="button" class="icon-btn icon-btn-sm icon-btn-secondary" onclick="editMember(${m.id}, ${teamId})" title="Modifier" aria-label="Modifier le membre">􀈊</button>
-                <button type="button" class="icon-btn icon-btn-sm icon-btn-danger" onclick="confirmDeleteMember(${m.id}, '${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}')" title="Supprimer" aria-label="Supprimer le membre">􀁡</button>
+                <button type="button" class="icon-btn" onclick="editMember(${m.id}, ${teamId})" title="Modifier" aria-label="Modifier le membre">􀈊</button>
+                <button type="button" class="icon-btn danger" onclick="confirmDeleteMember(${m.id}, '${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}')" title="Supprimer" aria-label="Supprimer le membre">􀈑</button>
               </div>
             </td>
           </tr>
@@ -1046,9 +1046,9 @@ function renderPizzasList() {
         <span class="pizza-item-name">${escapeHtml(pizza.name)}</span>
         <span class="pizza-item-desc">${escapeHtml(pizza.description || '')}</span>
       </div>
-      <div class="pizza-item-actions">
-        <button type="button" class="btn btn-sm btn-secondary edit-pizza-btn" data-index="${index}">Modifier</button>
-        <button type="button" class="btn btn-sm btn-danger delete-pizza-btn" data-index="${index}">Supprimer</button>
+      <div class="pizza-item-actions action-buttons">
+        <button type="button" class="icon-btn edit-pizza-btn" data-index="${index}" title="Modifier" aria-label="Modifier la pizza">􀈊</button>
+        <button type="button" class="icon-btn danger delete-pizza-btn" data-index="${index}" title="Supprimer" aria-label="Supprimer la pizza">􀈑</button>
       </div>
     </div>
   `).join('');
