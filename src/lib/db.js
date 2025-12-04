@@ -321,3 +321,96 @@ export async function addMemberAdmin(db, teamId, member) {
 
   return { id: result.meta.last_row_id, teamId, ...member };
 }
+
+// ============ ATTENDANCE TRACKING ============
+
+/**
+ * Get all members with attendance info for attendance management
+ */
+export async function getAllMembersWithAttendance(db) {
+  const result = await db.prepare(`
+    SELECT
+      m.id,
+      m.first_name,
+      m.last_name,
+      m.email,
+      m.bac_level,
+      m.is_leader,
+      m.food_diet,
+      m.checked_in,
+      m.checked_in_at,
+      m.created_at,
+      t.id as team_id,
+      t.name as team_name
+    FROM members m
+    JOIN teams t ON m.team_id = t.id
+    ORDER BY m.last_name, m.first_name
+  `).all();
+  return result.results;
+}
+
+/**
+ * Check in a member (mark as present)
+ */
+export async function checkInMember(db, memberId) {
+  const now = new Date().toISOString();
+  const result = await db.prepare(`
+    UPDATE members SET checked_in = 1, checked_in_at = ? WHERE id = ?
+  `).bind(now, memberId).run();
+  return result.meta.changes > 0;
+}
+
+/**
+ * Check out a member (revoke attendance)
+ */
+export async function checkOutMember(db, memberId) {
+  const result = await db.prepare(`
+    UPDATE members SET checked_in = 0, checked_in_at = NULL WHERE id = ?
+  `).bind(memberId).run();
+  return result.meta.changes > 0;
+}
+
+/**
+ * Get attendance statistics
+ */
+export async function getAttendanceStats(db) {
+  const result = await db.prepare(`
+    SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN checked_in = 1 THEN 1 ELSE 0 END) as checked_in,
+      SUM(CASE WHEN checked_in = 0 OR checked_in IS NULL THEN 1 ELSE 0 END) as not_checked_in
+    FROM members m
+    JOIN teams t ON m.team_id = t.id
+    WHERE t.name != 'Organisation'
+  `).first();
+  return result;
+}
+
+/**
+ * Batch check-in multiple members
+ */
+export async function checkInMembers(db, memberIds) {
+  if (!memberIds.length) return 0;
+
+  const now = new Date().toISOString();
+  const placeholders = memberIds.map(() => '?').join(',');
+  const result = await db.prepare(
+    `UPDATE members SET checked_in = 1, checked_in_at = ? WHERE id IN (${placeholders})`
+  ).bind(now, ...memberIds).run();
+
+  return result.meta.changes;
+}
+
+/**
+ * Batch check-out multiple members
+ */
+export async function checkOutMembers(db, memberIds) {
+  if (!memberIds.length) return 0;
+
+  const placeholders = memberIds.map(() => '?').join(',');
+  const result = await db.prepare(
+    `UPDATE members SET checked_in = 0, checked_in_at = NULL WHERE id IN (${placeholders})`
+  ).bind(...memberIds).run();
+
+  return result.meta.changes;
+}

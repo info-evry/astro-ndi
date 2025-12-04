@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS members (
     bac_level INTEGER DEFAULT 0,
     is_leader INTEGER DEFAULT 0,
     food_diet TEXT DEFAULT '',
+    checked_in INTEGER DEFAULT 0,
+    checked_in_at TEXT DEFAULT NULL,
     created_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
     UNIQUE(first_name, last_name)
@@ -28,4 +30,5 @@ CREATE TABLE IF NOT EXISTS members (
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_members_team_id ON members(team_id);
 CREATE INDEX IF NOT EXISTS idx_members_email ON members(email);
+CREATE INDEX IF NOT EXISTS idx_members_checked_in ON members(checked_in);
 CREATE INDEX IF NOT EXISTS idx_teams_name ON teams(name);

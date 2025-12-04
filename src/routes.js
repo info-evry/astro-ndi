@@ -20,7 +20,12 @@ import {
   deleteMembersBatch,
   updateTeamAdmin,
   deleteTeamAdmin,
-  createTeamAdmin
+  createTeamAdmin,
+  getAttendance,
+  checkInMember,
+  checkOutMember,
+  checkInMembersBatch,
+  checkOutMembersBatch
 } from './api/admin.js';
 import { getSettings, updateSettings } from './features/admin/admin.settings.js';
 import { importCSV } from './features/admin/admin.import.js';
@@ -60,6 +65,13 @@ export function createRouter() {
   // Admin API routes - Delete
   router.delete('/api/admin/teams/:id', deleteTeamAdmin);
   router.delete('/api/admin/members/:id', deleteMemberAdmin);
+
+  // Admin API routes - Attendance
+  router.get('/api/admin/attendance', getAttendance);
+  router.post('/api/admin/attendance/check-in/:id', checkInMember);
+  router.post('/api/admin/attendance/check-out/:id', checkOutMember);
+  router.post('/api/admin/attendance/check-in-batch', checkInMembersBatch);
+  router.post('/api/admin/attendance/check-out-batch', checkOutMembersBatch);
 
   return router;
 }

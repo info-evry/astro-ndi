@@ -558,3 +558,151 @@ export async function createTeamAdmin(request, env) {
     return error('Failed to create team', 500);
   }
 }
+
+// ============ ATTENDANCE ENDPOINTS ============
+
+/**
+ * GET /api/admin/attendance - Get all members with attendance status
+ */
+export async function getAttendance(request, env) {
+  if (!await verifyAdmin(request, env)) {
+    return error('Unauthorized', 401);
+  }
+
+  try {
+    const members = await db.getAllMembersWithAttendance(env.DB);
+    const stats = await db.getAttendanceStats(env.DB);
+
+    return json({
+      members,
+      stats: {
+        total: stats?.total || 0,
+        checked_in: stats?.checked_in || 0,
+        not_checked_in: stats?.not_checked_in || 0
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching attendance:', err);
+    return error('Failed to fetch attendance', 500);
+  }
+}
+
+/**
+ * POST /api/admin/attendance/check-in/:id - Check in a member
+ */
+export async function checkInMember(request, env, ctx, params) {
+  if (!await verifyAdmin(request, env)) {
+    return error('Unauthorized', 401);
+  }
+
+  try {
+    const memberId = parseInt(params.id, 10);
+
+    const member = await db.getMemberById(env.DB, memberId);
+    if (!member) {
+      return error('Member not found', 404);
+    }
+
+    const success = await db.checkInMember(env.DB, memberId);
+    if (!success) {
+      return error('Failed to check in member', 500);
+    }
+
+    const updated = await db.getMemberById(env.DB, memberId);
+
+    return json({
+      success: true,
+      member: {
+        id: updated.id,
+        checked_in: updated.checked_in,
+        checked_in_at: updated.checked_in_at
+      }
+    });
+  } catch (err) {
+    console.error('Error checking in member:', err);
+    return error('Failed to check in member', 500);
+  }
+}
+
+/**
+ * POST /api/admin/attendance/check-out/:id - Check out a member (revoke attendance)
+ */
+export async function checkOutMember(request, env, ctx, params) {
+  if (!await verifyAdmin(request, env)) {
+    return error('Unauthorized', 401);
+  }
+
+  try {
+    const memberId = parseInt(params.id, 10);
+
+    const member = await db.getMemberById(env.DB, memberId);
+    if (!member) {
+      return error('Member not found', 404);
+    }
+
+    const success = await db.checkOutMember(env.DB, memberId);
+    if (!success) {
+      return error('Failed to check out member', 500);
+    }
+
+    return json({
+      success: true,
+      member: {
+        id: memberId,
+        checked_in: 0,
+        checked_in_at: null
+      }
+    });
+  } catch (err) {
+    console.error('Error checking out member:', err);
+    return error('Failed to check out member', 500);
+  }
+}
+
+/**
+ * POST /api/admin/attendance/check-in-batch - Batch check in multiple members
+ */
+export async function checkInMembersBatch(request, env) {
+  if (!await verifyAdmin(request, env)) {
+    return error('Unauthorized', 401);
+  }
+
+  try {
+    const { memberIds } = await request.json();
+
+    if (!Array.isArray(memberIds) || memberIds.length === 0) {
+      return error('memberIds array is required', 400);
+    }
+
+    const count = await db.checkInMembers(env.DB, memberIds.map(id => parseInt(id, 10)));
+
+    return json({ success: true, checked_in: count });
+  } catch (err) {
+    console.error('Error batch checking in:', err);
+    return error('Failed to check in members', 500);
+  }
+}
+
+/**
+ * POST /api/admin/attendance/check-out-batch - Batch check out multiple members
+ */
+export async function checkOutMembersBatch(request, env) {
+  if (!await verifyAdmin(request, env)) {
+    return error('Unauthorized', 401);
+  }
+
+  try {
+    const { memberIds } = await request.json();
+
+    if (!Array.isArray(memberIds) || memberIds.length === 0) {
+      return error('memberIds array is required', 400);
+    }
+
+    const count = await db.checkOutMembers(env.DB, memberIds.map(id => parseInt(id, 10)));
+
+    return json({ success: true, checked_out: count });
+  } catch (err) {
+    console.error('Error batch checking out:', err);
+    return error('Failed to check out members', 500);
+  }
+}
