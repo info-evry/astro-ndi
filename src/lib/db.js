@@ -344,7 +344,6 @@ export async function getAllMembersWithAttendance(db) {
       t.name as team_name
     FROM members m
     JOIN teams t ON m.team_id = t.id
-    WHERE t.name != 'Organisation'
     ORDER BY m.last_name, m.first_name
   `).all();
   return result.results;
@@ -382,7 +381,6 @@ export async function getAttendanceStats(db) {
       SUM(CASE WHEN checked_in = 0 OR checked_in IS NULL THEN 1 ELSE 0 END) as not_checked_in
     FROM members m
     JOIN teams t ON m.team_id = t.id
-    WHERE t.name != 'Organisation'
   `).first();
   return result;
 }

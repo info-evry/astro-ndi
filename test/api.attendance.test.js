@@ -21,9 +21,11 @@ beforeEach(async () => {
 
   // Create test team and members
   await env.DB.exec(`INSERT INTO teams (id, name, description) VALUES (1, 'Test Team', 'A test team')`);
+  await env.DB.exec(`INSERT INTO teams (id, name, description) VALUES (2, 'Organisation', 'Organisers')`);
   await env.DB.exec(`INSERT INTO members (id, team_id, first_name, last_name, email, bac_level) VALUES (1, 1, 'Alice', 'Smith', 'alice@example.com', 3)`);
   await env.DB.exec(`INSERT INTO members (id, team_id, first_name, last_name, email, bac_level) VALUES (2, 1, 'Bob', 'Jones', 'bob@example.com', 2)`);
   await env.DB.exec(`INSERT INTO members (id, team_id, first_name, last_name, email, bac_level) VALUES (3, 1, 'Charlie', 'Brown', 'charlie@example.com', 4)`);
+  await env.DB.exec(`INSERT INTO members (id, team_id, first_name, last_name, email, bac_level) VALUES (4, 2, 'Diana', 'Org', 'diana@example.com', 5)`);
 });
 
 describe('GET /api/admin/attendance', () => {
@@ -35,7 +37,7 @@ describe('GET /api/admin/attendance', () => {
     expect(response.status).toBe(401);
   });
 
-  it('should return all members with attendance status', async () => {
+  it('should return all members with attendance status including Organisation', async () => {
     const response = await SELF.fetch('http://localhost/api/admin/attendance', {
       method: 'GET',
       headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
@@ -44,11 +46,16 @@ describe('GET /api/admin/attendance', () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.members).toHaveLength(3);
+    expect(data.members).toHaveLength(4); // Includes Organisation member
     expect(data.stats).toBeDefined();
-    expect(data.stats.total).toBe(3);
+    expect(data.stats.total).toBe(4); // Includes Organisation member
     expect(data.stats.checked_in).toBe(0);
-    expect(data.stats.not_checked_in).toBe(3);
+    expect(data.stats.not_checked_in).toBe(4);
+
+    // Verify Organisation member is included
+    const orgMember = data.members.find(m => m.team_name === 'Organisation');
+    expect(orgMember).toBeDefined();
+    expect(orgMember.first_name).toBe('Diana');
   });
 
   it('should include attendance fields in member data', async () => {
@@ -127,7 +134,7 @@ describe('POST /api/admin/attendance/check-in/:id', () => {
     const data = await response.json();
 
     expect(data.stats.checked_in).toBe(1);
-    expect(data.stats.not_checked_in).toBe(2);
+    expect(data.stats.not_checked_in).toBe(3); // 4 total - 1 checked in = 3 not checked in
   });
 });
 
@@ -209,13 +216,14 @@ describe('POST /api/admin/attendance/check-in-batch', () => {
     expect(data.success).toBe(true);
     expect(data.checked_in).toBe(3);
 
-    // Verify all are checked in
+    // Verify 3 are checked in (Organisation member still not checked in)
     const statsResponse = await SELF.fetch('http://localhost/api/admin/attendance', {
       method: 'GET',
       headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
     });
     const statsData = await statsResponse.json();
     expect(statsData.stats.checked_in).toBe(3);
+    expect(statsData.stats.not_checked_in).toBe(1); // Organisation member
   });
 
   it('should require memberIds array', async () => {
@@ -244,7 +252,7 @@ describe('POST /api/admin/attendance/check-out-batch', () => {
   });
 
   it('should check out multiple members', async () => {
-    // First check in all members
+    // First check in some members (not including Organisation member)
     await SELF.fetch('http://localhost/api/admin/attendance/check-in-batch', {
       method: 'POST',
       headers: {
@@ -270,14 +278,14 @@ describe('POST /api/admin/attendance/check-out-batch', () => {
     expect(data.success).toBe(true);
     expect(data.checked_out).toBe(2);
 
-    // Verify stats
+    // Verify stats (1 checked in + 3 not checked in including Organisation member)
     const statsResponse = await SELF.fetch('http://localhost/api/admin/attendance', {
       method: 'GET',
       headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
     });
     const statsData = await statsResponse.json();
     expect(statsData.stats.checked_in).toBe(1);
-    expect(statsData.stats.not_checked_in).toBe(2);
+    expect(statsData.stats.not_checked_in).toBe(3); // 2 checked out + 1 Organisation member
   });
 
   it('should require memberIds array', async () => {
@@ -295,14 +303,15 @@ describe('POST /api/admin/attendance/check-out-batch', () => {
 });
 
 describe('Attendance Workflow', () => {
-  it('should handle complete check-in/check-out workflow', async () => {
-    // Initial state - no one checked in
+  it('should handle complete check-in/check-out workflow including Organisation members', async () => {
+    // Initial state - no one checked in (4 members total including Organisation)
     let response = await SELF.fetch('http://localhost/api/admin/attendance', {
       method: 'GET',
       headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
     });
     let data = await response.json();
     expect(data.stats.checked_in).toBe(0);
+    expect(data.stats.total).toBe(4); // Includes Organisation member
 
     // Check in member 1
     await SELF.fetch('http://localhost/api/admin/attendance/check-in/1', {
@@ -321,7 +330,7 @@ describe('Attendance Workflow', () => {
     data = await response.json();
     expect(data.stats.checked_in).toBe(1);
 
-    // Batch check in remaining members
+    // Batch check in remaining Test Team members (not Organisation member)
     await SELF.fetch('http://localhost/api/admin/attendance/check-in-batch', {
       method: 'POST',
       headers: {
@@ -331,13 +340,31 @@ describe('Attendance Workflow', () => {
       body: JSON.stringify({ memberIds: [2, 3] })
     });
 
-    // All should be checked in
+    // 3 Test Team members checked in, Organisation member not checked in
     response = await SELF.fetch('http://localhost/api/admin/attendance', {
       method: 'GET',
       headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
     });
     data = await response.json();
     expect(data.stats.checked_in).toBe(3);
+    expect(data.stats.not_checked_in).toBe(1); // Organisation member
+
+    // Check in Organisation member too
+    await SELF.fetch('http://localhost/api/admin/attendance/check-in/4', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${ADMIN_TOKEN}`,
+        'Origin': 'http://localhost'
+      }
+    });
+
+    // All 4 members checked in
+    response = await SELF.fetch('http://localhost/api/admin/attendance', {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+    });
+    data = await response.json();
+    expect(data.stats.checked_in).toBe(4);
     expect(data.stats.not_checked_in).toBe(0);
 
     // Check out one member (mistake)
@@ -355,7 +382,7 @@ describe('Attendance Workflow', () => {
       headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
     });
     data = await response.json();
-    expect(data.stats.checked_in).toBe(2);
+    expect(data.stats.checked_in).toBe(3);
     expect(data.stats.not_checked_in).toBe(1);
   });
 
