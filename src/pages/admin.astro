@@ -132,7 +132,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
                     <input type="text" id="new-pizza-desc" placeholder="ex: Tomate, jambon, ananas">
                   </div>
                 </div>
-                <button type="submit" class="btn btn-secondary btn-sm">+ Ajouter</button>
+                <button type="submit" class="btn btn-secondary btn-sm">􀁍 Ajouter</button>
               </form>
             </div>
           </div>
@@ -177,10 +177,10 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         </div>
         <div class="disclosure-body">
           <div class="quick-actions">
-            <button type="button" id="add-team-btn" class="btn btn-primary">+ Nouvelle équipe</button>
-            <button type="button" id="add-member-btn" class="btn btn-primary">+ Nouveau membre</button>
+            <button type="button" id="add-team-btn" class="btn btn-primary">􀁍 Nouvelle équipe</button>
+            <button type="button" id="add-member-btn" class="btn btn-primary">􀁍 Nouveau membre</button>
             <button type="button" id="select-all-btn" class="btn btn-secondary">Tout sélectionner</button>
-            <button type="button" id="delete-selected-btn" class="btn btn-danger" disabled>Supprimer sélection</button>
+            <button type="button" id="delete-selected-btn" class="btn btn-danger" disabled>􀈑 Supprimer sélection</button>
           </div>
         </div>
       </div>
@@ -231,22 +231,25 @@ import AdminLayout from '../layouts/AdminLayout.astro';
           </div>
           <div class="disclosure-body">
             <div class="attendance-filters">
-              <label class="filter-label">
-                <input type="checkbox" id="filter-checked-in"> Présents uniquement
+              <label class="filter-pill" id="filter-all-pill">
+                <input type="radio" name="attendance-filter" value="all" checked> 􀋲 Tous
               </label>
-              <label class="filter-label">
-                <input type="checkbox" id="filter-not-checked-in"> Absents uniquement
+              <label class="filter-pill" id="filter-present-pill">
+                <input type="radio" name="attendance-filter" value="present"> 􀁣 Présents
+              </label>
+              <label class="filter-pill" id="filter-absent-pill">
+                <input type="radio" name="attendance-filter" value="absent"> 􀁡 Absents
               </label>
             </div>
             <div class="table-container">
               <table id="attendance-table" class="members-table attendance-table">
                 <thead>
                   <tr>
-                    <th>Nom</th>
-                    <th>Email</th>
-                    <th>Équipe</th>
-                    <th>Statut</th>
-                    <th>Heure d'arrivée</th>
+                    <th class="sortable-header" data-sort="name">Nom <span class="sort-indicator">⇅</span></th>
+                    <th class="sortable-header" data-sort="email">Email <span class="sort-indicator">⇅</span></th>
+                    <th class="sortable-header" data-sort="team">Équipe <span class="sort-indicator">⇅</span></th>
+                    <th class="sortable-header" data-sort="status">Statut <span class="sort-indicator">⇅</span></th>
+                    <th class="sortable-header" data-sort="time">Heure <span class="sort-indicator">⇅</span></th>
                     <th class="actions-col">Actions</th>
                   </tr>
                 </thead>
@@ -278,8 +281,8 @@ import AdminLayout from '../layouts/AdminLayout.astro';
             <input type="text" id="team-form-password" placeholder="Nouveau mot de passe">
           </div>
           <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('team-modal')">Annuler</button>
-            <button type="submit" class="btn btn-primary">Enregistrer</button>
+            <button type="button" class="btn btn-secondary" onclick="closeModal('team-modal')">􀁑 Annuler</button>
+            <button type="submit" class="btn btn-primary">􀁣 Enregistrer</button>
           </div>
         </form>
       </div>
@@ -338,8 +341,8 @@ import AdminLayout from '../layouts/AdminLayout.astro';
             </label>
           </div>
           <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('member-modal')">Annuler</button>
-            <button type="submit" class="btn btn-primary">Enregistrer</button>
+            <button type="button" class="btn btn-secondary" onclick="closeModal('member-modal')">􀁑 Annuler</button>
+            <button type="submit" class="btn btn-primary">􀁣 Enregistrer</button>
           </div>
         </form>
       </div>
@@ -351,8 +354,8 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         <h3>Confirmer la suppression</h3>
         <p id="confirm-message"></p>
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('confirm-modal')">Annuler</button>
-          <button type="button" id="confirm-delete-btn" class="btn btn-danger">Supprimer</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal('confirm-modal')">􀁑 Annuler</button>
+          <button type="button" id="confirm-delete-btn" class="btn btn-danger">􀈑 Supprimer</button>
         </div>
       </div>
     </div>
@@ -599,9 +602,16 @@ function renderMembersTable(members, teamId) {
     return '<p>Aucun membre</p>';
   }
 
+  // Sort members by name by default
+  const sortedMembers = [...members].sort((a, b) => {
+    const nameA = `${a.first_name} ${a.last_name}`.toLowerCase();
+    const nameB = `${b.first_name} ${b.last_name}`.toLowerCase();
+    return nameA.localeCompare(nameB);
+  });
+
   return `
     <div class="table-container">
-    <table class="members-table">
+    <table class="members-table" data-team-id="${teamId}">
       <thead>
         <tr>
           <th class="checkbox-col">
@@ -609,25 +619,25 @@ function renderMembersTable(members, teamId) {
               <input type="checkbox" onchange="toggleSelectAll(${teamId}, this.checked)">
             </label>
           </th>
-          <th>Nom</th>
-          <th>Email</th>
-          <th>Niveau</th>
+          <th class="sortable-header" data-sort="name" onclick="sortTeamMembers(${teamId}, 'name', this)">Nom <span class="sort-indicator">⇅</span></th>
+          <th class="sortable-header" data-sort="email" onclick="sortTeamMembers(${teamId}, 'email', this)">Email <span class="sort-indicator">⇅</span></th>
+          <th class="sortable-header" data-sort="bac" onclick="sortTeamMembers(${teamId}, 'bac', this)">Niveau <span class="sort-indicator">⇅</span></th>
           <th>Pizza</th>
           <th>Rôle</th>
           <th class="actions-col">Actions</th>
         </tr>
       </thead>
       <tbody>
-        ${members.map(m => `
+        ${sortedMembers.map(m => `
           <tr class="member-row" data-member-id="${m.id}">
             <td class="checkbox-col">
-              <input type="checkbox" onchange="toggleMemberSelect(${m.id}, this.checked)">
+              <input type="checkbox" onchange="toggleMemberSelect(${m.id}, this.checked)" ${selectedMembers.has(m.id) ? 'checked' : ''}>
             </td>
             <td>${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</td>
             <td><a href="mailto:${escapeHtml(m.email)}">${escapeHtml(m.email)}</a></td>
             <td><span class="badge badge-bac">BAC+${m.bac_level}</span></td>
             <td>${escapeHtml(m.food_diet) || '-'}</td>
-            <td>${m.is_leader ? '<span class="badge badge-leader">Chef</span>' : ''}</td>
+            <td>${m.is_leader ? '<span class="badge badge-leader">􀋀 Chef</span>' : ''}</td>
             <td class="actions-col">
               <div class="action-buttons">
                 <button type="button" class="icon-btn" onclick="editMember(${m.id}, ${teamId})" title="Modifier" aria-label="Modifier le membre">􀈊</button>
@@ -711,6 +721,84 @@ window.toggleMemberSelect = function(memberId, checked) {
     selectedMembers.delete(memberId);
   }
   updateDeleteButton();
+};
+
+// Team members sorting
+const teamSortState = {}; // { teamId: { key: 'name', dir: 'asc' } }
+
+window.sortTeamMembers = function(teamId, sortKey, headerElement) {
+  const team = teamsData.find(t => t.id === teamId);
+  if (!team || !team.members) return;
+
+  // Update sort state
+  if (!teamSortState[teamId]) {
+    teamSortState[teamId] = { key: sortKey, dir: 'asc' };
+  } else if (teamSortState[teamId].key === sortKey) {
+    teamSortState[teamId].dir = teamSortState[teamId].dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    teamSortState[teamId] = { key: sortKey, dir: 'asc' };
+  }
+
+  const { key, dir } = teamSortState[teamId];
+
+  // Sort members
+  team.members.sort((a, b) => {
+    let valA, valB;
+    switch (key) {
+      case 'name':
+        valA = `${a.first_name} ${a.last_name}`.toLowerCase();
+        valB = `${b.first_name} ${b.last_name}`.toLowerCase();
+        break;
+      case 'email':
+        valA = a.email.toLowerCase();
+        valB = b.email.toLowerCase();
+        break;
+      case 'bac':
+        valA = a.bac_level || 0;
+        valB = b.bac_level || 0;
+        break;
+      default:
+        valA = a.first_name.toLowerCase();
+        valB = b.first_name.toLowerCase();
+    }
+
+    if (valA < valB) return dir === 'asc' ? -1 : 1;
+    if (valA > valB) return dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Update sort indicators in the table
+  const table = headerElement.closest('table');
+  table.querySelectorAll('.sortable-header').forEach(h => {
+    if (h.dataset.sort === key) {
+      h.setAttribute('data-sort-dir', dir);
+      h.querySelector('.sort-indicator').textContent = dir === 'asc' ? '↑' : '↓';
+    } else {
+      h.removeAttribute('data-sort-dir');
+      h.querySelector('.sort-indicator').textContent = '⇅';
+    }
+  });
+
+  // Re-render the table body
+  const tbody = table.querySelector('tbody');
+  tbody.innerHTML = team.members.map(m => `
+    <tr class="member-row" data-member-id="${m.id}">
+      <td class="checkbox-col">
+        <input type="checkbox" onchange="toggleMemberSelect(${m.id}, this.checked)" ${selectedMembers.has(m.id) ? 'checked' : ''}>
+      </td>
+      <td>${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</td>
+      <td><a href="mailto:${escapeHtml(m.email)}">${escapeHtml(m.email)}</a></td>
+      <td><span class="badge badge-bac">BAC+${m.bac_level}</span></td>
+      <td>${escapeHtml(m.food_diet) || '-'}</td>
+      <td>${m.is_leader ? '<span class="badge badge-leader">􀋀 Chef</span>' : ''}</td>
+      <td class="actions-col">
+        <div class="action-buttons">
+          <button type="button" class="icon-btn" onclick="editMember(${m.id}, ${teamId})" title="Modifier" aria-label="Modifier le membre">􀈊</button>
+          <button type="button" class="icon-btn danger" onclick="confirmDeleteMember(${m.id}, '${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}')" title="Supprimer" aria-label="Supprimer le membre">􀈑</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
 };
 
 window.exportTeam = async function(teamId, teamName) {
@@ -1534,6 +1622,9 @@ function switchTab(tabId) {
 
 let attendanceData = [];
 let attendanceSearchTerm = '';
+let attendanceFilter = 'all'; // 'all', 'present', 'absent'
+let attendanceSortKey = 'name';
+let attendanceSortDir = 'asc';
 
 async function loadAttendanceData() {
   try {
@@ -1578,10 +1669,7 @@ function renderAttendance() {
   const tbody = $('attendance-tbody');
   if (!tbody) return;
 
-  const filterCheckedIn = $('filter-checked-in')?.checked;
-  const filterNotCheckedIn = $('filter-not-checked-in')?.checked;
-
-  let filtered = attendanceData;
+  let filtered = [...attendanceData];
 
   // Apply search filter
   if (attendanceSearchTerm) {
@@ -1594,12 +1682,46 @@ function renderAttendance() {
     );
   }
 
-  // Apply status filters
-  if (filterCheckedIn && !filterNotCheckedIn) {
+  // Apply status filter
+  if (attendanceFilter === 'present') {
     filtered = filtered.filter(m => m.checked_in === 1);
-  } else if (filterNotCheckedIn && !filterCheckedIn) {
+  } else if (attendanceFilter === 'absent') {
     filtered = filtered.filter(m => m.checked_in === 0 || m.checked_in === null);
   }
+
+  // Apply sorting
+  filtered.sort((a, b) => {
+    let valA, valB;
+    switch (attendanceSortKey) {
+      case 'name':
+        valA = `${a.first_name} ${a.last_name}`.toLowerCase();
+        valB = `${b.first_name} ${b.last_name}`.toLowerCase();
+        break;
+      case 'email':
+        valA = a.email.toLowerCase();
+        valB = b.email.toLowerCase();
+        break;
+      case 'team':
+        valA = a.team_name.toLowerCase();
+        valB = b.team_name.toLowerCase();
+        break;
+      case 'status':
+        valA = a.checked_in || 0;
+        valB = b.checked_in || 0;
+        break;
+      case 'time':
+        valA = a.checked_in_at || '';
+        valB = b.checked_in_at || '';
+        break;
+      default:
+        valA = a.first_name.toLowerCase();
+        valB = b.first_name.toLowerCase();
+    }
+
+    if (valA < valB) return attendanceSortDir === 'asc' ? -1 : 1;
+    if (valA > valB) return attendanceSortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   if (filtered.length === 0) {
     tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Aucun participant trouvé</td></tr>`;
@@ -1617,15 +1739,15 @@ function renderAttendance() {
         <td>${escapeHtml(m.team_name)}</td>
         <td>
           ${isCheckedIn
-            ? '<span class="badge badge-success">Présent</span>'
-            : '<span class="badge badge-muted">Absent</span>'}
+            ? '<span class="badge badge-success">􀁣 Présent</span>'
+            : '<span class="badge badge-muted">􀁡 Absent</span>'}
         </td>
         <td>${checkedInTime}</td>
         <td class="actions-col">
           <div class="action-buttons">
             ${isCheckedIn
-              ? `<button type="button" class="btn btn-sm btn-danger" onclick="handleCheckOut(${m.id})">Annuler</button>`
-              : `<button type="button" class="btn btn-sm btn-primary" onclick="handleCheckIn(${m.id})">Valider</button>`}
+              ? `<button type="button" class="icon-btn danger" onclick="handleCheckOut(${m.id})" title="Annuler la présence" aria-label="Annuler la présence">􀁡</button>`
+              : `<button type="button" class="icon-btn success" onclick="handleCheckIn(${m.id})" title="Valider la présence" aria-label="Valider la présence">􀁣</button>`}
           </div>
         </td>
       </tr>
@@ -1669,20 +1791,65 @@ function initAttendance() {
     });
   }
 
-  const filterCheckedIn = $('filter-checked-in');
-  const filterNotCheckedIn = $('filter-not-checked-in');
+  // Filter pills
+  const filterRadios = document.querySelectorAll('input[name="attendance-filter"]');
+  filterRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      attendanceFilter = e.target.value;
+      updateFilterPills();
+      renderAttendance();
+    });
+  });
 
-  if (filterCheckedIn) {
-    filterCheckedIn.addEventListener('change', renderAttendance);
-  }
-  if (filterNotCheckedIn) {
-    filterNotCheckedIn.addEventListener('change', renderAttendance);
-  }
+  // Sortable headers
+  const sortableHeaders = document.querySelectorAll('#attendance-table .sortable-header');
+  sortableHeaders.forEach(header => {
+    header.addEventListener('click', () => {
+      const sortKey = header.dataset.sort;
+      if (attendanceSortKey === sortKey) {
+        attendanceSortDir = attendanceSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        attendanceSortKey = sortKey;
+        attendanceSortDir = 'asc';
+      }
+      updateSortIndicators();
+      renderAttendance();
+    });
+  });
 
   const refreshBtn = $('refresh-attendance-btn');
   if (refreshBtn) {
     refreshBtn.addEventListener('click', loadAttendanceData);
   }
+
+  // Initialize filter pills state
+  updateFilterPills();
+}
+
+function updateFilterPills() {
+  const pills = document.querySelectorAll('.filter-pill');
+  pills.forEach(pill => {
+    const radio = pill.querySelector('input[type="radio"]');
+    if (radio?.checked) {
+      pill.classList.add('active');
+    } else {
+      pill.classList.remove('active');
+    }
+  });
+}
+
+function updateSortIndicators() {
+  const headers = document.querySelectorAll('#attendance-table .sortable-header');
+  headers.forEach(header => {
+    const sortKey = header.dataset.sort;
+    if (sortKey === attendanceSortKey) {
+      header.setAttribute('data-sort-dir', attendanceSortDir);
+      header.querySelector('.sort-indicator').textContent = attendanceSortDir === 'asc' ? '↑' : '↓';
+    } else {
+      header.removeAttribute('data-sort-dir');
+      header.querySelector('.sort-indicator').textContent = '⇅';
+    }
+  });
 }
 
 // ============================================================
