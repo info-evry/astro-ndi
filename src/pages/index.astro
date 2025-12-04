@@ -81,7 +81,7 @@ function formatTime(dateString: string) {
       </div>
 
       <div class="hero-actions">
-        <a href="#inscription" class="btn btn-primary btn-lg">
+        <a href="#inscription" id="hero-register-btn" class="btn btn-primary btn-lg">
           S'inscrire maintenant
         </a>
         <a href="#about" class="btn btn-secondary btn-lg">
@@ -651,6 +651,8 @@ const elements = {
   successMessage: document.getElementById('success-message'),
   capacityWarning: document.getElementById('capacity-warning'),
   capacityWarningText: document.getElementById('capacity-warning-text'),
+  inscriptionSection: document.getElementById('inscription'),
+  heroRegisterBtn: document.getElementById('hero-register-btn'),
   // Team view modal elements
   teamViewModal: document.getElementById('team-view-modal'),
   teamViewAuth: document.getElementById('team-view-auth'),
@@ -719,7 +721,10 @@ function renderStats(stats) {
 
   // Update hero KPIs
   elements.kpiTeams.textContent = stats.total_teams;
-  elements.kpiParticipants.textContent = `${stats.total_participants}/${stats.max_participants}`;
+  // Show x/max when open, just x when closed
+  elements.kpiParticipants.textContent = isAtCapacity
+    ? stats.total_participants
+    : `${stats.total_participants}/${stats.max_participants}`;
   elements.kpiSpots.textContent = stats.available_spots;
 
   // Handle capacity warning
@@ -738,15 +743,10 @@ function renderStats(stats) {
 }
 
 function disableForm() {
-  elements.form.classList.add('disabled');
-  elements.submitBtn.disabled = true;
-  elements.submitBtn.textContent = 'Inscriptions closes';
-  elements.addMemberBtn.disabled = true;
-
-  // Disable all inputs
-  elements.form.querySelectorAll('input, select, textarea').forEach(el => {
-    el.disabled = true;
-  });
+  // Hide the entire inscription section when closed
+  elements.inscriptionSection.classList.add('hidden');
+  // Also hide the hero register button
+  elements.heroRegisterBtn.classList.add('hidden');
 }
 
 function renderTeams(teams) {
