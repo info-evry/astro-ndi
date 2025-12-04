@@ -344,6 +344,7 @@ export async function getAllMembersWithAttendance(db) {
       t.name as team_name
     FROM members m
     JOIN teams t ON m.team_id = t.id
+    WHERE t.name != 'Organisation'
     ORDER BY m.last_name, m.first_name
   `).all();
   return result.results;
