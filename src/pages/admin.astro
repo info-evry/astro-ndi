@@ -116,7 +116,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
                     <input type="text" id="new-pizza-desc" placeholder="ex: Tomate, jambon, ananas">
                   </div>
                 </div>
-                <button type="submit" class="btn btn-secondary">+ Ajouter</button>
+                <button type="submit" class="btn btn-secondary btn-sm">+ Ajouter</button>
               </form>
             </div>
           </div>
@@ -503,10 +503,10 @@ function renderTeams(teams) {
       </div>
       <div class="team-body">
         ${team.description ? `<p><em>${escapeHtml(team.description)}</em></p>` : ''}
-        <div class="team-actions">
+        <div class="team-actions action-buttons">
           <button type="button" class="icon-btn" onclick="editTeam(${team.id})" title="Modifier" aria-label="Modifier l'équipe">􀈊</button>
-          <button type="button" class="btn btn-sm btn-secondary" onclick="exportTeam(${team.id}, '${escapeHtml(team.name)}')">Exporter CSV</button>
-          <button type="button" class="btn btn-sm btn-primary" onclick="exportTeamOfficial(${team.id}, '${escapeHtml(team.name)}')">Export Officiel</button>
+          <button type="button" class="action-btn" onclick="exportTeam(${team.id}, '${escapeHtml(team.name)}')">Exporter CSV</button>
+          <button type="button" class="action-btn primary" onclick="exportTeamOfficial(${team.id}, '${escapeHtml(team.name)}')">Export Officiel</button>
           ${team.name !== 'Organisation' ? `<button type="button" class="icon-btn danger" onclick="confirmDeleteTeam(${team.id}, '${escapeHtml(team.name)}')" title="Supprimer" aria-label="Supprimer l'équipe">􀈑</button>` : ''}
         </div>
         ${renderMembersTable(team.members, team.id)}
@@ -1049,8 +1049,8 @@ function renderPizzasList() {
         <span class="pizza-item-desc">${escapeHtml(pizza.description || '')}</span>
       </div>
       <div class="pizza-item-actions action-buttons">
-        <button type="button" class="icon-btn edit-pizza-btn" data-index="${index}" title="Modifier" aria-label="Modifier la pizza">􀈊</button>
-        <button type="button" class="icon-btn danger delete-pizza-btn" data-index="${index}" title="Supprimer" aria-label="Supprimer la pizza">􀈑</button>
+        <button type="button" class="icon-btn sm edit-pizza-btn" data-index="${index}" title="Modifier" aria-label="Modifier la pizza">􀈊</button>
+        <button type="button" class="icon-btn sm danger delete-pizza-btn" data-index="${index}" title="Supprimer" aria-label="Supprimer la pizza">􀈑</button>
       </div>
     </div>
   `).join('');
