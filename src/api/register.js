@@ -152,8 +152,13 @@ export async function register(request, env) {
  * Send confirmation email via MailChannels API (free for Workers)
  */
 async function sendConfirmationEmail(env, { teamName, isNewTeam, members }) {
-  // Use MailChannels Send API (free for Cloudflare Workers)
+  // Skip email in test environment
   const adminEmail = env.ADMIN_EMAIL || 'asso@info-evry.fr';
+  if (adminEmail === 'test@example.com') {
+    return;
+  }
+
+  // Use MailChannels Send API (free for Cloudflare Workers)
   const replyTo = env.REPLY_TO_EMAIL || 'contact@info-evry.fr';
 
   const memberList = members.map(m =>
