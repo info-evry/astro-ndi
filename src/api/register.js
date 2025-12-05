@@ -8,6 +8,98 @@ import { validateRegistration, sanitizeString } from '../lib/validation.js';
 import { hashPassword, verifyPassword, needsHashUpgrade } from '../shared/crypto.js';
 
 /**
+ * Check total capacity before registration
+ */
+async function checkCapacity(database, memberCount, maxTotal) {
+  const currentTotal = await db.getTotalParticipants(database);
+  const available = maxTotal - currentTotal;
+  if (memberCount > available) {
+    return { ok: false, available };
+  }
+  return { ok: true, available };
+}
+
+/**
+ * Create a new team
+ */
+async function createNewTeam(database, data, passwordHash) {
+  const name = sanitizeString(data.teamName, 128);
+  const description = sanitizeString(data.teamDescription || '', 256);
+
+  const existing = await db.getTeamByName(database, name);
+  if (existing) {
+    return { error: 'Team name already exists' };
+  }
+
+  const team = await db.createTeam(database, name, description, passwordHash);
+  return { teamId: team.id, teamName: name, isNewTeam: true };
+}
+
+/**
+ * Join an existing team with password verification
+ */
+async function joinExistingTeam(database, data, password, memberCount, maxTeamSize) {
+  const teamId = parseInt(data.teamId, 10);
+  const team = await db.getTeamById(database, teamId);
+
+  if (!team) {
+    return { error: 'Selected team not found', status: 404 };
+  }
+
+  const passwordValid = await verifyPassword(password, team.password_hash);
+  if (!passwordValid) {
+    return { error: 'Incorrect password', status: 403 };
+  }
+
+  // Upgrade legacy hash to new format on successful verification
+  if (needsHashUpgrade(team.password_hash)) {
+    try {
+      const newHash = await hashPassword(password);
+      await db.updateTeam(database, teamId, { passwordHash: newHash });
+    } catch (upgradeErr) {
+      console.error('Failed to upgrade password hash:', upgradeErr);
+    }
+  }
+
+  // Check team capacity (except for Organisation)
+  if (team.name !== 'Organisation') {
+    const teamMemberCount = await db.getTeamMemberCount(database, teamId);
+    const available = maxTeamSize - teamMemberCount;
+    if (memberCount > available) {
+      return { error: `Team is full or would exceed capacity. Only ${available} spots available.` };
+    }
+  }
+
+  return { teamId, teamName: team.name, isNewTeam: false };
+}
+
+/**
+ * Insert members into the database using batch operations
+ */
+async function insertMembers(database, teamId, members) {
+  const insertStatements = members.map(member =>
+    database.prepare(`
+      INSERT INTO members (team_id, first_name, last_name, email, bac_level, is_leader, food_diet)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      teamId,
+      member.firstName,
+      member.lastName,
+      member.email,
+      member.bacLevel || 0,
+      member.isLeader ? 1 : 0,
+      member.foodDiet || ''
+    )
+  );
+
+  const results = await database.batch(insertStatements);
+  return members.map((member, i) => ({
+    id: results[i].meta.last_row_id,
+    ...member
+  }));
+}
+
+/**
  * POST /api/register - Register team members
  */
 export async function register(request, env) {
@@ -18,123 +110,49 @@ export async function register(request, env) {
     const minTeamSize = parseInt(env.MIN_TEAM_SIZE, 10) || 2;
 
     // Validate input
-    const validation = validateRegistration(data, {
-      maxTeamSize,
-      minTeamSize
-    });
-
+    const validation = validateRegistration(data, { maxTeamSize, minTeamSize });
     if (!validation.valid) {
       return error(validation.errors.join('; '), 400);
     }
 
     // Check total capacity
-    const currentTotal = await db.getTotalParticipants(env.DB);
-    if (currentTotal + validation.members.length > maxTotal) {
-      return error(
-        `Registration would exceed maximum capacity. Only ${maxTotal - currentTotal} spots available.`,
-        400
-      );
+    const capacity = await checkCapacity(env.DB, validation.members.length, maxTotal);
+    if (!capacity.ok) {
+      return error(`Registration would exceed maximum capacity. Only ${capacity.available} spots available.`, 400);
     }
 
-    let teamId;
-    let teamName;
-    let isNewTeam = false;
-
-    // Hash password using Web Crypto API
+    // Validate password
     const password = sanitizeString(data.teamPassword || '', 64);
     if (!password) {
       return error('Team password is required', 400);
     }
 
-    const passwordHash = await hashPassword(password);
-
-    // Handle team creation or selection
+    // Handle team creation or joining
+    let teamResult;
     if (data.createNewTeam) {
-      const name = sanitizeString(data.teamName, 128);
-      const description = sanitizeString(data.teamDescription || '', 256);
-
-      // Check if team name exists
-      const existing = await db.getTeamByName(env.DB, name);
-      if (existing) {
-        return error('Team name already exists', 400);
-      }
-
-      const team = await db.createTeam(env.DB, name, description, passwordHash);
-      teamId = team.id;
-      teamName = name;
-      isNewTeam = true;
+      const passwordHash = await hashPassword(password);
+      teamResult = await createNewTeam(env.DB, data, passwordHash);
     } else {
-      teamId = parseInt(data.teamId, 10);
-      const team = await db.getTeamById(env.DB, teamId);
-
-      if (!team) {
-        return error('Selected team not found', 404);
-      }
-
-      // Verify password using the new verifyPassword function
-      // which handles both legacy SHA-256 and new PBKDF2 formats
-      const passwordValid = await verifyPassword(password, team.password_hash);
-      if (!passwordValid) {
-        return error('Incorrect password', 403);
-      }
-
-      // Upgrade legacy hash to new format on successful verification
-      if (needsHashUpgrade(team.password_hash)) {
-        try {
-          const newHash = await hashPassword(password);
-          await db.updateTeam(env.DB, teamId, { passwordHash: newHash });
-        } catch (upgradeErr) {
-          // Log but don't fail the request if upgrade fails
-          console.error('Failed to upgrade password hash:', upgradeErr);
-        }
-      }
-
-      teamName = team.name;
-
-      // Check team capacity (except for Organisation)
-      if (team.name !== 'Organisation') {
-        const teamMemberCount = await db.getTeamMemberCount(env.DB, teamId);
-        if (teamMemberCount + validation.members.length > maxTeamSize) {
-          return error(
-            `Team is full or would exceed capacity. Only ${maxTeamSize - teamMemberCount} spots available.`,
-            400
-          );
-        }
-      }
+      teamResult = await joinExistingTeam(env.DB, data, password, validation.members.length, maxTeamSize);
     }
 
-    // Use batch insert for atomicity - prevents race conditions where two
-    // concurrent registrations could both pass existence checks
-    const insertStatements = validation.members.map(member =>
-      env.DB.prepare(`
-        INSERT INTO members (team_id, first_name, last_name, email, bac_level, is_leader, food_diet)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).bind(
-        teamId,
-        member.firstName,
-        member.lastName,
-        member.email,
-        member.bacLevel || 0,
-        member.isLeader ? 1 : 0,
-        member.foodDiet || ''
-      )
-    );
+    if (teamResult.error) {
+      return error(teamResult.error, teamResult.status || 400);
+    }
 
+    const { teamId, teamName, isNewTeam } = teamResult;
+
+    // Insert members
     let addedMembers;
     try {
-      const results = await env.DB.batch(insertStatements);
-      addedMembers = validation.members.map((member, i) => ({
-        id: results[i].meta.last_row_id,
-        ...member
-      }));
+      addedMembers = await insertMembers(env.DB, teamId, validation.members);
     } catch (err) {
-      // Handle unique constraint violation (member already exists)
-      // Check multiple patterns for SQLite/D1 unique constraint errors
       const errMsg = err.message?.toLowerCase() || '';
-      if (errMsg.includes('unique constraint') ||
+      const isConstraintError = errMsg.includes('unique constraint') ||
           errMsg.includes('duplicate') ||
           errMsg.includes('already exists') ||
-          (err.code && String(err.code).includes('CONSTRAINT'))) {
+          (err.code && String(err.code).includes('CONSTRAINT'));
+      if (isConstraintError) {
         return error('One or more members are already registered', 400);
       }
       throw err;
@@ -142,25 +160,16 @@ export async function register(request, env) {
 
     // Send confirmation email (non-blocking)
     try {
-      await sendConfirmationEmail(env, {
-        teamName,
-        isNewTeam,
-        members: validation.members
-      });
+      await sendConfirmationEmail(env, { teamName, isNewTeam, members: validation.members });
     } catch (emailErr) {
       console.error('Failed to send confirmation email:', emailErr);
-      // Don't fail the registration if email fails
     }
 
     return json({
       success: true,
       message: `Successfully registered ${addedMembers.length} member(s) to team "${teamName}"`,
       team: { id: teamId, name: teamName, isNew: isNewTeam },
-      members: addedMembers.map(m => ({
-        id: m.id,
-        firstName: m.firstName,
-        lastName: m.lastName
-      }))
+      members: addedMembers.map(m => ({ id: m.id, firstName: m.firstName, lastName: m.lastName }))
     });
 
   } catch (err) {

@@ -100,94 +100,88 @@ export async function updateSettings(request, env) {
 }
 
 /**
+ * Validate a number is within range
+ */
+function validateNumber(value, min, max) {
+  const num = parseInt(value, 10);
+  if (isNaN(num) || num < min || num > max) {
+    return { valid: false, error: `Must be a number between ${min} and ${max}` };
+  }
+  return { valid: true };
+}
+
+/**
+ * Validate pizzas array
+ */
+function validatePizzas(value) {
+  if (!Array.isArray(value)) {
+    return { valid: false, error: 'Must be an array' };
+  }
+  for (let i = 0; i < value.length; i++) {
+    const pizza = value[i];
+    if (!pizza.id || typeof pizza.id !== 'string') {
+      return { valid: false, error: `Pizza at index ${i} must have a string 'id'` };
+    }
+    if (!pizza.name || typeof pizza.name !== 'string') {
+      return { valid: false, error: `Pizza at index ${i} must have a string 'name'` };
+    }
+    if (pizza.description !== undefined && typeof pizza.description !== 'string') {
+      return { valid: false, error: `Pizza at index ${i} 'description' must be a string` };
+    }
+  }
+  return { valid: true };
+}
+
+/**
+ * Validate BAC levels array
+ */
+function validateBacLevels(value) {
+  if (!Array.isArray(value)) {
+    return { valid: false, error: 'Must be an array' };
+  }
+  for (let i = 0; i < value.length; i++) {
+    const level = value[i];
+    if (typeof level.value !== 'number') {
+      return { valid: false, error: `BAC level at index ${i} must have a numeric 'value'` };
+    }
+    if (!level.label || typeof level.label !== 'string') {
+      return { valid: false, error: `BAC level at index ${i} must have a string 'label'` };
+    }
+  }
+  return { valid: true };
+}
+
+// Validator functions for each setting key
+const VALIDATORS = {
+  max_team_size: (v) => validateNumber(v, 1, 100),
+  max_total_participants: (v) => validateNumber(v, 1, 10000),
+  min_team_size: (v) => validateNumber(v, 1, 50),
+  pizzas: validatePizzas,
+  bac_levels: validateBacLevels,
+  school_name: (v) => {
+    if (typeof v !== 'string' || v.length > 256) {
+      return { valid: false, error: 'Must be a string up to 256 characters' };
+    }
+    return { valid: true };
+  },
+  price_asso_member: (v) => validateNumber(v, 0, 100000),
+  price_non_member: (v) => validateNumber(v, 0, 100000),
+  price_late: (v) => validateNumber(v, 0, 100000),
+  late_cutoff_time: (v) => {
+    if (typeof v !== 'string' || !/^\d{2}:\d{2}$/.test(v)) {
+      return { valid: false, error: 'Must be a time in HH:MM format' };
+    }
+    return { valid: true };
+  }
+};
+
+/**
  * Validate a setting value based on its key
  */
 function validateSetting(key, value) {
-  switch (key) {
-    case 'max_team_size': {
-      const maxTeam = parseInt(value, 10);
-      if (isNaN(maxTeam) || maxTeam < 1 || maxTeam > 100) {
-        return { valid: false, error: 'Must be a number between 1 and 100' };
-      }
-      break;
-    }
-
-    case 'max_total_participants': {
-      const maxTotal = parseInt(value, 10);
-      if (isNaN(maxTotal) || maxTotal < 1 || maxTotal > 10000) {
-        return { valid: false, error: 'Must be a number between 1 and 10000' };
-      }
-      break;
-    }
-
-    case 'min_team_size': {
-      const minTeam = parseInt(value, 10);
-      if (isNaN(minTeam) || minTeam < 1 || minTeam > 50) {
-        return { valid: false, error: 'Must be a number between 1 and 50' };
-      }
-      break;
-    }
-
-    case 'pizzas': {
-      if (!Array.isArray(value)) {
-        return { valid: false, error: 'Must be an array' };
-      }
-      for (let i = 0; i < value.length; i++) {
-        const pizza = value[i];
-        if (!pizza.id || typeof pizza.id !== 'string') {
-          return { valid: false, error: `Pizza at index ${i} must have a string 'id'` };
-        }
-        if (!pizza.name || typeof pizza.name !== 'string') {
-          return { valid: false, error: `Pizza at index ${i} must have a string 'name'` };
-        }
-        if (pizza.description !== undefined && typeof pizza.description !== 'string') {
-          return { valid: false, error: `Pizza at index ${i} 'description' must be a string` };
-        }
-      }
-      break;
-    }
-
-    case 'bac_levels': {
-      if (!Array.isArray(value)) {
-        return { valid: false, error: 'Must be an array' };
-      }
-      for (let i = 0; i < value.length; i++) {
-        const level = value[i];
-        if (typeof level.value !== 'number') {
-          return { valid: false, error: `BAC level at index ${i} must have a numeric 'value'` };
-        }
-        if (!level.label || typeof level.label !== 'string') {
-          return { valid: false, error: `BAC level at index ${i} must have a string 'label'` };
-        }
-      }
-      break;
-    }
-
-    case 'school_name':
-      if (typeof value !== 'string' || value.length > 256) {
-        return { valid: false, error: 'Must be a string up to 256 characters' };
-      }
-      break;
-
-    case 'price_asso_member':
-    case 'price_non_member':
-    case 'price_late': {
-      const price = parseInt(value, 10);
-      if (isNaN(price) || price < 0 || price > 100000) {
-        return { valid: false, error: 'Must be a number between 0 and 100000 (in cents)' };
-      }
-      break;
-    }
-
-    case 'late_cutoff_time':
-      if (typeof value !== 'string' || !/^\d{2}:\d{2}$/.test(value)) {
-        return { valid: false, error: 'Must be a time in HH:MM format' };
-      }
-      break;
-
-    default:
-      return { valid: false, error: 'Unknown setting key' };
+  const validator = VALIDATORS[key];
+  if (!validator) {
+    return { valid: false, error: 'Unknown setting key' };
   }
-
-  return { valid: true };
+  return validator(value);
 }

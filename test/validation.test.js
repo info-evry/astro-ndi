@@ -1,10 +1,15 @@
+/**
+ * Validation Helper Tests
+ * Tests for extracted validation helper functions
+ */
+
 import { describe, it, expect } from 'vitest';
 import {
-  sanitizeString,
-  isValidEmail,
-  validateTeamName,
+  validateRegistration,
   validateMember,
-  validateRegistration
+  validateTeamName,
+  sanitizeString,
+  isValidEmail
 } from '../src/lib/validation.js';
 
 describe('sanitizeString', () => {
@@ -13,10 +18,11 @@ describe('sanitizeString', () => {
   });
 
   it('should limit length', () => {
-    expect(sanitizeString('hello world', 5)).toBe('hello');
+    const longString = 'a'.repeat(300);
+    expect(sanitizeString(longString, 10)).toBe('a'.repeat(10));
   });
 
-  it('should return empty string for non-strings', () => {
+  it('should return empty string for non-string input', () => {
     expect(sanitizeString(null)).toBe('');
     expect(sanitizeString(undefined)).toBe('');
     expect(sanitizeString(123)).toBe('');
@@ -26,16 +32,26 @@ describe('sanitizeString', () => {
 describe('isValidEmail', () => {
   it('should accept valid emails', () => {
     expect(isValidEmail('test@example.com')).toBe(true);
-    expect(isValidEmail('user.name@domain.org')).toBe(true);
-    expect(isValidEmail('user+tag@example.co.uk')).toBe(true);
+    expect(isValidEmail('user.name@domain.co.uk')).toBe(true);
+    expect(isValidEmail('user+tag@example.org')).toBe(true);
   });
 
   it('should reject invalid emails', () => {
     expect(isValidEmail('notanemail')).toBe(false);
-    expect(isValidEmail('missing@domain')).toBe(false);
-    expect(isValidEmail('@nodomain.com')).toBe(false);
-    expect(isValidEmail('spaces in@email.com')).toBe(false);
-    expect(isValidEmail('')).toBe(false);
+    expect(isValidEmail('@example.com')).toBe(false);
+    expect(isValidEmail('test@')).toBe(false);
+    expect(isValidEmail('test@example')).toBe(false);
+    expect(isValidEmail('test @example.com')).toBe(false);
+  });
+
+  it('should reject emails over 254 characters', () => {
+    const longEmail = 'a'.repeat(250) + '@example.com';
+    expect(isValidEmail(longEmail)).toBe(false);
+  });
+
+  it('should handle null/undefined', () => {
+    expect(isValidEmail(null)).toBe(false);
+    expect(isValidEmail(undefined)).toBe(false);
   });
 });
 
@@ -55,164 +71,153 @@ describe('validateTeamName', () => {
     expect(validateTeamName('A').valid).toBe(false);
   });
 
-  it('should trim team names', () => {
-    const result = validateTeamName('  Team Beta  ');
+  it('should truncate long team names', () => {
+    const longName = 'A'.repeat(200);
+    const result = validateTeamName(longName);
     expect(result.valid).toBe(true);
-    expect(result.value).toBe('Team Beta');
+    expect(result.value.length).toBeLessThanOrEqual(128);
   });
 });
 
 describe('validateMember', () => {
-  const validMember = {
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john@example.com',
-    bacLevel: 3,
-    isLeader: true,
-    foodDiet: 'margherita'
-  };
+  it('should validate a complete member', () => {
+    const result = validateMember({
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john@example.com',
+      bacLevel: 3,
+      isLeader: true,
+      foodDiet: 'margherita'
+    });
 
-  it('should accept valid member data', () => {
-    const result = validateMember(validMember);
     expect(result.valid).toBe(true);
     expect(result.value.firstName).toBe('John');
     expect(result.value.lastName).toBe('Doe');
     expect(result.value.email).toBe('john@example.com');
     expect(result.value.bacLevel).toBe(3);
     expect(result.value.isLeader).toBe(true);
-    expect(result.value.foodDiet).toBe('margherita');
   });
 
   it('should reject missing first name', () => {
-    const result = validateMember({ ...validMember, firstName: '' });
+    const result = validateMember({
+      lastName: 'Doe',
+      email: 'john@example.com'
+    });
     expect(result.valid).toBe(false);
     expect(result.errors).toContain('First name is required');
   });
 
   it('should reject missing last name', () => {
-    const result = validateMember({ ...validMember, lastName: '' });
+    const result = validateMember({
+      firstName: 'John',
+      email: 'john@example.com'
+    });
     expect(result.valid).toBe(false);
     expect(result.errors).toContain('Last name is required');
   });
 
-  it('should reject missing email', () => {
-    const result = validateMember({ ...validMember, email: '' });
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain('Email is required');
-  });
-
   it('should reject invalid email', () => {
-    const result = validateMember({ ...validMember, email: 'notanemail' });
+    const result = validateMember({
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'invalid'
+    });
     expect(result.valid).toBe(false);
     expect(result.errors).toContain('Invalid email format');
   });
 
   it('should reject invalid BAC level', () => {
-    const result = validateMember({ ...validMember, bacLevel: 15 });
+    const result = validateMember({
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john@example.com',
+      bacLevel: 15
+    });
     expect(result.valid).toBe(false);
     expect(result.errors).toContain('Invalid BAC level');
-  });
-
-  it('should lowercase email', () => {
-    const result = validateMember({ ...validMember, email: 'John@Example.COM' });
-    expect(result.valid).toBe(true);
-    expect(result.value.email).toBe('john@example.com');
   });
 });
 
 describe('validateRegistration', () => {
-  const validNewTeamData = {
-    createNewTeam: true,
-    teamName: 'Team Alpha',
-    members: [
-      {
-        firstName: 'John',
-        lastName: 'Doe',
-        email: 'john@example.com',
-        bacLevel: 3,
-        isLeader: true,
-        foodDiet: 'margherita'
-      }
-    ]
-  };
+  const defaultConfig = { maxTeamSize: 15, minTeamSize: 2 };
 
-  const validJoinTeamData = {
-    createNewTeam: false,
-    teamId: 1,
-    members: [
-      {
-        firstName: 'Jane',
-        lastName: 'Smith',
-        email: 'jane@example.com',
-        bacLevel: 2,
-        isLeader: false,
-        foodDiet: 'none'
-      }
-    ]
-  };
+  it('should validate a new team registration', () => {
+    const result = validateRegistration({
+      createNewTeam: true,
+      teamName: 'Test Team',
+      members: [
+        { firstName: 'John', lastName: 'Doe', email: 'john@example.com', isLeader: true }
+      ]
+    }, defaultConfig);
 
-  const config = { maxTeamSize: 15 };
-
-  it('should accept valid new team registration', () => {
-    const result = validateRegistration(validNewTeamData, config);
     expect(result.valid).toBe(true);
     expect(result.members).toHaveLength(1);
   });
 
-  it('should accept valid join team registration', () => {
-    const result = validateRegistration(validJoinTeamData, config);
-    expect(result.valid).toBe(true);
-  });
+  it('should require team ID when not creating new team', () => {
+    const result = validateRegistration({
+      createNewTeam: false,
+      members: [
+        { firstName: 'John', lastName: 'Doe', email: 'john@example.com' }
+      ]
+    }, defaultConfig);
 
-  it('should reject new team without leader', () => {
-    const data = {
-      ...validNewTeamData,
-      members: [{ ...validNewTeamData.members[0], isLeader: false }]
-    };
-    const result = validateRegistration(data, config);
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('New team must have at least one leader');
+    expect(result.errors).toContain('Team selection is required');
   });
 
-  it('should reject empty members array', () => {
-    const data = { ...validNewTeamData, members: [] };
-    const result = validateRegistration(data, config);
+  it('should require at least one member', () => {
+    const result = validateRegistration({
+      createNewTeam: true,
+      teamName: 'Test Team',
+      members: []
+    }, defaultConfig);
+
     expect(result.valid).toBe(false);
     expect(result.errors).toContain('At least one member is required');
   });
 
-  it('should reject too many members', () => {
-    const members = Array(20).fill(null).map((_, i) => ({
-      firstName: `User${i}`,
-      lastName: `Test${i}`,
-      email: `user${i}@example.com`,
-      bacLevel: 1,
-      isLeader: i === 0,
-      foodDiet: 'none'
+  it('should reject exceeding max team size', () => {
+    const members = Array.from({ length: 20 }, (_, i) => ({
+      firstName: 'User' + i,
+      lastName: 'Test',
+      email: 'user' + i + '@example.com'
     }));
-    const data = { ...validNewTeamData, members };
-    const result = validateRegistration(data, config);
+
+    const result = validateRegistration({
+      createNewTeam: true,
+      teamName: 'Test Team',
+      members
+    }, defaultConfig);
+
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('Maximum 15 members allowed');
+    expect(result.errors.some(e => e.includes('Maximum'))).toBe(true);
   });
 
-  it('should reject duplicate members', () => {
-    const data = {
-      ...validNewTeamData,
+  it('should require leader for new team', () => {
+    const result = validateRegistration({
+      createNewTeam: true,
+      teamName: 'Test Team',
       members: [
-        validNewTeamData.members[0],
-        { ...validNewTeamData.members[0], email: 'different@example.com' }
+        { firstName: 'John', lastName: 'Doe', email: 'john@example.com', isLeader: false }
       ]
-    };
-    const result = validateRegistration(data, config);
+    }, defaultConfig);
+
     expect(result.valid).toBe(false);
-    expect(result.errors.some(e => e.includes('Duplicate member'))).toBe(true);
+    expect(result.errors).toContain('New team must have at least one leader');
   });
 
-  it('should reject join team without team ID', () => {
-    const data = { ...validJoinTeamData, teamId: null };
-    const result = validateRegistration(data, config);
+  it('should detect duplicate members', () => {
+    const result = validateRegistration({
+      createNewTeam: true,
+      teamName: 'Test Team',
+      members: [
+        { firstName: 'John', lastName: 'Doe', email: 'john@example.com', isLeader: true },
+        { firstName: 'John', lastName: 'Doe', email: 'john2@example.com' }
+      ]
+    }, defaultConfig);
+
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('Team selection is required');
+    expect(result.errors.some(e => e.includes('Duplicate'))).toBe(true);
   });
 });

@@ -67,61 +67,82 @@ const DEFAULT_CONFIG = {
 };
 
 /**
+ * Check if D1 settings table is available
+ */
+async function isD1Available(env) {
+  try {
+    return await settingsDb.settingsTableExists(env.DB);
+  } catch (e) {
+    console.error('D1 check error:', e);
+    return false;
+  }
+}
+
+/**
+ * Load settings from D1 database
+ */
+async function loadD1Settings(config, env) {
+  try {
+    const d1Pizzas = await settingsDb.getSettingJson(env.DB, 'pizzas');
+    if (d1Pizzas) config.pizzas = d1Pizzas;
+
+    const d1BacLevels = await settingsDb.getSettingJson(env.DB, 'bac_levels');
+    if (d1BacLevels) config.bacLevels = d1BacLevels;
+
+    const capacity = await settingsDb.getCapacitySettings(env.DB, env);
+    config.maxTeamSize = capacity.maxTeamSize;
+    config.maxTotalParticipants = capacity.maxTotalParticipants;
+    config.minTeamSize = capacity.minTeamSize;
+    return true;
+  } catch (e) {
+    console.error('D1 settings read error:', e);
+    return false;
+  }
+}
+
+/**
+ * Load settings from KV namespace
+ */
+async function loadKVSettings(config, env) {
+  try {
+    const kvPizzas = await env.CONFIG.get('pizzas', { type: 'json' });
+    if (kvPizzas) config.pizzas = kvPizzas;
+
+    const kvLabels = await env.CONFIG.get('labels', { type: 'json' });
+    if (kvLabels) config.labels = { ...config.labels, ...kvLabels };
+
+    const kvBacLevels = await env.CONFIG.get('bacLevels', { type: 'json' });
+    if (kvBacLevels) config.bacLevels = kvBacLevels;
+  } catch (e) {
+    console.error('KV read error:', e);
+  }
+}
+
+/**
+ * Apply default capacity values from environment
+ */
+function applyDefaultCapacity(config, env) {
+  if (!config.maxTeamSize) config.maxTeamSize = parseInt(env.MAX_TEAM_SIZE, 10) || 15;
+  if (!config.maxTotalParticipants) config.maxTotalParticipants = parseInt(env.MAX_TOTAL_PARTICIPANTS, 10) || 200;
+  if (!config.minTeamSize) config.minTeamSize = parseInt(env.MIN_TEAM_SIZE, 10) || 1;
+}
+
+/**
  * GET /api/config - Get public configuration
  * Priority: D1 settings > KV namespace > Default values
  */
 export async function getConfig(request, env) {
   try {
-    let config = { ...DEFAULT_CONFIG };
+    const config = { ...DEFAULT_CONFIG };
 
-    // Try D1 settings first (if table exists)
-    let d1Available = false;
-    try {
-      d1Available = await settingsDb.settingsTableExists(env.DB);
-    } catch (e) {
-      console.error('D1 check error:', e);
-    }
-
+    const d1Available = await isD1Available(env);
     if (d1Available) {
-      try {
-        const d1Pizzas = await settingsDb.getSettingJson(env.DB, 'pizzas');
-        if (d1Pizzas) config.pizzas = d1Pizzas;
-
-        const d1BacLevels = await settingsDb.getSettingJson(env.DB, 'bac_levels');
-        if (d1BacLevels) config.bacLevels = d1BacLevels;
-
-        // Get capacity from D1 with env fallback
-        const capacity = await settingsDb.getCapacitySettings(env.DB, env);
-        config.maxTeamSize = capacity.maxTeamSize;
-        config.maxTotalParticipants = capacity.maxTotalParticipants;
-        config.minTeamSize = capacity.minTeamSize;
-      } catch (e) {
-        console.error('D1 settings read error:', e);
-        // Fall through to KV/defaults
-      }
+      await loadD1Settings(config, env);
+    } else if (env.CONFIG) {
+      await loadKVSettings(config, env);
     }
 
-    // Fallback to KV overrides if D1 didn't provide values
-    if (env.CONFIG && !d1Available) {
-      try {
-        const kvPizzas = await env.CONFIG.get('pizzas', { type: 'json' });
-        if (kvPizzas) config.pizzas = kvPizzas;
-
-        const kvLabels = await env.CONFIG.get('labels', { type: 'json' });
-        if (kvLabels) config.labels = { ...config.labels, ...kvLabels };
-
-        const kvBacLevels = await env.CONFIG.get('bacLevels', { type: 'json' });
-        if (kvBacLevels) config.bacLevels = kvBacLevels;
-      } catch (e) {
-        console.error('KV read error:', e);
-      }
-    }
-
-    // Ensure capacity values have defaults if not set
-    if (!config.maxTeamSize) config.maxTeamSize = parseInt(env.MAX_TEAM_SIZE, 10) || 15;
-    if (!config.maxTotalParticipants) config.maxTotalParticipants = parseInt(env.MAX_TOTAL_PARTICIPANTS, 10) || 200;
-    if (!config.minTeamSize) config.minTeamSize = parseInt(env.MIN_TEAM_SIZE, 10) || 1;
-
+    applyDefaultCapacity(config, env);
     return json({ config });
   } catch (err) {
     console.error('Error fetching config:', err);

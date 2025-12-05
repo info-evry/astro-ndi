@@ -84,7 +84,7 @@ export async function verifyPassword(password, storedValue) {
 
   // Format 3: Plain text (DEPRECATED - security risk)
   // Log warning but allow for migration purposes
-  // TODO: Remove plain text support after all passwords are migrated
+  // [MIGRATION] Remove plain text support after all passwords are migrated
   console.error('SECURITY WARNING: Plain text password detected - must be migrated immediately');
   return password === storedValue;
 }

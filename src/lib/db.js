@@ -417,7 +417,7 @@ export async function checkOutMember(db, memberId) {
  * Get attendance statistics
  */
 export async function getAttendanceStats(db) {
-  const result = await db.prepare(`
+  return await db.prepare(`
     SELECT
       COUNT(*) as total,
       SUM(CASE WHEN checked_in = 1 THEN 1 ELSE 0 END) as checked_in,
@@ -425,7 +425,6 @@ export async function getAttendanceStats(db) {
     FROM members m
     JOIN teams t ON m.team_id = t.id
   `).first();
-  return result;
 }
 
 /**
@@ -627,7 +626,7 @@ export async function checkInWithPayment(db, memberId, paymentTier, paymentAmoun
  * Get payment statistics
  */
 export async function getPaymentStats(db) {
-  const result = await db.prepare(`
+  return await db.prepare(`
     SELECT
       COUNT(CASE WHEN payment_tier IS NOT NULL THEN 1 END) as total_paid,
       SUM(CASE WHEN payment_amount IS NOT NULL THEN payment_amount ELSE 0 END) as total_revenue,
@@ -641,7 +640,6 @@ export async function getPaymentStats(db) {
     JOIN teams t ON m.team_id = t.id
     WHERE t.name != 'Organisation'
   `).first();
-  return result;
 }
 
 /**

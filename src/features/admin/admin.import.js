@@ -63,10 +63,80 @@ function parseCSVLine(line) {
 }
 
 /**
+ * Group CSV rows by team name
+ */
+function groupRowsByTeam(rows) {
+  const teamGroups = new Map();
+  for (const row of rows) {
+    const teamName = row.teamname || 'Sans équipe';
+    if (!teamGroups.has(teamName)) {
+      teamGroups.set(teamName, []);
+    }
+    teamGroups.get(teamName).push(row);
+  }
+  return teamGroups;
+}
+
+/**
+ * Get or create a team
+ */
+async function getOrCreateTeam(database, teamName, teamMap, stats) {
+  let team = teamMap.get(teamName.toLowerCase());
+  if (team) return team;
+
+  try {
+    const passwordHash = await hashPassword(teamName);
+    const result = await database.prepare(
+      'INSERT INTO teams (name, description, password_hash) VALUES (?, ?, ?)'
+    ).bind(teamName, '', passwordHash).run();
+
+    team = { id: result.meta.last_row_id, name: teamName };
+    teamMap.set(teamName.toLowerCase(), team);
+    stats.teamsCreated++;
+    return team;
+  } catch (err) {
+    stats.errors.push(`Failed to create team "${teamName}": ${err.message}`);
+    return null;
+  }
+}
+
+/**
+ * Import a single member from CSV row
+ */
+async function importMember(database, teamId, row, stats) {
+  const firstName = row.firstname || '';
+  const lastName = row.lastname || '';
+  const email = (row.email || '').toLowerCase();
+  const foodDiet = row.fooddiet || 'none';
+  const bacLevel = parseInt(row.baclevel, 10) || 0;
+  const isLeader = ['Yes', 'yes', '1'].includes(row.ismanager) ? 1 : 0;
+
+  if (!firstName || !lastName || !email) {
+    stats.membersSkipped++;
+    stats.errors.push(`Skipped member: missing name or email (${firstName} ${lastName})`);
+    return;
+  }
+
+  const existing = await database.prepare(
+    'SELECT id FROM members WHERE first_name = ? AND last_name = ?'
+  ).bind(firstName, lastName).first();
+
+  if (existing) {
+    stats.membersSkipped++;
+    return;
+  }
+
+  await database.prepare(
+    'INSERT INTO members (team_id, first_name, last_name, email, bac_level, is_leader, food_diet) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).bind(teamId, firstName, lastName, email, bacLevel, isLeader, foodDiet).run();
+
+  stats.membersImported++;
+}
+
+/**
  * POST /api/admin/import - Import members from CSV
  */
 export async function importCSV(request, env) {
-  // Verify admin
   if (!await verifyAdmin(request, env)) {
     return error('Unauthorized', 401);
   }
@@ -79,99 +149,29 @@ export async function importCSV(request, env) {
       return error('CSV data is required', 400);
     }
 
-    // Parse CSV
     const rows = parseCSV(csv);
     if (rows.length === 0) {
       return error('No valid rows found in CSV', 400);
     }
 
-    // Validate required columns
     const requiredColumns = ['firstname', 'lastname', 'email', 'teamname'];
-    const firstRow = rows[0];
-    const missingColumns = requiredColumns.filter(col => !(col in firstRow));
+    const missingColumns = requiredColumns.filter(col => !(col in rows[0]));
     if (missingColumns.length > 0) {
       return error(`Missing required columns: ${missingColumns.join(', ')}`, 400);
     }
 
-    // Get existing teams
     const existingTeams = await db.getTeams(env.DB);
     const teamMap = new Map(existingTeams.map(t => [t.name.toLowerCase(), t]));
+    const stats = { teamsCreated: 0, membersImported: 0, membersSkipped: 0, errors: [] };
+    const teamGroups = groupRowsByTeam(rows);
 
-    // Track stats
-    const stats = {
-      teamsCreated: 0,
-      membersImported: 0,
-      membersSkipped: 0,
-      errors: []
-    };
-
-    // Group rows by team
-    const teamGroups = new Map();
-    for (const row of rows) {
-      const teamName = row.teamname || 'Sans équipe';
-      if (!teamGroups.has(teamName)) {
-        teamGroups.set(teamName, []);
-      }
-      teamGroups.get(teamName).push(row);
-    }
-
-    // Process each team
     for (const [teamName, members] of teamGroups) {
-      let team = teamMap.get(teamName.toLowerCase());
+      const team = await getOrCreateTeam(env.DB, teamName, teamMap, stats);
+      if (!team) continue;
 
-      // Create team if doesn't exist
-      if (!team) {
-        try {
-          // Password is the team name
-          const passwordHash = await hashPassword(teamName);
-          const result = await env.DB.prepare(
-            'INSERT INTO teams (name, description, password_hash) VALUES (?, ?, ?)'
-          ).bind(teamName, '', passwordHash).run();
-
-          team = {
-            id: result.meta.last_row_id,
-            name: teamName
-          };
-          teamMap.set(teamName.toLowerCase(), team);
-          stats.teamsCreated++;
-        } catch (err) {
-          stats.errors.push(`Failed to create team "${teamName}": ${err.message}`);
-          continue;
-        }
-      }
-
-      // Add members to team
       for (const row of members) {
         try {
-          const firstName = row.firstname || '';
-          const lastName = row.lastname || '';
-          const email = (row.email || '').toLowerCase();
-          const foodDiet = row.fooddiet || 'none';
-          const bacLevel = parseInt(row.baclevel, 10) || 0;
-          const isLeader = row.ismanager === 'Yes' || row.ismanager === 'yes' || row.ismanager === '1' ? 1 : 0;
-
-          if (!firstName || !lastName || !email) {
-            stats.membersSkipped++;
-            stats.errors.push(`Skipped member: missing name or email (${firstName} ${lastName})`);
-            continue;
-          }
-
-          // Check if member already exists
-          const existing = await env.DB.prepare(
-            'SELECT id FROM members WHERE first_name = ? AND last_name = ?'
-          ).bind(firstName, lastName).first();
-
-          if (existing) {
-            stats.membersSkipped++;
-            continue;
-          }
-
-          // Insert member
-          await env.DB.prepare(
-            'INSERT INTO members (team_id, first_name, last_name, email, bac_level, is_leader, food_diet) VALUES (?, ?, ?, ?, ?, ?, ?)'
-          ).bind(team.id, firstName, lastName, email, bacLevel, isLeader, foodDiet).run();
-
-          stats.membersImported++;
+          await importMember(env.DB, team.id, row, stats);
         } catch (err) {
           stats.membersSkipped++;
           stats.errors.push(`Failed to import ${row.firstname} ${row.lastname}: ${err.message}`);
@@ -186,7 +186,7 @@ export async function importCSV(request, env) {
         membersImported: stats.membersImported,
         membersSkipped: stats.membersSkipped,
         totalRows: rows.length,
-        errors: stats.errors.slice(0, 10) // Limit errors returned
+        errors: stats.errors.slice(0, 10)
       }
     });
 

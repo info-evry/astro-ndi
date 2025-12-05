@@ -7,6 +7,10 @@ import * as db from '../../lib/db.js';
 import { getCapacitySettings } from '../../database/db.settings.js';
 import { verifyAdmin } from '../../shared/auth.js';
 
+// Constants for repeated strings
+const CSV_CONTENT_TYPE = 'text/csv; charset=utf-8';
+const EXPORT_FAILED_MSG = 'Export failed';
+
 /**
  * GET /api/admin/members - Get all members
  */
@@ -38,13 +42,13 @@ export async function exportAllCSV(request, env) {
 
     return new Response(csv, {
       headers: {
-        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Type': CSV_CONTENT_TYPE,
         'Content-Disposition': 'attachment; filename="participants.csv"'
       }
     });
   } catch (err) {
     console.error('Error exporting:', err);
-    return error('Export failed', 500);
+    return error(EXPORT_FAILED_MSG, 500);
   }
 }
 
@@ -72,13 +76,13 @@ export async function exportTeamCSV(request, env, ctx, params) {
 
     return new Response(csv, {
       headers: {
-        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Type': CSV_CONTENT_TYPE,
         'Content-Disposition': `attachment; filename="participants_${safeTeamName}.csv"`
       }
     });
   } catch (err) {
     console.error('Error exporting team:', err);
-    return error('Export failed', 500);
+    return error(EXPORT_FAILED_MSG, 500);
   }
 }
 
@@ -113,13 +117,13 @@ export async function exportOfficialCSV(request, env) {
 
     return new Response(csv, {
       headers: {
-        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Type': CSV_CONTENT_TYPE,
         'Content-Disposition': 'attachment; filename="participants_officiel.csv"'
       }
     });
   } catch (err) {
     console.error('Error exporting official:', err);
-    return error('Export failed', 500);
+    return error(EXPORT_FAILED_MSG, 500);
   }
 }
 
@@ -162,13 +166,13 @@ export async function exportTeamOfficialCSV(request, env, ctx, params) {
 
     return new Response(csv, {
       headers: {
-        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Type': CSV_CONTENT_TYPE,
         'Content-Disposition': `attachment; filename="participants_officiel_${safeTeamName}.csv"`
       }
     });
   } catch (err) {
     console.error('Error exporting team official:', err);
-    return error('Export failed', 500);
+    return error(EXPORT_FAILED_MSG, 500);
   }
 }
 

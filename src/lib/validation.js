@@ -61,13 +61,9 @@ export function validateMember(member) {
 }
 
 /**
- * Validate registration request
+ * Validate team info in registration
  */
-export function validateRegistration(data, config) {
-  const errors = [];
-  const maxTeamSize = parseInt(config.maxTeamSize, 10) || 15;
-
-  // Validate team info
+function validateTeamInfo(data, errors) {
   if (data.createNewTeam) {
     const teamValidation = validateTeamName(data.teamName);
     if (!teamValidation.valid) {
@@ -76,45 +72,60 @@ export function validateRegistration(data, config) {
   } else if (!data.teamId) {
     errors.push('Team selection is required');
   }
+}
 
-  // Validate members
+/**
+ * Validate and deduplicate members list
+ */
+function validateMembersList(members, errors) {
+  const validatedMembers = [];
+  const seenNames = new Set();
+
+  for (let i = 0; i < members.length; i++) {
+    const memberValidation = validateMember(members[i]);
+    if (!memberValidation.valid) {
+      errors.push(`Member ${i + 1}: ${memberValidation.errors.join(', ')}`);
+      continue;
+    }
+
+    const nameKey = `${memberValidation.value.firstName.toLowerCase()}|${memberValidation.value.lastName.toLowerCase()}`;
+    if (seenNames.has(nameKey)) {
+      errors.push(`Duplicate member: ${memberValidation.value.firstName} ${memberValidation.value.lastName}`);
+    } else {
+      seenNames.add(nameKey);
+      validatedMembers.push(memberValidation.value);
+    }
+  }
+
+  return validatedMembers;
+}
+
+/**
+ * Validate registration request
+ */
+export function validateRegistration(data, config) {
+  const errors = [];
+  const maxTeamSize = parseInt(config.maxTeamSize, 10) || 15;
+
+  validateTeamInfo(data, errors);
+
   if (!Array.isArray(data.members) || data.members.length === 0) {
     errors.push('At least one member is required');
-  } else {
-    if (data.members.length > maxTeamSize) {
-      errors.push(`Maximum ${maxTeamSize} members allowed`);
-    }
+    return { valid: false, errors };
+  }
 
-    // Check for leader in new team
-    if (data.createNewTeam) {
-      const hasLeader = data.members.some(m => m.isLeader);
-      if (!hasLeader) {
-        errors.push('New team must have at least one leader');
-      }
-    }
+  if (data.members.length > maxTeamSize) {
+    errors.push(`Maximum ${maxTeamSize} members allowed`);
+  }
 
-    // Validate each member
-    const validatedMembers = [];
-    const seenNames = new Set();
+  if (data.createNewTeam && !data.members.some(m => m.isLeader)) {
+    errors.push('New team must have at least one leader');
+  }
 
-    for (let i = 0; i < data.members.length; i++) {
-      const memberValidation = validateMember(data.members[i]);
-      if (!memberValidation.valid) {
-        errors.push(`Member ${i + 1}: ${memberValidation.errors.join(', ')}`);
-      } else {
-        const nameKey = `${memberValidation.value.firstName.toLowerCase()}|${memberValidation.value.lastName.toLowerCase()}`;
-        if (seenNames.has(nameKey)) {
-          errors.push(`Duplicate member: ${memberValidation.value.firstName} ${memberValidation.value.lastName}`);
-        } else {
-          seenNames.add(nameKey);
-          validatedMembers.push(memberValidation.value);
-        }
-      }
-    }
+  const validatedMembers = validateMembersList(data.members, errors);
 
-    if (errors.length === 0) {
-      return { valid: true, members: validatedMembers };
-    }
+  if (errors.length === 0) {
+    return { valid: true, members: validatedMembers };
   }
 
   return { valid: false, errors };
