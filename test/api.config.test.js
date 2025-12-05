@@ -60,21 +60,5 @@ describe('GET /api/config', () => {
   });
 });
 
-// CORS is handled by Astro's API route, not testable with cloudflare:test
-describe.skip('CORS', () => {
-  it('should handle OPTIONS preflight', async () => {
-    const response = await SELF.fetch('http://localhost/api/teams', {
-      method: 'OPTIONS'
-    });
-
-    expect(response.status).toBe(204);
-    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
-    expect(response.headers.get('Access-Control-Allow-Methods')).toContain('GET');
-  });
-
-  it('should include CORS headers in API responses', async () => {
-    const response = await SELF.fetch('http://localhost/api/teams');
-
-    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
-  });
-});
+// Note: CORS is handled by Astro's API route (src/pages/api/[...slug].ts)
+// and tested via corsHeaders() unit tests in router.test.js
