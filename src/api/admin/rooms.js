@@ -47,6 +47,9 @@ export async function setRoom(request, env, ctx, params) {
 
   try {
     const teamId = parseInt(params.teamId, 10);
+    if (Number.isNaN(teamId)) {
+      return error('Invalid team ID', 400);
+    }
 
     const team = await db.getTeamById(env.DB, teamId);
     if (!team) {
@@ -94,19 +97,22 @@ export async function setRoomsBatch(request, env) {
     }
 
     // Validate each assignment
+    const parsedAssignments = [];
     for (const assignment of assignments) {
       if (!assignment.teamId) {
         return error('Each assignment must have a teamId', 400);
       }
+      const teamId = parseInt(assignment.teamId, 10);
+      if (Number.isNaN(teamId)) {
+        return error('Invalid team ID in assignment', 400);
+      }
       if (assignment.room && (typeof assignment.room !== 'string' || assignment.room.length > 50)) {
         return error('Room must be a string (max 50 characters)', 400);
       }
+      parsedAssignments.push({ teamId, room: assignment.room || null });
     }
 
-    const count = await db.setTeamRoomsBatch(env.DB, assignments.map(a => ({
-      teamId: parseInt(a.teamId, 10),
-      room: a.room || null
-    })));
+    const count = await db.setTeamRoomsBatch(env.DB, parsedAssignments);
 
     return json({ success: true, updated: count });
   } catch (err) {

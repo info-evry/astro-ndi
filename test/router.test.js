@@ -115,13 +115,19 @@ describe('error helper', () => {
 });
 
 describe('corsHeaders', () => {
-  it('should return CORS headers', () => {
-    const headers = corsHeaders();
+  it('should return CORS headers with explicit origin', () => {
+    const headers = corsHeaders('https://asso.info-evry.fr');
 
-    expect(headers['Access-Control-Allow-Origin']).toBe('*');
+    expect(headers['Access-Control-Allow-Origin']).toBe('https://asso.info-evry.fr');
     expect(headers['Access-Control-Allow-Methods']).toContain('GET');
     expect(headers['Access-Control-Allow-Methods']).toContain('POST');
     expect(headers['Access-Control-Allow-Headers']).toContain('Content-Type');
+  });
+
+  it('should require explicit origin for security', () => {
+    expect(() => corsHeaders()).toThrow('origin must be explicitly specified');
+    expect(() => corsHeaders(null)).toThrow('origin must be explicitly specified');
+    expect(() => corsHeaders('')).toThrow('origin must be explicitly specified');
   });
 
   it('should accept custom origin', () => {

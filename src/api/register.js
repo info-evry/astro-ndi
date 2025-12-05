@@ -129,7 +129,12 @@ export async function register(request, env) {
       }));
     } catch (err) {
       // Handle unique constraint violation (member already exists)
-      if (err.message && err.message.includes('UNIQUE constraint')) {
+      // Check multiple patterns for SQLite/D1 unique constraint errors
+      const errMsg = err.message?.toLowerCase() || '';
+      if (errMsg.includes('unique constraint') ||
+          errMsg.includes('duplicate') ||
+          errMsg.includes('already exists') ||
+          (err.code && String(err.code).includes('CONSTRAINT'))) {
         return error('One or more members are already registered', 400);
       }
       throw err;

@@ -77,12 +77,15 @@ export async function verifyPassword(password, storedValue) {
 
   // Format 2: Legacy SHA-256 format (64 hex characters)
   if (/^[a-f0-9]{64}$/i.test(storedValue)) {
+    console.warn('SECURITY: Legacy SHA-256 password hash detected - should be upgraded to PBKDF2');
     const legacyHash = await legacyHashPassword(password);
     return legacyHash === storedValue;
   }
 
-  // Format 3: Plain text (fallback for unencrypted databases)
-  // This allows existing plain text passwords to work and be upgraded on next login
+  // Format 3: Plain text (DEPRECATED - security risk)
+  // Log warning but allow for migration purposes
+  // TODO: Remove plain text support after all passwords are migrated
+  console.error('SECURITY WARNING: Plain text password detected - must be migrated immediately');
   return password === storedValue;
 }
 

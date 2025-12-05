@@ -100,8 +100,12 @@ export function error(message, status = 400) {
 
 /**
  * CORS headers for cross-origin requests
+ * @param {string} origin - Origin to allow (must be explicitly specified)
  */
-export function corsHeaders(origin = '*') {
+export function corsHeaders(origin) {
+  if (!origin) {
+    throw new Error("corsHeaders: origin must be explicitly specified for security");
+  }
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',

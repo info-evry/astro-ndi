@@ -52,6 +52,9 @@ export async function updateMemberAdmin(request, env, ctx, params) {
 
   try {
     const memberId = parseInt(params.id, 10);
+    if (Number.isNaN(memberId)) {
+      return error('Invalid member ID', 400);
+    }
     const updates = await request.json();
 
     const member = await db.getMemberById(env.DB, memberId);
@@ -79,6 +82,9 @@ export async function deleteMemberAdmin(request, env, ctx, params) {
 
   try {
     const memberId = parseInt(params.id, 10);
+    if (Number.isNaN(memberId)) {
+      return error('Invalid member ID', 400);
+    }
     const deleted = await db.deleteMember(env.DB, memberId);
 
     if (!deleted) {
@@ -107,7 +113,13 @@ export async function deleteMembersBatch(request, env) {
       return error('memberIds array is required', 400);
     }
 
-    const deleted = await db.deleteMembers(env.DB, memberIds.map(id => parseInt(id, 10)));
+    // Validate all IDs before processing
+    const parsedIds = memberIds.map(id => parseInt(id, 10));
+    if (parsedIds.some(id => Number.isNaN(id))) {
+      return error('Invalid member ID in array', 400);
+    }
+
+    const deleted = await db.deleteMembers(env.DB, parsedIds);
 
     return json({ success: true, deleted });
   } catch (err) {
