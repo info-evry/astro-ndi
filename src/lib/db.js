@@ -26,7 +26,7 @@ export async function getTeams(db) {
  */
 export async function getTeamById(db, id) {
   const team = await db.prepare(
-    'SELECT * FROM teams WHERE id = ?'
+    'SELECT id, name, description, room, password_hash, created_at FROM teams WHERE id = ?'
   ).bind(id).first();
 
   if (!team) return null;
@@ -158,7 +158,8 @@ export async function getAllMembers(db) {
       m.is_leader,
       m.food_diet,
       m.created_at,
-      t.name as team_name
+      t.name as team_name,
+      t.room as team_room
     FROM members m
     JOIN teams t ON m.team_id = t.id
     ORDER BY t.name, m.last_name, m.first_name
@@ -341,7 +342,8 @@ export async function getAllMembersWithAttendance(db) {
       m.checked_in_at,
       m.created_at,
       t.id as team_id,
-      t.name as team_name
+      t.name as team_name,
+      t.room as team_room
     FROM members m
     JOIN teams t ON m.team_id = t.id
     ORDER BY m.last_name, m.first_name
@@ -447,7 +449,8 @@ export async function getAllMembersWithPizzaStatus(db) {
       m.pizza_received_at,
       m.created_at,
       t.id as team_id,
-      t.name as team_name
+      t.name as team_name,
+      t.room as team_room
     FROM members m
     JOIN teams t ON m.team_id = t.id
     ORDER BY m.last_name, m.first_name
@@ -593,7 +596,8 @@ export async function getAllMembersWithPayment(db) {
       m.payment_confirmed_at,
       m.created_at,
       t.id as team_id,
-      t.name as team_name
+      t.name as team_name,
+      t.room as team_room
     FROM members m
     JOIN teams t ON m.team_id = t.id
     ORDER BY m.last_name, m.first_name

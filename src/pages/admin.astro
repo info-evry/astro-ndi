@@ -619,6 +619,13 @@ function truncateText(str, maxLength = 40) {
   return str.substring(0, maxLength - 1) + '…';
 }
 
+function formatTeamWithRoom(teamName, teamRoom, maxLength = 40) {
+  if (!teamName) return { truncated: '-', full: '-' };
+  const fullText = teamRoom ? `${teamName} (${teamRoom})` : teamName;
+  const truncated = truncateText(fullText, maxLength);
+  return { truncated, full: fullText };
+}
+
 // ============================================================
 // TOAST NOTIFICATIONS
 // ============================================================
@@ -811,7 +818,7 @@ function renderTeams(teams) {
   elements.teamsContainer.innerHTML = teams.map(team => `
     <div class="team-block" data-team-id="${team.id}">
       <div class="team-header" onclick="toggleTeam(${team.id})">
-        <h3>${escapeHtml(team.name)}</h3>
+        <h3>${escapeHtml(team.name)}${team.room ? ` <span class="badge badge-muted">${escapeHtml(team.room)}</span>` : ''}</h3>
         <div class="team-info">
           <span>${team.members?.length || 0} membre(s)</span>
         </div>
@@ -1479,16 +1486,18 @@ function renderAllParticipants() {
     return;
   }
 
-  tbody.innerHTML = filtered.map(m => `
+  tbody.innerHTML = filtered.map(m => {
+    const teamInfo = formatTeamWithRoom(m.team_name, m.team_room, 40);
+    return `
     <tr class="member-row" data-member-id="${m.id}">
       <td><strong>${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</strong></td>
       <td><a href="mailto:${escapeHtml(m.email)}">${escapeHtml(m.email)}</a></td>
-      <td class="team-col" title="${escapeHtml(m.team_name)}">${escapeHtml(truncateText(m.team_name, 40))}</td>
+      <td class="team-col" title="${escapeHtml(teamInfo.full)}">${escapeHtml(teamInfo.truncated)}</td>
       <td>${escapeHtml(m.food_diet) || '-'}</td>
       <td><span class="badge badge-bac">BAC+${m.bac_level || '?'}</span></td>
       <td>${m.is_leader ? '<span class="badge badge-leader">􀋀 Chef</span>' : '<span class="badge badge-muted">Membre</span>'}</td>
     </tr>
-  `).join('');
+  `;}).join('');
 }
 
 window.sortAllParticipants = function(key) {
@@ -2186,6 +2195,7 @@ function renderAttendance() {
   tbody.innerHTML = filtered.map(m => {
     const isCheckedIn = m.checked_in === 1;
     const checkedInTime = m.checked_in_at ? new Date(m.checked_in_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '-';
+    const teamInfo = formatTeamWithRoom(m.team_name, m.team_room, 40);
 
     // Payment badge
     let paymentBadge = '<span class="badge badge-muted">-</span>';
@@ -2207,7 +2217,7 @@ function renderAttendance() {
       <tr class="member-row ${isCheckedIn ? 'checked-in' : ''}" data-member-id="${m.id}">
         <td><strong>${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</strong></td>
         <td><a href="mailto:${escapeHtml(m.email)}">${escapeHtml(m.email)}</a></td>
-        <td class="team-col" title="${escapeHtml(m.team_name)}">${escapeHtml(truncateText(m.team_name, 40))}</td>
+        <td class="team-col" title="${escapeHtml(teamInfo.full)}">${escapeHtml(teamInfo.truncated)}</td>
         <td class="status-col">
           ${isCheckedIn
             ? '<span class="badge badge-success">􀁣 Présent</span>'
@@ -2523,11 +2533,12 @@ function renderPizza() {
     const isPizzaReceived = m.pizza_received === 1;
     const isCheckedIn = m.checked_in === 1;
     const pizzaTime = m.pizza_received_at ? new Date(m.pizza_received_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '-';
+    const teamInfo = formatTeamWithRoom(m.team_name, m.team_room, 40);
 
     return `
       <tr class="member-row ${isPizzaReceived ? 'checked-in' : ''}" data-member-id="${m.id}">
         <td><strong>${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</strong></td>
-        <td class="team-col" title="${escapeHtml(m.team_name || '')}">${escapeHtml(truncateText(m.team_name, 40) || '-')}</td>
+        <td class="team-col" title="${escapeHtml(teamInfo.full)}">${escapeHtml(teamInfo.truncated)}</td>
         <td>${pizzaTypes[m.food_diet] || escapeHtml(m.food_diet) || '-'}</td>
         <td class="status-col">
           ${isCheckedIn
