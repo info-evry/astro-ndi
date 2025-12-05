@@ -413,3 +413,110 @@ export async function checkOutMembers(db, memberIds) {
 
   return result.meta.changes;
 }
+
+// ============ PIZZA DISTRIBUTION TRACKING ============
+
+/**
+ * Get all members with pizza distribution status
+ */
+export async function getAllMembersWithPizzaStatus(db) {
+  const result = await db.prepare(`
+    SELECT
+      m.id,
+      m.first_name,
+      m.last_name,
+      m.email,
+      m.bac_level,
+      m.is_leader,
+      m.food_diet,
+      m.checked_in,
+      m.checked_in_at,
+      m.pizza_received,
+      m.pizza_received_at,
+      m.created_at,
+      t.id as team_id,
+      t.name as team_name
+    FROM members m
+    JOIN teams t ON m.team_id = t.id
+    ORDER BY m.last_name, m.first_name
+  `).all();
+  return result.results;
+}
+
+/**
+ * Get pizza distribution statistics
+ */
+export async function getPizzaStats(db) {
+  const result = await db.prepare(`
+    SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN pizza_received = 1 THEN 1 ELSE 0 END) as received,
+      SUM(CASE WHEN pizza_received = 0 OR pizza_received IS NULL THEN 1 ELSE 0 END) as pending
+    FROM members m
+    JOIN teams t ON m.team_id = t.id
+  `).first();
+
+  // Stats by pizza type
+  const byType = await db.prepare(`
+    SELECT
+      food_diet,
+      COUNT(*) as total,
+      SUM(CASE WHEN pizza_received = 1 THEN 1 ELSE 0 END) as received
+    FROM members
+    WHERE food_diet IS NOT NULL AND food_diet != ''
+    GROUP BY food_diet
+    ORDER BY total DESC
+  `).all();
+
+  return { ...result, by_type: byType.results };
+}
+
+/**
+ * Mark member as received pizza
+ */
+export async function givePizza(db, memberId) {
+  const now = new Date().toISOString();
+  const result = await db.prepare(`
+    UPDATE members SET pizza_received = 1, pizza_received_at = ? WHERE id = ?
+  `).bind(now, memberId).run();
+  return result.meta.changes > 0;
+}
+
+/**
+ * Revoke pizza from member (undo distribution)
+ */
+export async function revokePizza(db, memberId) {
+  const result = await db.prepare(`
+    UPDATE members SET pizza_received = 0, pizza_received_at = NULL WHERE id = ?
+  `).bind(memberId).run();
+  return result.meta.changes > 0;
+}
+
+/**
+ * Batch give pizza to multiple members
+ */
+export async function givePizzaBatch(db, memberIds) {
+  if (!memberIds.length) return 0;
+
+  const now = new Date().toISOString();
+  const placeholders = memberIds.map(() => '?').join(',');
+  const result = await db.prepare(
+    `UPDATE members SET pizza_received = 1, pizza_received_at = ? WHERE id IN (${placeholders})`
+  ).bind(now, ...memberIds).run();
+
+  return result.meta.changes;
+}
+
+/**
+ * Batch revoke pizza from multiple members
+ */
+export async function revokePizzaBatch(db, memberIds) {
+  if (!memberIds.length) return 0;
+
+  const placeholders = memberIds.map(() => '?').join(',');
+  const result = await db.prepare(
+    `UPDATE members SET pizza_received = 0, pizza_received_at = NULL WHERE id IN (${placeholders})`
+  ).bind(...memberIds).run();
+
+  return result.meta.changes;
+}

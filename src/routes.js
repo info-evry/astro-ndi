@@ -25,7 +25,12 @@ import {
   checkInMember,
   checkOutMember,
   checkInMembersBatch,
-  checkOutMembersBatch
+  checkOutMembersBatch,
+  getPizza,
+  givePizzaMember,
+  revokePizzaMember,
+  givePizzaMembersBatch,
+  revokePizzaMembersBatch
 } from './api/admin.js';
 import { getSettings, updateSettings } from './features/admin/admin.settings.js';
 import { importCSV } from './features/admin/admin.import.js';
@@ -72,6 +77,13 @@ export function createRouter() {
   router.post('/api/admin/attendance/check-out/:id', checkOutMember);
   router.post('/api/admin/attendance/check-in-batch', checkInMembersBatch);
   router.post('/api/admin/attendance/check-out-batch', checkOutMembersBatch);
+
+  // Admin API routes - Pizza distribution
+  router.get('/api/admin/pizza', getPizza);
+  router.post('/api/admin/pizza/give/:id', givePizzaMember);
+  router.post('/api/admin/pizza/revoke/:id', revokePizzaMember);
+  router.post('/api/admin/pizza/give-batch', givePizzaMembersBatch);
+  router.post('/api/admin/pizza/revoke-batch', revokePizzaMembersBatch);
 
   return router;
 }

@@ -41,6 +41,11 @@ import AdminLayout from '../layouts/AdminLayout.astro';
           <span class="tab-label">Présences</span>
           <span id="attendance-badge" class="tab-badge">0</span>
         </button>
+        <button type="button" role="tab" id="tab-pizza" aria-controls="panel-pizza" aria-selected="false" class="tab-item" data-tab="pizza">
+          <span class="tab-icon">&#x1F355;</span>
+          <span class="tab-label">Pizzas</span>
+          <span id="pizza-badge" class="tab-badge">0</span>
+        </button>
       </nav>
 
       <!-- Registrations Panel -->
@@ -259,6 +264,73 @@ import AdminLayout from '../layouts/AdminLayout.astro';
           </div>
         </div>
       </div><!-- End Attendance Panel -->
+
+      <!-- Pizza Distribution Panel -->
+      <div id="panel-pizza" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-pizza">
+        <!-- Pizza Stats -->
+        <div class="disclosure-group open" data-disclosure="pizza-stats">
+          <div class="disclosure-header" onclick="toggleDisclosure('pizza-stats')">
+            <h2><span class="disclosure-chevron">􀆊</span> Distribution des pizzas</h2>
+            <div class="header-actions" onclick="event.stopPropagation()">
+              <button type="button" id="refresh-pizza-btn" class="btn btn-secondary btn-sm">Rafraîchir</button>
+            </div>
+          </div>
+          <div class="disclosure-body">
+            <div id="pizza-stats-grid" class="stats-grid"></div>
+            <div id="pizza-by-type-grid" class="stats-grid" style="margin-top: var(--space-4);"></div>
+          </div>
+        </div>
+
+        <!-- Pizza List -->
+        <div class="disclosure-group open" data-disclosure="pizza-list">
+          <div class="disclosure-header" onclick="toggleDisclosure('pizza-list')">
+            <h2><span class="disclosure-chevron">􀆊</span> Liste des participants</h2>
+            <div class="header-actions" onclick="event.stopPropagation()">
+              <div class="search-input-wrapper">
+                <span class="search-icon" aria-hidden="true">&#x1F50D;</span>
+                <input type="search" id="pizza-search" class="search-input" placeholder="Rechercher un participant...">
+              </div>
+            </div>
+          </div>
+          <div class="disclosure-body">
+            <div class="attendance-filters">
+              <label class="filter-pill" id="pizza-filter-all-pill">
+                <input type="radio" name="pizza-filter" value="all" checked> 􀋲 Tous
+              </label>
+              <label class="filter-pill" id="pizza-filter-pending-pill">
+                <input type="radio" name="pizza-filter" value="pending"> 􀁡 En attente
+              </label>
+              <label class="filter-pill" id="pizza-filter-received-pill">
+                <input type="radio" name="pizza-filter" value="received"> 􀁣 Servis
+              </label>
+              <label class="filter-pill" id="pizza-filter-checkedin-pill">
+                <input type="radio" name="pizza-filter" value="checkedin"> 􀆅 Présents uniquement
+              </label>
+            </div>
+            <div class="filter-row" style="margin-top: var(--space-3); margin-bottom: var(--space-3);">
+              <select id="pizza-type-filter" class="filter-select">
+                <option value="">Toutes les pizzas</option>
+              </select>
+            </div>
+            <div class="table-container">
+              <table id="pizza-table" class="members-table attendance-table">
+                <thead>
+                  <tr>
+                    <th class="sortable-header" data-sort="name">Nom <span class="sort-indicator">⇅</span></th>
+                    <th class="sortable-header" data-sort="team">Équipe <span class="sort-indicator">⇅</span></th>
+                    <th class="sortable-header" data-sort="pizza">Pizza <span class="sort-indicator">⇅</span></th>
+                    <th class="sortable-header" data-sort="checkin">Présent <span class="sort-indicator">⇅</span></th>
+                    <th class="sortable-header" data-sort="status">Statut <span class="sort-indicator">⇅</span></th>
+                    <th class="sortable-header" data-sort="time">Heure <span class="sort-indicator">⇅</span></th>
+                    <th class="actions-col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="pizza-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div><!-- End Pizza Panel -->
 
     </div>
 
@@ -1610,9 +1682,11 @@ function switchTab(tabId) {
     panel.classList.toggle('hidden', !isActive);
   });
 
-  // Load attendance data when switching to attendance tab
+  // Load data when switching tabs
   if (tabId === 'attendance') {
     loadAttendanceData();
+  } else if (tabId === 'pizza') {
+    loadPizzaData();
   }
 }
 
@@ -1853,6 +1927,300 @@ function updateSortIndicators() {
 }
 
 // ============================================================
+// PIZZA DISTRIBUTION MANAGEMENT
+// ============================================================
+
+let pizzaData = [];
+let pizzaSearchTerm = '';
+let pizzaFilter = 'all'; // 'all', 'pending', 'received', 'checkedin'
+let pizzaTypeFilter = '';
+let pizzaSortKey = 'name';
+let pizzaSortDir = 'asc';
+let pizzaTypes = {}; // { id: name } mapping from settings
+
+async function loadPizzaData() {
+  try {
+    const data = await adminGet('/admin/pizza');
+    pizzaData = data.members || [];
+    renderPizzaStats(data.stats);
+    renderPizza();
+    updatePizzaBadge(data.stats.pending);
+  } catch (err) {
+    console.error('Error loading pizza data:', err);
+    toastError('Erreur lors du chargement des pizzas');
+  }
+}
+
+function renderPizzaStats(stats) {
+  const grid = $('pizza-stats-grid');
+  if (!grid) return;
+
+  const percentage = stats.total > 0 ? Math.round((stats.received / stats.total) * 100) : 0;
+
+  grid.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-value">${stats.received}</div>
+      <div class="stat-label">Servis</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">${stats.pending}</div>
+      <div class="stat-label">En attente</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">${stats.total}</div>
+      <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">${percentage}%</div>
+      <div class="stat-label">Progression</div>
+    </div>
+  `;
+
+  // By type stats
+  const typeGrid = $('pizza-by-type-grid');
+  if (typeGrid && stats.by_type && stats.by_type.length > 0) {
+    typeGrid.innerHTML = stats.by_type.map(t => `
+      <div class="stat-card stat-card-sm">
+        <div class="stat-value">${t.received}/${t.total}</div>
+        <div class="stat-label">${pizzaTypes[t.food_diet] || t.food_diet}</div>
+      </div>
+    `).join('');
+  }
+}
+
+function renderPizza() {
+  const tbody = $('pizza-tbody');
+  if (!tbody) return;
+
+  let filtered = [...pizzaData];
+
+  // Apply search filter
+  if (pizzaSearchTerm) {
+    const term = pizzaSearchTerm.toLowerCase();
+    filtered = filtered.filter(m =>
+      m.first_name.toLowerCase().includes(term) ||
+      m.last_name.toLowerCase().includes(term) ||
+      m.email.toLowerCase().includes(term) ||
+      (m.team_name || '').toLowerCase().includes(term)
+    );
+  }
+
+  // Apply status filter
+  if (pizzaFilter === 'pending') {
+    filtered = filtered.filter(m => m.pizza_received === 0 || m.pizza_received === null);
+  } else if (pizzaFilter === 'received') {
+    filtered = filtered.filter(m => m.pizza_received === 1);
+  } else if (pizzaFilter === 'checkedin') {
+    filtered = filtered.filter(m => m.checked_in === 1);
+  }
+
+  // Apply pizza type filter
+  if (pizzaTypeFilter) {
+    filtered = filtered.filter(m => m.food_diet === pizzaTypeFilter);
+  }
+
+  // Apply sorting
+  filtered.sort((a, b) => {
+    let valA, valB;
+    switch (pizzaSortKey) {
+      case 'name':
+        valA = `${a.first_name} ${a.last_name}`.toLowerCase();
+        valB = `${b.first_name} ${b.last_name}`.toLowerCase();
+        break;
+      case 'team':
+        valA = (a.team_name || '').toLowerCase();
+        valB = (b.team_name || '').toLowerCase();
+        break;
+      case 'pizza':
+        valA = a.food_diet || '';
+        valB = b.food_diet || '';
+        break;
+      case 'checkin':
+        valA = a.checked_in || 0;
+        valB = b.checked_in || 0;
+        break;
+      case 'status':
+        valA = a.pizza_received || 0;
+        valB = b.pizza_received || 0;
+        break;
+      case 'time':
+        valA = a.pizza_received_at || '';
+        valB = b.pizza_received_at || '';
+        break;
+      default:
+        valA = a.first_name.toLowerCase();
+        valB = b.first_name.toLowerCase();
+    }
+
+    if (valA < valB) return pizzaSortDir === 'asc' ? -1 : 1;
+    if (valA > valB) return pizzaSortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">Aucun participant trouvé</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(m => {
+    const isPizzaReceived = m.pizza_received === 1;
+    const isCheckedIn = m.checked_in === 1;
+    const pizzaTime = m.pizza_received_at ? new Date(m.pizza_received_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '-';
+
+    return `
+      <tr class="member-row ${isPizzaReceived ? 'checked-in' : ''}" data-member-id="${m.id}">
+        <td><strong>${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</strong></td>
+        <td>${escapeHtml(m.team_name || '-')}</td>
+        <td>${pizzaTypes[m.food_diet] || escapeHtml(m.food_diet) || '-'}</td>
+        <td>
+          ${isCheckedIn
+            ? '<span class="badge badge-success">Présent</span>'
+            : '<span class="badge badge-muted">Absent</span>'}
+        </td>
+        <td>
+          ${isPizzaReceived
+            ? '<span class="badge badge-success">􀁣 Servi</span>'
+            : '<span class="badge badge-muted">􀁡 En attente</span>'}
+        </td>
+        <td>${pizzaTime}</td>
+        <td class="actions-col">
+          <div class="action-buttons">
+            ${isPizzaReceived
+              ? `<button type="button" class="icon-btn danger" onclick="handleRevokePizza(${m.id})" title="Annuler" aria-label="Annuler la distribution">􀁡</button>`
+              : `<button type="button" class="icon-btn success" onclick="handleGivePizza(${m.id})" title="Donner pizza" aria-label="Donner pizza">􀁣</button>`}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function updatePizzaBadge(pending) {
+  const badge = $('pizza-badge');
+  if (badge) badge.textContent = pending || 0;
+}
+
+window.handleGivePizza = async function(memberId) {
+  try {
+    await adminPost(`/admin/pizza/give/${memberId}`);
+    await loadPizzaData();
+    toastSuccess('Pizza distribuée');
+  } catch (err) {
+    console.error('Error giving pizza:', err);
+    toastError('Erreur lors de la distribution');
+  }
+};
+
+window.handleRevokePizza = async function(memberId) {
+  try {
+    await adminPost(`/admin/pizza/revoke/${memberId}`);
+    await loadPizzaData();
+    toastSuccess('Distribution annulée');
+  } catch (err) {
+    console.error('Error revoking pizza:', err);
+    toastError('Erreur lors de l\'annulation');
+  }
+};
+
+function initPizza() {
+  // Load pizza types from settings
+  if (settingsState.pizzas) {
+    settingsState.pizzas.forEach(p => { pizzaTypes[p.id] = p.name; });
+  }
+
+  // Also try from pizzasConfig
+  if (pizzasConfig && pizzasConfig.length > 0) {
+    pizzasConfig.forEach(p => { pizzaTypes[p.id] = p.name; });
+  }
+
+  // Populate type filter
+  const typeFilter = $('pizza-type-filter');
+  if (typeFilter) {
+    const pizzaList = settingsState.pizzas || pizzasConfig || [];
+    typeFilter.innerHTML = '<option value="">Toutes les pizzas</option>' +
+      pizzaList.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('');
+  }
+
+  // Search
+  const searchInput = $('pizza-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      pizzaSearchTerm = e.target.value;
+      renderPizza();
+    });
+  }
+
+  // Filter pills
+  const filterRadios = document.querySelectorAll('input[name="pizza-filter"]');
+  filterRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      pizzaFilter = e.target.value;
+      updatePizzaFilterPills();
+      renderPizza();
+    });
+  });
+
+  // Type filter
+  const typeFilterSelect = $('pizza-type-filter');
+  if (typeFilterSelect) {
+    typeFilterSelect.addEventListener('change', (e) => {
+      pizzaTypeFilter = e.target.value;
+      renderPizza();
+    });
+  }
+
+  // Sortable headers
+  const sortableHeaders = document.querySelectorAll('#pizza-table .sortable-header');
+  sortableHeaders.forEach(header => {
+    header.addEventListener('click', () => {
+      const sortKey = header.dataset.sort;
+      if (pizzaSortKey === sortKey) {
+        pizzaSortDir = pizzaSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        pizzaSortKey = sortKey;
+        pizzaSortDir = 'asc';
+      }
+      updatePizzaSortIndicators();
+      renderPizza();
+    });
+  });
+
+  // Refresh button
+  const refreshBtn = $('refresh-pizza-btn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', loadPizzaData);
+  }
+
+  // Initialize filter pills state
+  updatePizzaFilterPills();
+}
+
+function updatePizzaFilterPills() {
+  document.querySelectorAll('[id^="pizza-filter-"]').forEach(pill => {
+    const radio = pill.querySelector('input[type="radio"]');
+    if (radio?.checked) {
+      pill.classList.add('active');
+    } else {
+      pill.classList.remove('active');
+    }
+  });
+}
+
+function updatePizzaSortIndicators() {
+  const headers = document.querySelectorAll('#pizza-table .sortable-header');
+  headers.forEach(header => {
+    const sortKey = header.dataset.sort;
+    if (sortKey === pizzaSortKey) {
+      header.setAttribute('data-sort-dir', pizzaSortDir);
+      header.querySelector('.sort-indicator').textContent = pizzaSortDir === 'asc' ? '↑' : '↓';
+    } else {
+      header.removeAttribute('data-sort-dir');
+      header.querySelector('.sort-indicator').textContent = '⇅';
+    }
+  });
+}
+
+// ============================================================
 // TEAMS SEARCH
 // ============================================================
 
@@ -1926,6 +2294,7 @@ async function init() {
   initTabs();
   initTeamsSearch();
   initAttendance();
+  initPizza();
 
   if (adminToken) {
     try {
