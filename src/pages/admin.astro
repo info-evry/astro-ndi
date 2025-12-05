@@ -46,6 +46,11 @@ import AdminLayout from '../layouts/AdminLayout.astro';
           <span class="tab-label">Pizzas</span>
           <span id="pizza-badge" class="tab-badge">0</span>
         </button>
+        <button type="button" role="tab" id="tab-rooms" aria-controls="panel-rooms" aria-selected="false" class="tab-item" data-tab="rooms">
+          <span class="tab-icon">&#x1F3E0;</span>
+          <span class="tab-label">Salles</span>
+          <span id="rooms-badge" class="tab-badge">0</span>
+        </button>
       </nav>
 
       <!-- Registrations Panel -->
@@ -248,7 +253,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
                 <tr>
                   <th class="sortable-header" data-sort="name" onclick="sortAllParticipants('name')">Nom <span class="sort-indicator">⇅</span></th>
                   <th class="sortable-header" data-sort="email" onclick="sortAllParticipants('email')">Email <span class="sort-indicator">⇅</span></th>
-                  <th class="sortable-header" data-sort="team" onclick="sortAllParticipants('team')">Équipe <span class="sort-indicator">⇅</span></th>
+                  <th class="sortable-header team-col" data-sort="team" onclick="sortAllParticipants('team')">Équipe <span class="sort-indicator">⇅</span></th>
                   <th class="sortable-header" data-sort="pizza" onclick="sortAllParticipants('pizza')">Pizza <span class="sort-indicator">⇅</span></th>
                   <th class="sortable-header" data-sort="bac" onclick="sortAllParticipants('bac')">BAC <span class="sort-indicator">⇅</span></th>
                   <th class="sortable-header" data-sort="manager" onclick="sortAllParticipants('manager')">Rôle <span class="sort-indicator">⇅</span></th>
@@ -306,9 +311,9 @@ import AdminLayout from '../layouts/AdminLayout.astro';
                   <tr>
                     <th class="sortable-header" data-sort="name">Nom <span class="sort-indicator">⇅</span></th>
                     <th class="sortable-header" data-sort="email">Email <span class="sort-indicator">⇅</span></th>
-                    <th class="sortable-header" data-sort="team">Équipe <span class="sort-indicator">⇅</span></th>
-                    <th class="sortable-header" data-sort="status">Statut <span class="sort-indicator">⇅</span></th>
-                    <th class="sortable-header" data-sort="time">Heure <span class="sort-indicator">⇅</span></th>
+                    <th class="sortable-header team-col" data-sort="team">Équipe <span class="sort-indicator">⇅</span></th>
+                    <th class="sortable-header status-col" data-sort="status">Statut <span class="sort-indicator">⇅</span></th>
+                    <th class="sortable-header time-col" data-sort="time">Heure <span class="sort-indicator">⇅</span></th>
                     <th class="sortable-header" data-sort="payment">Paiement <span class="sort-indicator">⇅</span></th>
                     <th class="actions-col">Actions</th>
                   </tr>
@@ -372,11 +377,11 @@ import AdminLayout from '../layouts/AdminLayout.astro';
                 <thead>
                   <tr>
                     <th class="sortable-header" data-sort="name">Nom <span class="sort-indicator">⇅</span></th>
-                    <th class="sortable-header" data-sort="team">Équipe <span class="sort-indicator">⇅</span></th>
+                    <th class="sortable-header team-col" data-sort="team">Équipe <span class="sort-indicator">⇅</span></th>
                     <th class="sortable-header" data-sort="pizza">Pizza <span class="sort-indicator">⇅</span></th>
-                    <th class="sortable-header" data-sort="checkin">Présent <span class="sort-indicator">⇅</span></th>
-                    <th class="sortable-header" data-sort="status">Statut <span class="sort-indicator">⇅</span></th>
-                    <th class="sortable-header" data-sort="time">Heure <span class="sort-indicator">⇅</span></th>
+                    <th class="sortable-header status-col" data-sort="checkin">Présent <span class="sort-indicator">⇅</span></th>
+                    <th class="sortable-header status-col" data-sort="status">Statut <span class="sort-indicator">⇅</span></th>
+                    <th class="sortable-header time-col" data-sort="time">Heure <span class="sort-indicator">⇅</span></th>
                     <th class="actions-col">Actions</th>
                   </tr>
                 </thead>
@@ -386,6 +391,62 @@ import AdminLayout from '../layouts/AdminLayout.astro';
           </div>
         </div>
       </div><!-- End Pizza Panel -->
+
+      <!-- Rooms Panel -->
+      <div id="panel-rooms" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-rooms">
+        <!-- Room Stats -->
+        <div class="disclosure-group open" data-disclosure="room-stats">
+          <div class="disclosure-header" onclick="toggleDisclosure('room-stats')">
+            <h2><span class="disclosure-chevron">&#x276F;</span> Attribution des salles</h2>
+            <div class="header-actions" onclick="event.stopPropagation()">
+              <button type="button" id="refresh-rooms-btn" class="btn btn-secondary btn-sm">Rafraîchir</button>
+            </div>
+          </div>
+          <div class="disclosure-body">
+            <div id="room-stats-grid" class="stats-grid"></div>
+            <div id="room-by-room-grid" class="stats-grid" style="margin-top: var(--space-4);"></div>
+          </div>
+        </div>
+
+        <!-- Room Assignment List -->
+        <div class="disclosure-group open" data-disclosure="room-list">
+          <div class="disclosure-header" onclick="toggleDisclosure('room-list')">
+            <h2><span class="disclosure-chevron">&#x276F;</span> Liste des équipes</h2>
+            <div class="header-actions" onclick="event.stopPropagation()">
+              <div class="search-input-wrapper">
+                <span class="search-icon" aria-hidden="true">&#x1F50D;</span>
+                <input type="search" id="rooms-search" class="search-input" placeholder="Rechercher une équipe...">
+              </div>
+            </div>
+          </div>
+          <div class="disclosure-body">
+            <div class="attendance-filters">
+              <label class="filter-pill" id="rooms-filter-all-pill">
+                <input type="radio" name="rooms-filter" value="all" checked> &#x25C9; Toutes
+              </label>
+              <label class="filter-pill" id="rooms-filter-assigned-pill">
+                <input type="radio" name="rooms-filter" value="assigned"> &#x2713; Assignées
+              </label>
+              <label class="filter-pill" id="rooms-filter-unassigned-pill">
+                <input type="radio" name="rooms-filter" value="unassigned"> &#x25CB; Non assignées
+              </label>
+            </div>
+            <div class="table-container">
+              <table id="rooms-table" class="members-table">
+                <thead>
+                  <tr>
+                    <th class="sortable-header" data-sort="name">Équipe <span class="sort-indicator">&#x21C5;</span></th>
+                    <th class="sortable-header" data-sort="members">Membres <span class="sort-indicator">&#x21C5;</span></th>
+                    <th class="sortable-header" data-sort="room">Salle <span class="sort-indicator">&#x21C5;</span></th>
+                    <th class="actions-col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="rooms-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div><!-- End Rooms Panel -->
 
     </div>
 
@@ -551,6 +612,11 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+function truncateText(str, maxLength = 40) {
+  if (!str || str.length <= maxLength) return str;
+  return str.substring(0, maxLength - 1) + '…';
 }
 
 // ============================================================
@@ -1417,7 +1483,7 @@ function renderAllParticipants() {
     <tr class="member-row" data-member-id="${m.id}">
       <td><strong>${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</strong></td>
       <td><a href="mailto:${escapeHtml(m.email)}">${escapeHtml(m.email)}</a></td>
-      <td>${escapeHtml(m.team_name)}</td>
+      <td class="team-col" title="${escapeHtml(m.team_name)}">${escapeHtml(truncateText(m.team_name, 40))}</td>
       <td>${escapeHtml(m.food_diet) || '-'}</td>
       <td><span class="badge badge-bac">BAC+${m.bac_level || '?'}</span></td>
       <td>${m.is_leader ? '<span class="badge badge-leader">􀋀 Chef</span>' : '<span class="badge badge-muted">Membre</span>'}</td>
@@ -1955,6 +2021,8 @@ function switchTab(tabId) {
     loadAttendanceData();
   } else if (tabId === 'pizza') {
     loadPizzaData();
+  } else if (tabId === 'rooms') {
+    loadRoomsData();
   }
 }
 
@@ -2139,13 +2207,13 @@ function renderAttendance() {
       <tr class="member-row ${isCheckedIn ? 'checked-in' : ''}" data-member-id="${m.id}">
         <td><strong>${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</strong></td>
         <td><a href="mailto:${escapeHtml(m.email)}">${escapeHtml(m.email)}</a></td>
-        <td>${escapeHtml(m.team_name)}</td>
-        <td>
+        <td class="team-col" title="${escapeHtml(m.team_name)}">${escapeHtml(truncateText(m.team_name, 40))}</td>
+        <td class="status-col">
           ${isCheckedIn
             ? '<span class="badge badge-success">􀁣 Présent</span>'
             : '<span class="badge badge-muted">􀁡 Absent</span>'}
         </td>
-        <td>${checkedInTime}</td>
+        <td class="time-col">${checkedInTime}</td>
         <td>${paymentBadge}</td>
         <td class="actions-col">
           <div class="action-buttons">
@@ -2459,19 +2527,19 @@ function renderPizza() {
     return `
       <tr class="member-row ${isPizzaReceived ? 'checked-in' : ''}" data-member-id="${m.id}">
         <td><strong>${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</strong></td>
-        <td>${escapeHtml(m.team_name || '-')}</td>
+        <td class="team-col" title="${escapeHtml(m.team_name || '')}">${escapeHtml(truncateText(m.team_name, 40) || '-')}</td>
         <td>${pizzaTypes[m.food_diet] || escapeHtml(m.food_diet) || '-'}</td>
-        <td>
+        <td class="status-col">
           ${isCheckedIn
             ? '<span class="badge badge-success">Présent</span>'
             : '<span class="badge badge-muted">Absent</span>'}
         </td>
-        <td>
+        <td class="status-col">
           ${isPizzaReceived
             ? '<span class="badge badge-success">􀁣 Servi</span>'
             : '<span class="badge badge-muted">􀁡 En attente</span>'}
         </td>
-        <td>${pizzaTime}</td>
+        <td class="time-col">${pizzaTime}</td>
         <td class="actions-col">
           <div class="action-buttons">
             ${isPizzaReceived
@@ -2610,6 +2678,260 @@ function updatePizzaSortIndicators() {
 }
 
 // ============================================================
+// ROOM MANAGEMENT
+// ============================================================
+
+let roomsData = [];
+let roomsSearchTerm = '';
+let roomsFilter = 'all';
+let roomsSortKey = 'name';
+let roomsSortDir = 'asc';
+let availableRooms = [];
+
+async function loadRoomsData() {
+  try {
+    const data = await adminGet('/admin/rooms');
+    roomsData = data.teams || [];
+    availableRooms = data.rooms || [];
+    renderRoomsStats(data.stats);
+    renderRooms();
+    updateRoomsBadge(data.stats?.unassigned_teams || 0);
+  } catch (err) {
+    console.error('Error loading rooms data:', err);
+    toastError('Erreur lors du chargement des salles');
+  }
+}
+
+function renderRoomsStats(stats) {
+  const grid = $('room-stats-grid');
+  if (!grid) return;
+
+  const assigned = stats?.assigned_teams || 0;
+  const unassigned = stats?.unassigned_teams || 0;
+  const total = stats?.total_teams || 0;
+  const percent = total > 0 ? Math.round((assigned / total) * 100) : 0;
+
+  grid.innerHTML = `
+    <div class="stat-card">
+      <span class="stat-value">${assigned}</span>
+      <span class="stat-label">Équipes assignées</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">${unassigned}</span>
+      <span class="stat-label">Non assignées</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">${total}</span>
+      <span class="stat-label">Total équipes</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">${percent}%</span>
+      <span class="stat-label">Progression</span>
+    </div>
+  `;
+
+  // By room stats
+  const byRoomGrid = $('room-by-room-grid');
+  if (byRoomGrid && stats?.by_room?.length > 0) {
+    byRoomGrid.innerHTML = stats.by_room.map(r => `
+      <div class="stat-card stat-card-sm">
+        <span class="stat-value">${r.team_count}</span>
+        <span class="stat-label">${escapeHtml(r.room)}</span>
+        <span class="stat-sublabel">${r.member_count} membres</span>
+      </div>
+    `).join('');
+  } else if (byRoomGrid) {
+    byRoomGrid.innerHTML = '';
+  }
+}
+
+function renderRooms() {
+  const tbody = $('rooms-tbody');
+  if (!tbody) return;
+
+  let filtered = [...roomsData];
+
+  // Search filter
+  if (roomsSearchTerm) {
+    filtered = filtered.filter(t =>
+      t.name.toLowerCase().includes(roomsSearchTerm) ||
+      (t.room || '').toLowerCase().includes(roomsSearchTerm)
+    );
+  }
+
+  // Status filter
+  if (roomsFilter === 'assigned') {
+    filtered = filtered.filter(t => t.room && t.room !== '');
+  } else if (roomsFilter === 'unassigned') {
+    filtered = filtered.filter(t => !t.room || t.room === '');
+  }
+
+  // Sort
+  filtered.sort((a, b) => {
+    let valA, valB;
+    switch (roomsSortKey) {
+      case 'name':
+        valA = a.name.toLowerCase();
+        valB = b.name.toLowerCase();
+        break;
+      case 'members':
+        valA = a.member_count || 0;
+        valB = b.member_count || 0;
+        break;
+      case 'room':
+        valA = (a.room || '').toLowerCase();
+        valB = (b.room || '').toLowerCase();
+        break;
+      default:
+        valA = a.name.toLowerCase();
+        valB = b.name.toLowerCase();
+    }
+
+    if (valA < valB) return roomsSortDir === 'asc' ? -1 : 1;
+    if (valA > valB) return roomsSortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Aucune équipe trouvée</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(t => {
+    const hasRoom = t.room && t.room !== '';
+    const roomOptions = availableRooms
+      .filter(r => r !== t.room)
+      .map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`)
+      .join('');
+
+    return `
+      <tr class="member-row ${hasRoom ? 'checked-in' : ''}" data-team-id="${t.id}">
+        <td class="team-col" title="${escapeHtml(t.name)}">${escapeHtml(truncateText(t.name, 40))}</td>
+        <td>${t.member_count || 0}</td>
+        <td>
+          <div class="room-input-wrapper">
+            <input type="text"
+                   class="room-input"
+                   value="${escapeHtml(t.room || '')}"
+                   placeholder="Salle..."
+                   list="room-datalist-${t.id}"
+                   data-team-id="${t.id}"
+                   onchange="handleRoomChange(${t.id}, this.value)"
+                   style="width: 120px; padding: 4px 8px; font-size: var(--text-sm); border: 1px solid var(--border-default); border-radius: var(--radius);">
+            <datalist id="room-datalist-${t.id}">
+              ${roomOptions}
+            </datalist>
+          </div>
+        </td>
+        <td class="actions-col">
+          <div class="action-buttons">
+            ${hasRoom
+              ? `<button type="button" class="icon-btn danger" onclick="handleClearRoom(${t.id})" title="Retirer de la salle" aria-label="Retirer de la salle">&#x2716;</button>`
+              : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+window.handleRoomChange = async function(teamId, room) {
+  try {
+    await adminPut(`/admin/rooms/${teamId}`, { room: room || null });
+    await loadRoomsData();
+    toastSuccess(room ? `Équipe assignée à ${room}` : 'Salle retirée');
+  } catch (err) {
+    console.error('Error setting room:', err);
+    toastError('Erreur lors de l\'assignation');
+  }
+};
+
+window.handleClearRoom = async function(teamId) {
+  try {
+    await adminPut(`/admin/rooms/${teamId}`, { room: null });
+    await loadRoomsData();
+    toastSuccess('Salle retirée');
+  } catch (err) {
+    console.error('Error clearing room:', err);
+    toastError('Erreur lors de la suppression');
+  }
+};
+
+function updateRoomsBadge(unassigned) {
+  const badge = $('rooms-badge');
+  if (badge) badge.textContent = unassigned || 0;
+}
+
+function initRooms() {
+  // Search
+  const searchInput = $('rooms-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      roomsSearchTerm = e.target.value.toLowerCase();
+      renderRooms();
+    });
+  }
+
+  // Filter pills
+  document.querySelectorAll('input[name="rooms-filter"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      roomsFilter = e.target.value;
+      updateRoomsFilterPills();
+      renderRooms();
+    });
+  });
+
+  // Sortable headers
+  const sortableHeaders = document.querySelectorAll('#rooms-table .sortable-header');
+  sortableHeaders.forEach(header => {
+    header.addEventListener('click', () => {
+      const sortKey = header.dataset.sort;
+      if (roomsSortKey === sortKey) {
+        roomsSortDir = roomsSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        roomsSortKey = sortKey;
+        roomsSortDir = 'asc';
+      }
+      updateRoomsSortIndicators();
+      renderRooms();
+    });
+  });
+
+  // Refresh button
+  const refreshBtn = $('refresh-rooms-btn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', loadRoomsData);
+  }
+
+  updateRoomsFilterPills();
+}
+
+function updateRoomsFilterPills() {
+  document.querySelectorAll('[id^="rooms-filter-"]').forEach(pill => {
+    const radio = pill.querySelector('input[type="radio"]');
+    if (radio?.checked) {
+      pill.classList.add('active');
+    } else {
+      pill.classList.remove('active');
+    }
+  });
+}
+
+function updateRoomsSortIndicators() {
+  const headers = document.querySelectorAll('#rooms-table .sortable-header');
+  headers.forEach(header => {
+    const sortKey = header.dataset.sort;
+    if (sortKey === roomsSortKey) {
+      header.setAttribute('data-sort-dir', roomsSortDir);
+      header.querySelector('.sort-indicator').textContent = roomsSortDir === 'asc' ? '↑' : '↓';
+    } else {
+      header.removeAttribute('data-sort-dir');
+      header.querySelector('.sort-indicator').textContent = '⇅';
+    }
+  });
+}
+
+// ============================================================
 // TEAMS SEARCH
 // ============================================================
 
@@ -2684,6 +3006,7 @@ async function init() {
   initTeamsSearch();
   initAttendance();
   initPizza();
+  initRooms();
 
   if (adminToken) {
     try {

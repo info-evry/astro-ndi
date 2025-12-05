@@ -600,3 +600,91 @@ export async function getAllMembersWithPayment(db) {
   `).all();
   return result.results;
 }
+
+// ============ ROOM ASSIGNMENT ============
+
+/**
+ * Get all teams with room assignments
+ */
+export async function getTeamsWithRooms(db) {
+  const result = await db.prepare(`
+    SELECT
+      t.id,
+      t.name,
+      t.description,
+      t.room,
+      t.created_at,
+      COUNT(m.id) as member_count
+    FROM teams t
+    LEFT JOIN members m ON t.id = m.team_id
+    WHERE t.name != 'Organisation'
+    GROUP BY t.id
+    ORDER BY t.room IS NULL, t.room, t.name
+  `).all();
+  return result.results;
+}
+
+/**
+ * Get room assignment statistics
+ */
+export async function getRoomStats(db) {
+  const result = await db.prepare(`
+    SELECT
+      COUNT(DISTINCT t.id) as total_teams,
+      COUNT(DISTINCT CASE WHEN t.room IS NOT NULL AND t.room != '' THEN t.id END) as assigned_teams,
+      COUNT(DISTINCT CASE WHEN t.room IS NULL OR t.room = '' THEN t.id END) as unassigned_teams
+    FROM teams t
+    WHERE t.name != 'Organisation'
+  `).first();
+
+  // Get rooms with team counts
+  const byRoom = await db.prepare(`
+    SELECT
+      t.room,
+      COUNT(t.id) as team_count,
+      SUM((SELECT COUNT(*) FROM members m WHERE m.team_id = t.id)) as member_count
+    FROM teams t
+    WHERE t.name != 'Organisation' AND t.room IS NOT NULL AND t.room != ''
+    GROUP BY t.room
+    ORDER BY t.room
+  `).all();
+
+  return { ...result, by_room: byRoom.results };
+}
+
+/**
+ * Assign a room to a team
+ */
+export async function setTeamRoom(db, teamId, room) {
+  const result = await db.prepare(`
+    UPDATE teams SET room = ? WHERE id = ?
+  `).bind(room || null, teamId).run();
+  return result.meta.changes > 0;
+}
+
+/**
+ * Batch assign rooms to teams
+ */
+export async function setTeamRoomsBatch(db, assignments) {
+  // assignments is an array of { teamId, room }
+  let updated = 0;
+  for (const { teamId, room } of assignments) {
+    const result = await db.prepare(`
+      UPDATE teams SET room = ? WHERE id = ?
+    `).bind(room || null, teamId).run();
+    updated += result.meta.changes;
+  }
+  return updated;
+}
+
+/**
+ * Get distinct rooms for autocomplete
+ */
+export async function getDistinctRooms(db) {
+  const result = await db.prepare(`
+    SELECT DISTINCT room FROM teams
+    WHERE room IS NOT NULL AND room != ''
+    ORDER BY room
+  `).all();
+  return result.results.map(r => r.room);
+}

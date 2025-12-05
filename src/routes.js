@@ -30,7 +30,10 @@ import {
   givePizzaMember,
   revokePizzaMember,
   givePizzaMembersBatch,
-  revokePizzaMembersBatch
+  revokePizzaMembersBatch,
+  getRooms,
+  setRoom,
+  setRoomsBatch
 } from './api/admin.js';
 import { getSettings, updateSettings } from './features/admin/admin.settings.js';
 import { importCSV } from './features/admin/admin.import.js';
@@ -84,6 +87,11 @@ export function createRouter() {
   router.post('/api/admin/pizza/revoke/:id', revokePizzaMember);
   router.post('/api/admin/pizza/give-batch', givePizzaMembersBatch);
   router.post('/api/admin/pizza/revoke-batch', revokePizzaMembersBatch);
+
+  // Admin API routes - Room assignment
+  router.get('/api/admin/rooms', getRooms);
+  router.put('/api/admin/rooms/:teamId', setRoom);
+  router.post('/api/admin/rooms/batch', setRoomsBatch);
 
   return router;
 }
