@@ -141,6 +141,30 @@ import AdminLayout from '../layouts/AdminLayout.astro';
               </form>
             </div>
           </div>
+
+          <!-- Pricing Settings -->
+          <div class="settings-card">
+            <h3>Tarification</h3>
+            <p class="settings-description">Prix de participation à l'événement selon le statut du participant.</p>
+            <div class="settings-grid">
+              <div class="form-group">
+                <label for="setting-price-asso-member">Prix membre asso (€)</label>
+                <input type="number" id="setting-price-asso-member" min="0" max="100" step="0.01" value="5.00">
+              </div>
+              <div class="form-group">
+                <label for="setting-price-non-member">Prix non-membre (€)</label>
+                <input type="number" id="setting-price-non-member" min="0" max="100" step="0.01" value="8.00">
+              </div>
+              <div class="form-group">
+                <label for="setting-late-cutoff">Heure limite (arrivée tardive)</label>
+                <input type="time" id="setting-late-cutoff" value="19:00">
+              </div>
+              <div class="form-group">
+                <label for="setting-price-late">Prix retardataire (€)</label>
+                <input type="number" id="setting-price-late" min="0" max="100" step="0.01" value="10.00">
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -206,6 +230,36 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         </div>
       </div>
 
+      <!-- All Participants List Section -->
+      <div class="disclosure-group" data-disclosure="all-participants">
+        <div class="disclosure-header" onclick="toggleDisclosure('all-participants')">
+          <h2><span class="disclosure-chevron">􀆊</span> Tous les participants</h2>
+          <div class="header-actions" onclick="event.stopPropagation()">
+            <div class="search-input-wrapper">
+              <span class="search-icon" aria-hidden="true">&#x1F50D;</span>
+              <input type="search" id="all-participants-search" class="search-input" placeholder="Rechercher un participant...">
+            </div>
+          </div>
+        </div>
+        <div class="disclosure-body">
+          <div class="table-container">
+            <table id="all-participants-table" class="members-table">
+              <thead>
+                <tr>
+                  <th class="sortable-header" data-sort="name" onclick="sortAllParticipants('name')">Nom <span class="sort-indicator">⇅</span></th>
+                  <th class="sortable-header" data-sort="email" onclick="sortAllParticipants('email')">Email <span class="sort-indicator">⇅</span></th>
+                  <th class="sortable-header" data-sort="team" onclick="sortAllParticipants('team')">Équipe <span class="sort-indicator">⇅</span></th>
+                  <th class="sortable-header" data-sort="pizza" onclick="sortAllParticipants('pizza')">Pizza <span class="sort-indicator">⇅</span></th>
+                  <th class="sortable-header" data-sort="bac" onclick="sortAllParticipants('bac')">BAC <span class="sort-indicator">⇅</span></th>
+                  <th class="sortable-header" data-sort="manager" onclick="sortAllParticipants('manager')">Rôle <span class="sort-indicator">⇅</span></th>
+                </tr>
+              </thead>
+              <tbody id="all-participants-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       </div><!-- End Registrations Panel -->
 
       <!-- Attendance Panel -->
@@ -255,6 +309,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
                     <th class="sortable-header" data-sort="team">Équipe <span class="sort-indicator">⇅</span></th>
                     <th class="sortable-header" data-sort="status">Statut <span class="sort-indicator">⇅</span></th>
                     <th class="sortable-header" data-sort="time">Heure <span class="sort-indicator">⇅</span></th>
+                    <th class="sortable-header" data-sort="payment">Paiement <span class="sort-indicator">⇅</span></th>
                     <th class="actions-col">Actions</th>
                   </tr>
                 </thead>
@@ -428,6 +483,46 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" onclick="closeModal('confirm-modal')">􀁑 Annuler</button>
           <button type="button" id="confirm-delete-btn" class="btn btn-danger">􀈑 Supprimer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Check-in with Payment Modal -->
+    <div id="checkin-modal" class="modal hidden">
+      <div class="modal-content">
+        <h3>Valider la présence</h3>
+        <p id="checkin-member-name" class="modal-subtitle"></p>
+        <input type="hidden" id="checkin-member-id">
+
+        <div class="payment-options">
+          <label class="payment-option" id="option-asso">
+            <input type="radio" name="payment-tier" value="asso_member" checked>
+            <span class="payment-option-content">
+              <span class="payment-option-title">Membre Asso</span>
+              <span class="payment-option-price" id="price-asso">5,00 €</span>
+            </span>
+          </label>
+
+          <label class="payment-option" id="option-non-member">
+            <input type="radio" name="payment-tier" value="non_member">
+            <span class="payment-option-content">
+              <span class="payment-option-title">Non-membre</span>
+              <span class="payment-option-price" id="price-non-member">8,00 €</span>
+            </span>
+          </label>
+
+          <label class="payment-option hidden" id="option-late">
+            <input type="radio" name="payment-tier" value="late">
+            <span class="payment-option-content">
+              <span class="payment-option-title">Retardataire</span>
+              <span class="payment-option-price" id="price-late">10,00 €</span>
+            </span>
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('checkin-modal')">􀁑 Annuler</button>
+          <button type="button" class="btn btn-primary" onclick="confirmCheckIn()">􀁣 Valider le paiement</button>
         </div>
       </div>
     </div>
@@ -1146,6 +1241,7 @@ async function handleAuth() {
     showAdmin();
     initSettings();
     initImport();
+    initAllParticipants();
   } catch (err) {
     if (err.message === 'Unauthorized') {
       showAuthError('Token invalide');
@@ -1162,6 +1258,7 @@ async function loadData() {
   renderStats(stats);
   renderFoodStats(stats.food_preferences);
   renderTeams(teams);
+  renderAllParticipants();
   await loadSettings();
   await loadPizzasConfig();
 }
@@ -1235,6 +1332,131 @@ async function handleRefresh() {
 }
 
 // ============================================================
+// ALL PARTICIPANTS LIST MODULE
+// ============================================================
+
+let allParticipantsData = [];
+let allParticipantsSearchTerm = '';
+let allParticipantsSortKey = 'name';
+let allParticipantsSortDir = 'asc';
+
+function renderAllParticipants() {
+  const tbody = $('all-participants-tbody');
+  if (!tbody) return;
+
+  // Build flat list from teamsData
+  allParticipantsData = [];
+  teamsData.forEach(team => {
+    if (team.members) {
+      team.members.forEach(member => {
+        allParticipantsData.push({
+          ...member,
+          team_name: team.name
+        });
+      });
+    }
+  });
+
+  let filtered = [...allParticipantsData];
+
+  // Apply search filter
+  if (allParticipantsSearchTerm) {
+    const term = allParticipantsSearchTerm.toLowerCase();
+    filtered = filtered.filter(m =>
+      m.first_name.toLowerCase().includes(term) ||
+      m.last_name.toLowerCase().includes(term) ||
+      m.email.toLowerCase().includes(term) ||
+      m.team_name.toLowerCase().includes(term)
+    );
+  }
+
+  // Apply sorting
+  filtered.sort((a, b) => {
+    let valA, valB;
+    switch (allParticipantsSortKey) {
+      case 'name':
+        valA = `${a.first_name} ${a.last_name}`.toLowerCase();
+        valB = `${b.first_name} ${b.last_name}`.toLowerCase();
+        break;
+      case 'email':
+        valA = a.email.toLowerCase();
+        valB = b.email.toLowerCase();
+        break;
+      case 'team':
+        valA = a.team_name.toLowerCase();
+        valB = b.team_name.toLowerCase();
+        break;
+      case 'pizza':
+        valA = (a.food_diet || '').toLowerCase();
+        valB = (b.food_diet || '').toLowerCase();
+        break;
+      case 'bac':
+        valA = a.bac_level || 0;
+        valB = b.bac_level || 0;
+        break;
+      case 'manager':
+        valA = a.is_leader ? 1 : 0;
+        valB = b.is_leader ? 1 : 0;
+        break;
+      default:
+        valA = `${a.first_name} ${a.last_name}`.toLowerCase();
+        valB = `${b.first_name} ${b.last_name}`.toLowerCase();
+    }
+
+    if (valA < valB) return allParticipantsSortDir === 'asc' ? -1 : 1;
+    if (valA > valB) return allParticipantsSortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Aucun participant trouvé</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(m => `
+    <tr class="member-row" data-member-id="${m.id}">
+      <td><strong>${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</strong></td>
+      <td><a href="mailto:${escapeHtml(m.email)}">${escapeHtml(m.email)}</a></td>
+      <td>${escapeHtml(m.team_name)}</td>
+      <td>${escapeHtml(m.food_diet) || '-'}</td>
+      <td><span class="badge badge-bac">BAC+${m.bac_level || '?'}</span></td>
+      <td>${m.is_leader ? '<span class="badge badge-leader">􀋀 Chef</span>' : '<span class="badge badge-muted">Membre</span>'}</td>
+    </tr>
+  `).join('');
+}
+
+window.sortAllParticipants = function(key) {
+  if (allParticipantsSortKey === key) {
+    allParticipantsSortDir = allParticipantsSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    allParticipantsSortKey = key;
+    allParticipantsSortDir = 'asc';
+  }
+
+  // Update sort indicators
+  document.querySelectorAll('#all-participants-table .sortable-header').forEach(h => {
+    const indicator = h.querySelector('.sort-indicator');
+    if (h.dataset.sort === allParticipantsSortKey) {
+      indicator.textContent = allParticipantsSortDir === 'asc' ? '↑' : '↓';
+    } else {
+      indicator.textContent = '⇅';
+    }
+  });
+
+  renderAllParticipants();
+};
+
+function initAllParticipants() {
+  const searchInput = $('all-participants-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', e => {
+      allParticipantsSearchTerm = e.target.value;
+      renderAllParticipants();
+    });
+  }
+}
+
+// ============================================================
 // SETTINGS MODULE
 // ============================================================
 
@@ -1248,6 +1470,12 @@ async function loadSettings() {
     settingsState.pizzas = data.settings.pizzas || [];
     settingsState.bacLevels = data.settings.bac_levels || [];
     settingsState.isDirty = false;
+
+    // Load pricing settings
+    pricingSettings.priceAssoMember = parseInt(data.settings.price_asso_member, 10) || 500;
+    pricingSettings.priceNonMember = parseInt(data.settings.price_non_member, 10) || 800;
+    pricingSettings.priceLate = parseInt(data.settings.price_late, 10) || 1000;
+    pricingSettings.lateCutoffTime = data.settings.late_cutoff_time || '19:00';
 
     renderSettings();
   } catch (err) {
@@ -1266,6 +1494,17 @@ function renderSettings() {
   if (maxTeamInput) maxTeamInput.value = settingsState.maxTeamSize;
   if (maxParticipantsInput) maxParticipantsInput.value = settingsState.maxTotalParticipants;
   if (minTeamInput) minTeamInput.value = settingsState.minTeamSize;
+
+  // Render pricing settings (convert cents to euros for display)
+  const priceAssoInput = $('setting-price-asso-member');
+  const priceNonMemberInput = $('setting-price-non-member');
+  const priceLateInput = $('setting-price-late');
+  const lateCutoffInput = $('setting-late-cutoff');
+
+  if (priceAssoInput) priceAssoInput.value = (pricingSettings.priceAssoMember / 100).toFixed(2);
+  if (priceNonMemberInput) priceNonMemberInput.value = (pricingSettings.priceNonMember / 100).toFixed(2);
+  if (priceLateInput) priceLateInput.value = (pricingSettings.priceLate / 100).toFixed(2);
+  if (lateCutoffInput) lateCutoffInput.value = pricingSettings.lateCutoffTime;
 
   renderPizzasList();
   updateSaveButton();
@@ -1304,7 +1543,8 @@ function renderPizzasList() {
 }
 
 function initSettings() {
-  ['setting-max-team', 'setting-max-participants', 'setting-min-team', 'setting-school-name'].forEach(id => {
+  ['setting-max-team', 'setting-max-participants', 'setting-min-team', 'setting-school-name',
+   'setting-price-asso-member', 'setting-price-non-member', 'setting-price-late', 'setting-late-cutoff'].forEach(id => {
     const input = $(id);
     if (input) {
       input.addEventListener('change', markDirty);
@@ -1409,6 +1649,12 @@ async function saveSettings() {
     const minTeamSize = parseInt($('setting-min-team')?.value, 10);
     const schoolName = $('setting-school-name')?.value?.trim() || "Université d'Evry";
 
+    // Pricing settings (convert euros to cents)
+    const priceAssoMember = Math.round(parseFloat($('setting-price-asso-member')?.value || '5') * 100);
+    const priceNonMember = Math.round(parseFloat($('setting-price-non-member')?.value || '8') * 100);
+    const priceLate = Math.round(parseFloat($('setting-price-late')?.value || '10') * 100);
+    const lateCutoffTime = $('setting-late-cutoff')?.value || '19:00';
+
     if (isNaN(maxTeamSize) || maxTeamSize < 1 || maxTeamSize > 100) {
       toastError('Taille max d\'équipe invalide (1-100)');
       return;
@@ -1419,6 +1665,18 @@ async function saveSettings() {
     }
     if (isNaN(minTeamSize) || minTeamSize < 1 || minTeamSize > 50) {
       toastError('Taille min d\'équipe invalide (1-50)');
+      return;
+    }
+    if (isNaN(priceAssoMember) || priceAssoMember < 0) {
+      toastError('Prix membre asso invalide');
+      return;
+    }
+    if (isNaN(priceNonMember) || priceNonMember < 0) {
+      toastError('Prix non-membre invalide');
+      return;
+    }
+    if (isNaN(priceLate) || priceLate < 0) {
+      toastError('Prix retardataire invalide');
       return;
     }
 
@@ -1433,7 +1691,11 @@ async function saveSettings() {
       max_total_participants: maxTotalParticipants,
       min_team_size: minTeamSize,
       school_name: schoolName,
-      pizzas: settingsState.pizzas
+      pizzas: settingsState.pizzas,
+      price_asso_member: priceAssoMember,
+      price_non_member: priceNonMember,
+      price_late: priceLate,
+      late_cutoff_time: lateCutoffTime
     });
 
     settingsState.isDirty = false;
@@ -1441,6 +1703,12 @@ async function saveSettings() {
     settingsState.maxTotalParticipants = maxTotalParticipants;
     settingsState.minTeamSize = minTeamSize;
     settingsState.schoolName = schoolName;
+
+    // Update pricing settings
+    pricingSettings.priceAssoMember = priceAssoMember;
+    pricingSettings.priceNonMember = priceNonMember;
+    pricingSettings.priceLate = priceLate;
+    pricingSettings.lateCutoffTime = lateCutoffTime;
 
     updateSaveButton();
     toastSuccess('Paramètres enregistrés');
@@ -1700,6 +1968,22 @@ let attendanceFilter = 'all'; // 'all', 'present', 'absent'
 let attendanceSortKey = 'name';
 let attendanceSortDir = 'asc';
 
+// Pricing settings (loaded from settings, defaults if not set)
+let pricingSettings = {
+  priceAssoMember: 500,   // cents
+  priceNonMember: 800,    // cents
+  priceLate: 1000,        // cents
+  lateCutoffTime: '19:00' // HH:MM format
+};
+let checkInMemberId = null;
+
+function formatCurrency(cents) {
+  return (cents / 100).toLocaleString('fr-FR', {
+    style: 'currency',
+    currency: 'EUR'
+  });
+}
+
 async function loadAttendanceData() {
   try {
     const data = await adminGet('/admin/attendance');
@@ -1732,11 +2016,35 @@ function renderAttendanceStats(stats) {
       <div class="stat-value">${stats.total}</div>
       <div class="stat-label">Total inscrits</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-value">${percentage}%</div>
-      <div class="stat-label">Taux de présence</div>
+    <div class="stat-card stat-card-highlight">
+      <div class="stat-value">${formatCurrency(stats.total_revenue || 0)}</div>
+      <div class="stat-label">Recettes</div>
     </div>
   `;
+
+  // Add payment breakdown if there are any payments
+  if (stats.total_paid > 0) {
+    const breakdownHtml = `
+      <div class="stats-grid" style="margin-top: var(--space-4);">
+        <div class="stat-card stat-card-sm">
+          <div class="stat-value">${stats.asso_members || 0}</div>
+          <div class="stat-label">Membres asso</div>
+          <div class="stat-sublabel">${formatCurrency(stats.asso_revenue || 0)}</div>
+        </div>
+        <div class="stat-card stat-card-sm">
+          <div class="stat-value">${stats.non_members || 0}</div>
+          <div class="stat-label">Non-membres</div>
+          <div class="stat-sublabel">${formatCurrency(stats.non_member_revenue || 0)}</div>
+        </div>
+        <div class="stat-card stat-card-sm">
+          <div class="stat-value">${stats.late_arrivals || 0}</div>
+          <div class="stat-label">Retardataires</div>
+          <div class="stat-sublabel">${formatCurrency(stats.late_revenue || 0)}</div>
+        </div>
+      </div>
+    `;
+    grid.insertAdjacentHTML('afterend', breakdownHtml);
+  }
 }
 
 function renderAttendance() {
@@ -1787,6 +2095,10 @@ function renderAttendance() {
         valA = a.checked_in_at || '';
         valB = b.checked_in_at || '';
         break;
+      case 'payment':
+        valA = a.payment_tier || '';
+        valB = b.payment_tier || '';
+        break;
       default:
         valA = a.first_name.toLowerCase();
         valB = b.first_name.toLowerCase();
@@ -1798,13 +2110,29 @@ function renderAttendance() {
   });
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Aucun participant trouvé</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">Aucun participant trouvé</td></tr>`;
     return;
   }
 
   tbody.innerHTML = filtered.map(m => {
     const isCheckedIn = m.checked_in === 1;
     const checkedInTime = m.checked_in_at ? new Date(m.checked_in_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '-';
+
+    // Payment badge
+    let paymentBadge = '<span class="badge badge-muted">-</span>';
+    if (m.payment_tier) {
+      const tierLabels = {
+        'asso_member': '􀉩 Membre asso',
+        'non_member': '􀉮 Non-membre',
+        'late': '􀐫 Retardataire'
+      };
+      const tierLabel = tierLabels[m.payment_tier] || m.payment_tier;
+      const amount = m.payment_amount ? formatCurrency(m.payment_amount) : '';
+      paymentBadge = `<span class="badge badge-success">${tierLabel}</span>`;
+      if (amount) {
+        paymentBadge += ` <span class="text-muted text-sm">${amount}</span>`;
+      }
+    }
 
     return `
       <tr class="member-row ${isCheckedIn ? 'checked-in' : ''}" data-member-id="${m.id}">
@@ -1817,6 +2145,7 @@ function renderAttendance() {
             : '<span class="badge badge-muted">􀁡 Absent</span>'}
         </td>
         <td>${checkedInTime}</td>
+        <td>${paymentBadge}</td>
         <td class="actions-col">
           <div class="action-buttons">
             ${isCheckedIn
@@ -1834,11 +2163,70 @@ function updateAttendanceBadge(count) {
   if (badge) badge.textContent = count || 0;
 }
 
-window.handleCheckIn = async function(memberId) {
+window.handleCheckIn = function(memberId) {
+  const member = attendanceData.find(m => m.id === memberId);
+  if (!member) return;
+
+  checkInMemberId = memberId;
+  $('checkin-member-id').value = memberId;
+  $('checkin-member-name').textContent = `${member.first_name} ${member.last_name}`;
+
+  // Check if after cutoff time
+  const now = new Date();
+  const [hours, minutes] = pricingSettings.lateCutoffTime.split(':').map(Number);
+  const cutoff = new Date();
+  cutoff.setHours(hours, minutes, 0, 0);
+  const isAfterCutoff = now >= cutoff;
+
+  // Show/hide late option based on cutoff
+  const lateOption = $('option-late');
+  const nonMemberOption = $('option-non-member');
+
+  if (isAfterCutoff) {
+    // After cutoff: show asso + late, hide non-member
+    lateOption.classList.remove('hidden');
+    nonMemberOption.classList.add('hidden');
+  } else {
+    // Before cutoff: show asso + non-member, hide late
+    lateOption.classList.add('hidden');
+    nonMemberOption.classList.remove('hidden');
+  }
+
+  // Update prices display
+  $('price-asso').textContent = formatCurrency(pricingSettings.priceAssoMember);
+  $('price-non-member').textContent = formatCurrency(pricingSettings.priceNonMember);
+  $('price-late').textContent = formatCurrency(pricingSettings.priceLate);
+
+  // Reset to asso member option
+  document.querySelector('input[name="payment-tier"][value="asso_member"]').checked = true;
+
+  openModal('checkin-modal');
+};
+
+window.confirmCheckIn = async function() {
+  const tier = document.querySelector('input[name="payment-tier"]:checked').value;
+  let amount;
+
+  switch (tier) {
+    case 'asso_member':
+      amount = pricingSettings.priceAssoMember;
+      break;
+    case 'non_member':
+      amount = pricingSettings.priceNonMember;
+      break;
+    case 'late':
+      amount = pricingSettings.priceLate;
+      break;
+  }
+
   try {
-    await adminPost(`/admin/attendance/check-in/${memberId}`);
+    await adminPost(`/admin/attendance/check-in/${checkInMemberId}`, {
+      paymentTier: tier,
+      paymentAmount: amount
+    });
+    closeModal('checkin-modal');
     await loadAttendanceData();
-    toastSuccess('Présence validée');
+    toastSuccess(`Présence validée - ${formatCurrency(amount)}`);
   } catch (err) {
     console.error('Error checking in:', err);
     toastError('Erreur lors de la validation');
@@ -2302,6 +2690,7 @@ async function init() {
       showAdmin();
       initSettings();
       initImport();
+      initAllParticipants();
     } catch (err) {
       showAuth();
       if (err.message === 'Unauthorized') {

@@ -570,15 +570,25 @@ export async function getAttendance(request, env) {
   }
 
   try {
-    const members = await db.getAllMembersWithAttendance(env.DB);
+    const members = await db.getAllMembersWithPayment(env.DB);
     const stats = await db.getAttendanceStats(env.DB);
+    const paymentStats = await db.getPaymentStats(env.DB);
 
     return json({
       members,
       stats: {
         total: stats?.total || 0,
         checked_in: stats?.checked_in || 0,
-        not_checked_in: stats?.not_checked_in || 0
+        not_checked_in: stats?.not_checked_in || 0,
+        // Payment stats
+        total_paid: paymentStats?.total_paid || 0,
+        total_revenue: paymentStats?.total_revenue || 0,
+        asso_members: paymentStats?.asso_members || 0,
+        asso_revenue: paymentStats?.asso_revenue || 0,
+        non_members: paymentStats?.non_members || 0,
+        non_member_revenue: paymentStats?.non_member_revenue || 0,
+        late_arrivals: paymentStats?.late_arrivals || 0,
+        late_revenue: paymentStats?.late_revenue || 0
       }
     });
   } catch (err) {
@@ -589,6 +599,7 @@ export async function getAttendance(request, env) {
 
 /**
  * POST /api/admin/attendance/check-in/:id - Check in a member
+ * Optionally accepts { paymentTier, paymentAmount } in body for paid check-in
  */
 export async function checkInMember(request, env, ctx, params) {
   if (!await verifyAdmin(request, env)) {
@@ -603,7 +614,29 @@ export async function checkInMember(request, env, ctx, params) {
       return error('Member not found', 404);
     }
 
-    const success = await db.checkInMember(env.DB, memberId);
+    // Check for payment info in request body
+    let paymentTier = null;
+    let paymentAmount = null;
+
+    try {
+      const body = await request.json();
+      if (body.paymentTier && body.paymentAmount !== undefined) {
+        paymentTier = body.paymentTier;
+        paymentAmount = parseInt(body.paymentAmount, 10);
+      }
+    } catch {
+      // No body or invalid JSON - proceed without payment info
+    }
+
+    let success;
+    if (paymentTier && paymentAmount !== null) {
+      // Check in with payment
+      success = await db.checkInWithPayment(env.DB, memberId, paymentTier, paymentAmount);
+    } else {
+      // Legacy check-in without payment
+      success = await db.checkInMember(env.DB, memberId);
+    }
+
     if (!success) {
       return error('Failed to check in member', 500);
     }
@@ -615,7 +648,10 @@ export async function checkInMember(request, env, ctx, params) {
       member: {
         id: updated.id,
         checked_in: updated.checked_in,
-        checked_in_at: updated.checked_in_at
+        checked_in_at: updated.checked_in_at,
+        payment_tier: updated.payment_tier,
+        payment_amount: updated.payment_amount,
+        payment_confirmed_at: updated.payment_confirmed_at
       }
     });
   } catch (err) {

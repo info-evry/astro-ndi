@@ -520,3 +520,71 @@ export async function revokePizzaBatch(db, memberIds) {
 
   return result.meta.changes;
 }
+
+// ============ PAYMENT TRACKING ============
+
+/**
+ * Check in a member with payment information
+ */
+export async function checkInWithPayment(db, memberId, paymentTier, paymentAmount) {
+  const now = new Date().toISOString();
+  const result = await db.prepare(`
+    UPDATE members
+    SET checked_in = 1,
+        checked_in_at = ?,
+        payment_tier = ?,
+        payment_amount = ?,
+        payment_confirmed_at = ?
+    WHERE id = ?
+  `).bind(now, paymentTier, paymentAmount, now, memberId).run();
+  return result.meta.changes > 0;
+}
+
+/**
+ * Get payment statistics
+ */
+export async function getPaymentStats(db) {
+  const result = await db.prepare(`
+    SELECT
+      COUNT(CASE WHEN payment_tier IS NOT NULL THEN 1 END) as total_paid,
+      SUM(CASE WHEN payment_amount IS NOT NULL THEN payment_amount ELSE 0 END) as total_revenue,
+      COUNT(CASE WHEN payment_tier = 'asso_member' THEN 1 END) as asso_members,
+      SUM(CASE WHEN payment_tier = 'asso_member' THEN payment_amount ELSE 0 END) as asso_revenue,
+      COUNT(CASE WHEN payment_tier = 'non_member' THEN 1 END) as non_members,
+      SUM(CASE WHEN payment_tier = 'non_member' THEN payment_amount ELSE 0 END) as non_member_revenue,
+      COUNT(CASE WHEN payment_tier = 'late' THEN 1 END) as late_arrivals,
+      SUM(CASE WHEN payment_tier = 'late' THEN payment_amount ELSE 0 END) as late_revenue
+    FROM members m
+    JOIN teams t ON m.team_id = t.id
+    WHERE t.name != 'Organisation'
+  `).first();
+  return result;
+}
+
+/**
+ * Get all members with payment information for attendance view
+ */
+export async function getAllMembersWithPayment(db) {
+  const result = await db.prepare(`
+    SELECT
+      m.id,
+      m.first_name,
+      m.last_name,
+      m.email,
+      m.bac_level,
+      m.is_leader,
+      m.food_diet,
+      m.checked_in,
+      m.checked_in_at,
+      m.payment_tier,
+      m.payment_amount,
+      m.payment_confirmed_at,
+      m.created_at,
+      t.id as team_id,
+      t.name as team_name
+    FROM members m
+    JOIN teams t ON m.team_id = t.id
+    ORDER BY m.last_name, m.first_name
+  `).all();
+  return result.results;
+}

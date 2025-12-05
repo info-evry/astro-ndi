@@ -13,7 +13,11 @@ const VALID_KEYS = new Set([
   'min_team_size',
   'pizzas',
   'bac_levels',
-  'school_name'
+  'school_name',
+  'price_asso_member',
+  'price_non_member',
+  'price_late',
+  'late_cutoff_time'
 ]);
 
 /**
@@ -157,6 +161,21 @@ function validateSetting(key, value) {
     case 'school_name':
       if (typeof value !== 'string' || value.length > 256) {
         return { valid: false, error: 'Must be a string up to 256 characters' };
+      }
+      break;
+
+    case 'price_asso_member':
+    case 'price_non_member':
+    case 'price_late':
+      const price = parseInt(value, 10);
+      if (isNaN(price) || price < 0 || price > 100000) {
+        return { valid: false, error: 'Must be a number between 0 and 100000 (in cents)' };
+      }
+      break;
+
+    case 'late_cutoff_time':
+      if (typeof value !== 'string' || !/^\d{2}:\d{2}$/.test(value)) {
+        return { valid: false, error: 'Must be a time in HH:MM format' };
       }
       break;
 
