@@ -12,10 +12,13 @@ export function sanitizeString(str, maxLength = 256) {
 
 /**
  * Validate email format
+ * Uses a simple pattern that avoids ReDoS vulnerability
  */
 export function isValidEmail(email) {
-  const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return pattern.test(email);
+  if (!email || typeof email !== 'string' || email.length > 254) return false;
+  const atIndex = email.indexOf('@');
+  const dotIndex = email.lastIndexOf('.');
+  return atIndex > 0 && dotIndex > atIndex + 1 && dotIndex < email.length - 1 && !email.includes(' ');
 }
 
 /**

@@ -104,7 +104,7 @@ export async function exportOfficialCSV(request, env) {
       } else if (env.SCHOOL_NAME) {
         schoolName = env.SCHOOL_NAME;
       }
-    } catch (e) {
+    } catch {
       // Fall back to env value or default
       if (env.SCHOOL_NAME) schoolName = env.SCHOOL_NAME;
     }
@@ -153,7 +153,7 @@ export async function exportTeamOfficialCSV(request, env, ctx, params) {
       } else if (env.SCHOOL_NAME) {
         schoolName = env.SCHOOL_NAME;
       }
-    } catch (e) {
+    } catch {
       if (env.SCHOOL_NAME) schoolName = env.SCHOOL_NAME;
     }
 

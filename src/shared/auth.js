@@ -21,9 +21,9 @@ function timingSafeEqual(a, b) {
   // but always return false
   if (aBytes.length !== bBytes.length) {
     // Still do the comparison to prevent length-based timing attacks
-    let result = 0;
+    let _unused = 0;
     for (let i = 0; i < aBytes.length; i++) {
-      result |= aBytes[i] ^ aBytes[i];
+      _unused |= aBytes[i] ^ aBytes[i];
     }
     return false;
   }
@@ -58,8 +58,8 @@ export async function verifyAdmin(request, env) {
     try {
       const storedToken = await env.CONFIG.get('admin_token');
       if (storedToken) adminToken = storedToken;
-    } catch (e) {
-      // Fall back to env variable
+    } catch {
+      // Fall back to env variable if KV access fails
     }
   }
 

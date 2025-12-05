@@ -104,28 +104,31 @@ export async function updateSettings(request, env) {
  */
 function validateSetting(key, value) {
   switch (key) {
-    case 'max_team_size':
+    case 'max_team_size': {
       const maxTeam = parseInt(value, 10);
       if (isNaN(maxTeam) || maxTeam < 1 || maxTeam > 100) {
         return { valid: false, error: 'Must be a number between 1 and 100' };
       }
       break;
+    }
 
-    case 'max_total_participants':
+    case 'max_total_participants': {
       const maxTotal = parseInt(value, 10);
       if (isNaN(maxTotal) || maxTotal < 1 || maxTotal > 10000) {
         return { valid: false, error: 'Must be a number between 1 and 10000' };
       }
       break;
+    }
 
-    case 'min_team_size':
+    case 'min_team_size': {
       const minTeam = parseInt(value, 10);
       if (isNaN(minTeam) || minTeam < 1 || minTeam > 50) {
         return { valid: false, error: 'Must be a number between 1 and 50' };
       }
       break;
+    }
 
-    case 'pizzas':
+    case 'pizzas': {
       if (!Array.isArray(value)) {
         return { valid: false, error: 'Must be an array' };
       }
@@ -142,8 +145,9 @@ function validateSetting(key, value) {
         }
       }
       break;
+    }
 
-    case 'bac_levels':
+    case 'bac_levels': {
       if (!Array.isArray(value)) {
         return { valid: false, error: 'Must be an array' };
       }
@@ -157,6 +161,7 @@ function validateSetting(key, value) {
         }
       }
       break;
+    }
 
     case 'school_name':
       if (typeof value !== 'string' || value.length > 256) {
@@ -166,12 +171,13 @@ function validateSetting(key, value) {
 
     case 'price_asso_member':
     case 'price_non_member':
-    case 'price_late':
+    case 'price_late': {
       const price = parseInt(value, 10);
       if (isNaN(price) || price < 0 || price > 100000) {
         return { valid: false, error: 'Must be a number between 0 and 100000 (in cents)' };
       }
       break;
+    }
 
     case 'late_cutoff_time':
       if (typeof value !== 'string' || !/^\d{2}:\d{2}$/.test(value)) {
