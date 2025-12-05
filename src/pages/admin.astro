@@ -2002,6 +2002,7 @@ function renderAttendanceStats(stats) {
   if (!grid) return;
 
   const percentage = stats.total > 0 ? Math.round((stats.checked_in / stats.total) * 100) : 0;
+  const payment = stats.payment || {};
 
   grid.innerHTML = `
     <div class="stat-card">
@@ -2017,29 +2018,29 @@ function renderAttendanceStats(stats) {
       <div class="stat-label">Total inscrits</div>
     </div>
     <div class="stat-card stat-card-highlight">
-      <div class="stat-value">${formatCurrency(stats.total_revenue || 0)}</div>
+      <div class="stat-value">${formatCurrency(payment.total_revenue || 0)}</div>
       <div class="stat-label">Recettes</div>
     </div>
   `;
 
   // Add payment breakdown if there are any payments
-  if (stats.total_paid > 0) {
+  if (payment.total_paid > 0) {
     const breakdownHtml = `
       <div class="stats-grid" style="margin-top: var(--space-4);">
         <div class="stat-card stat-card-sm">
-          <div class="stat-value">${stats.asso_members || 0}</div>
+          <div class="stat-value">${payment.asso_members || 0}</div>
           <div class="stat-label">Membres asso</div>
-          <div class="stat-sublabel">${formatCurrency(stats.asso_revenue || 0)}</div>
+          <div class="stat-sublabel">${formatCurrency(payment.asso_revenue || 0)}</div>
         </div>
         <div class="stat-card stat-card-sm">
-          <div class="stat-value">${stats.non_members || 0}</div>
+          <div class="stat-value">${payment.non_members || 0}</div>
           <div class="stat-label">Non-membres</div>
-          <div class="stat-sublabel">${formatCurrency(stats.non_member_revenue || 0)}</div>
+          <div class="stat-sublabel">${formatCurrency(payment.non_member_revenue || 0)}</div>
         </div>
         <div class="stat-card stat-card-sm">
-          <div class="stat-value">${stats.late_arrivals || 0}</div>
+          <div class="stat-value">${payment.late_arrivals || 0}</div>
           <div class="stat-label">Retardataires</div>
-          <div class="stat-sublabel">${formatCurrency(stats.late_revenue || 0)}</div>
+          <div class="stat-sublabel">${formatCurrency(payment.late_revenue || 0)}</div>
         </div>
       </div>
     `;

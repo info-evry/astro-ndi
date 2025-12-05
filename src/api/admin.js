@@ -580,15 +580,17 @@ export async function getAttendance(request, env) {
         total: stats?.total || 0,
         checked_in: stats?.checked_in || 0,
         not_checked_in: stats?.not_checked_in || 0,
-        // Payment stats
-        total_paid: paymentStats?.total_paid || 0,
-        total_revenue: paymentStats?.total_revenue || 0,
-        asso_members: paymentStats?.asso_members || 0,
-        asso_revenue: paymentStats?.asso_revenue || 0,
-        non_members: paymentStats?.non_members || 0,
-        non_member_revenue: paymentStats?.non_member_revenue || 0,
-        late_arrivals: paymentStats?.late_arrivals || 0,
-        late_revenue: paymentStats?.late_revenue || 0
+        // Payment stats (nested for cleaner structure)
+        payment: {
+          total_paid: paymentStats?.total_paid || 0,
+          total_revenue: paymentStats?.total_revenue || 0,
+          asso_members: paymentStats?.asso_members || 0,
+          asso_revenue: paymentStats?.asso_revenue || 0,
+          non_members: paymentStats?.non_members || 0,
+          non_member_revenue: paymentStats?.non_member_revenue || 0,
+          late_arrivals: paymentStats?.late_arrivals || 0,
+          late_revenue: paymentStats?.late_revenue || 0
+        }
       }
     });
   } catch (err) {
@@ -686,7 +688,10 @@ export async function checkOutMember(request, env, ctx, params) {
       member: {
         id: memberId,
         checked_in: 0,
-        checked_in_at: null
+        checked_in_at: null,
+        payment_tier: null,
+        payment_amount: null,
+        payment_confirmed_at: null
       }
     });
   } catch (err) {

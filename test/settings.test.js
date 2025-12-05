@@ -273,3 +273,198 @@ describe('Config uses D1 settings', () => {
     expect(configData.config.minTeamSize).toBe(3);
   });
 });
+
+describe('Pricing Settings', () => {
+  it('should update pricing settings', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/settings', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
+      },
+      body: JSON.stringify({
+        price_asso_member: 500,
+        price_non_member: 800,
+        price_late: 1000,
+        late_cutoff_time: '19:00'
+      })
+    });
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.updated).toContain('price_asso_member');
+    expect(data.updated).toContain('price_non_member');
+    expect(data.updated).toContain('price_late');
+    expect(data.updated).toContain('late_cutoff_time');
+  });
+
+  it('should retrieve pricing settings', async () => {
+    // First set pricing settings
+    await SELF.fetch('http://localhost/api/admin/settings', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
+      },
+      body: JSON.stringify({
+        price_asso_member: 500,
+        price_non_member: 800,
+        price_late: 1000,
+        late_cutoff_time: '19:00'
+      })
+    });
+
+    // Then retrieve them
+    const response = await SELF.fetch('http://localhost/api/admin/settings', {
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.settings.price_asso_member).toBe('500');
+    expect(data.settings.price_non_member).toBe('800');
+    expect(data.settings.price_late).toBe('1000');
+    expect(data.settings.late_cutoff_time).toBe('19:00');
+  });
+
+  it('should validate price values (positive numbers)', async () => {
+    // Negative price
+    const response = await SELF.fetch('http://localhost/api/admin/settings', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
+      },
+      body: JSON.stringify({
+        price_asso_member: -100
+      })
+    });
+
+    expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.error).toContain('price_asso_member');
+  });
+
+  it('should validate price values (maximum limit)', async () => {
+    // Price too high (over 100000 cents = 1000€)
+    const response = await SELF.fetch('http://localhost/api/admin/settings', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
+      },
+      body: JSON.stringify({
+        price_non_member: 200000
+      })
+    });
+
+    expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.error).toContain('price_non_member');
+  });
+
+  it('should validate late_cutoff_time format (HH:MM)', async () => {
+    // Invalid format
+    const response1 = await SELF.fetch('http://localhost/api/admin/settings', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
+      },
+      body: JSON.stringify({
+        late_cutoff_time: '7pm'
+      })
+    });
+
+    expect(response1.status).toBe(400);
+    const data1 = await response1.json();
+    expect(data1.error).toContain('late_cutoff_time');
+
+    // Valid format should work
+    const response2 = await SELF.fetch('http://localhost/api/admin/settings', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
+      },
+      body: JSON.stringify({
+        late_cutoff_time: '20:30'
+      })
+    });
+
+    expect(response2.status).toBe(200);
+  });
+
+  it('should allow zero price (free entry)', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/settings', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
+      },
+      body: JSON.stringify({
+        price_asso_member: 0
+      })
+    });
+
+    expect(response.status).toBe(200);
+
+    // Verify it was saved
+    const getResponse = await SELF.fetch('http://localhost/api/admin/settings', {
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+    const getData = await getResponse.json();
+    expect(getData.settings.price_asso_member).toBe('0');
+  });
+
+  it('should update pricing settings independently', async () => {
+    // Set initial values
+    await SELF.fetch('http://localhost/api/admin/settings', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
+      },
+      body: JSON.stringify({
+        price_asso_member: 500,
+        price_non_member: 800
+      })
+    });
+
+    // Update only one
+    await SELF.fetch('http://localhost/api/admin/settings', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token',
+        'Origin': 'http://localhost'
+      },
+      body: JSON.stringify({
+        price_asso_member: 600
+      })
+    });
+
+    // Verify only one changed
+    const response = await SELF.fetch('http://localhost/api/admin/settings', {
+      headers: {
+        'Authorization': 'Bearer test-admin-token'
+      }
+    });
+    const data = await response.json();
+    expect(data.settings.price_asso_member).toBe('600');
+    expect(data.settings.price_non_member).toBe('800');
+  });
+});

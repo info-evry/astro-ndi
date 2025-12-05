@@ -365,7 +365,13 @@ export async function checkInMember(db, memberId) {
  */
 export async function checkOutMember(db, memberId) {
   const result = await db.prepare(`
-    UPDATE members SET checked_in = 0, checked_in_at = NULL WHERE id = ?
+    UPDATE members
+    SET checked_in = 0,
+        checked_in_at = NULL,
+        payment_tier = NULL,
+        payment_amount = NULL,
+        payment_confirmed_at = NULL
+    WHERE id = ?
   `).bind(memberId).run();
   return result.meta.changes > 0;
 }
@@ -407,9 +413,15 @@ export async function checkOutMembers(db, memberIds) {
   if (!memberIds.length) return 0;
 
   const placeholders = memberIds.map(() => '?').join(',');
-  const result = await db.prepare(
-    `UPDATE members SET checked_in = 0, checked_in_at = NULL WHERE id IN (${placeholders})`
-  ).bind(...memberIds).run();
+  const result = await db.prepare(`
+    UPDATE members
+    SET checked_in = 0,
+        checked_in_at = NULL,
+        payment_tier = NULL,
+        payment_amount = NULL,
+        payment_confirmed_at = NULL
+    WHERE id IN (${placeholders})
+  `).bind(...memberIds).run();
 
   return result.meta.changes;
 }

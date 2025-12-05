@@ -412,3 +412,271 @@ describe('Attendance Workflow', () => {
     expect(timestamp.getTime()).toBeGreaterThan(0);
   });
 });
+
+describe('Payment Tracking', () => {
+  describe('Check-in with payment', () => {
+    it('should check in a member with payment tier asso_member', async () => {
+      const response = await SELF.fetch('http://localhost/api/admin/attendance/check-in/1', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ADMIN_TOKEN}`,
+          'Origin': 'http://localhost',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          paymentTier: 'asso_member',
+          paymentAmount: 500
+        })
+      });
+
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.member.checked_in).toBe(1);
+      expect(data.member.payment_tier).toBe('asso_member');
+      expect(data.member.payment_amount).toBe(500);
+      expect(data.member.payment_confirmed_at).toBeTruthy();
+    });
+
+    it('should check in a member with payment tier non_member', async () => {
+      const response = await SELF.fetch('http://localhost/api/admin/attendance/check-in/1', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ADMIN_TOKEN}`,
+          'Origin': 'http://localhost',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          paymentTier: 'non_member',
+          paymentAmount: 800
+        })
+      });
+
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.member.payment_tier).toBe('non_member');
+      expect(data.member.payment_amount).toBe(800);
+    });
+
+    it('should check in a member with payment tier late', async () => {
+      const response = await SELF.fetch('http://localhost/api/admin/attendance/check-in/1', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ADMIN_TOKEN}`,
+          'Origin': 'http://localhost',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          paymentTier: 'late',
+          paymentAmount: 1000
+        })
+      });
+
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.member.payment_tier).toBe('late');
+      expect(data.member.payment_amount).toBe(1000);
+    });
+
+    it('should check in without payment info (backwards compatible)', async () => {
+      const response = await SELF.fetch('http://localhost/api/admin/attendance/check-in/1', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ADMIN_TOKEN}`,
+          'Origin': 'http://localhost'
+        }
+      });
+
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.member.checked_in).toBe(1);
+      expect(data.member.payment_tier).toBeNull();
+      expect(data.member.payment_amount).toBeNull();
+    });
+
+    it('should clear payment info on check-out', async () => {
+      // Check in with payment
+      await SELF.fetch('http://localhost/api/admin/attendance/check-in/1', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ADMIN_TOKEN}`,
+          'Origin': 'http://localhost',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          paymentTier: 'asso_member',
+          paymentAmount: 500
+        })
+      });
+
+      // Check out
+      const response = await SELF.fetch('http://localhost/api/admin/attendance/check-out/1', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ADMIN_TOKEN}`,
+          'Origin': 'http://localhost'
+        }
+      });
+
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.member.checked_in).toBe(0);
+      expect(data.member.payment_tier).toBeNull();
+      expect(data.member.payment_amount).toBeNull();
+      expect(data.member.payment_confirmed_at).toBeNull();
+    });
+  });
+
+  describe('Payment stats in attendance response', () => {
+    it('should include payment stats in attendance response', async () => {
+      // Check in members with different payment tiers
+      await SELF.fetch('http://localhost/api/admin/attendance/check-in/1', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ADMIN_TOKEN}`,
+          'Origin': 'http://localhost',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ paymentTier: 'asso_member', paymentAmount: 500 })
+      });
+
+      await SELF.fetch('http://localhost/api/admin/attendance/check-in/2', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ADMIN_TOKEN}`,
+          'Origin': 'http://localhost',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ paymentTier: 'non_member', paymentAmount: 800 })
+      });
+
+      await SELF.fetch('http://localhost/api/admin/attendance/check-in/3', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ADMIN_TOKEN}`,
+          'Origin': 'http://localhost',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ paymentTier: 'late', paymentAmount: 1000 })
+      });
+
+      // Get attendance with stats
+      const response = await SELF.fetch('http://localhost/api/admin/attendance', {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+      });
+
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.stats.payment).toBeDefined();
+      expect(data.stats.payment.total_paid).toBe(3);
+      expect(data.stats.payment.total_revenue).toBe(2300); // 500 + 800 + 1000
+      expect(data.stats.payment.asso_members).toBe(1);
+      expect(data.stats.payment.asso_revenue).toBe(500);
+      expect(data.stats.payment.non_members).toBe(1);
+      expect(data.stats.payment.non_member_revenue).toBe(800);
+      expect(data.stats.payment.late_arrivals).toBe(1);
+      expect(data.stats.payment.late_revenue).toBe(1000);
+    });
+
+    it('should return zero payment stats when no payments recorded', async () => {
+      const response = await SELF.fetch('http://localhost/api/admin/attendance', {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+      });
+
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.stats.payment).toBeDefined();
+      expect(data.stats.payment.total_paid).toBe(0);
+      expect(data.stats.payment.total_revenue).toBe(0);
+    });
+
+    it('should exclude Organisation members from payment stats', async () => {
+      // Check in Organisation member with payment
+      await SELF.fetch('http://localhost/api/admin/attendance/check-in/4', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ADMIN_TOKEN}`,
+          'Origin': 'http://localhost',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ paymentTier: 'asso_member', paymentAmount: 500 })
+      });
+
+      // Check in regular member with payment
+      await SELF.fetch('http://localhost/api/admin/attendance/check-in/1', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ADMIN_TOKEN}`,
+          'Origin': 'http://localhost',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ paymentTier: 'non_member', paymentAmount: 800 })
+      });
+
+      const response = await SELF.fetch('http://localhost/api/admin/attendance', {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+      });
+
+      const data = await response.json();
+
+      // Only regular member payment should be counted (Organisation excluded)
+      expect(data.stats.payment.total_paid).toBe(1);
+      expect(data.stats.payment.total_revenue).toBe(800);
+    });
+  });
+
+  describe('Payment fields in member data', () => {
+    it('should include payment fields in member data', async () => {
+      // Check in with payment
+      await SELF.fetch('http://localhost/api/admin/attendance/check-in/1', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ADMIN_TOKEN}`,
+          'Origin': 'http://localhost',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ paymentTier: 'asso_member', paymentAmount: 500 })
+      });
+
+      const response = await SELF.fetch('http://localhost/api/admin/attendance', {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+      });
+
+      const data = await response.json();
+      const member = data.members.find(m => m.id === 1);
+
+      expect(member).toHaveProperty('payment_tier');
+      expect(member).toHaveProperty('payment_amount');
+      expect(member).toHaveProperty('payment_confirmed_at');
+      expect(member.payment_tier).toBe('asso_member');
+      expect(member.payment_amount).toBe(500);
+      expect(member.payment_confirmed_at).toBeTruthy();
+    });
+
+    it('should return null payment fields for members without payment', async () => {
+      const response = await SELF.fetch('http://localhost/api/admin/attendance', {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+      });
+
+      const data = await response.json();
+      const member = data.members[0];
+
+      expect(member.payment_tier).toBeNull();
+      expect(member.payment_amount).toBeNull();
+      expect(member.payment_confirmed_at).toBeNull();
+    });
+  });
+});
