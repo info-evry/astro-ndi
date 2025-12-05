@@ -34,7 +34,7 @@ import {
   getRooms,
   setRoom,
   setRoomsBatch
-} from './api/admin.js';
+} from './api/admin/index.js';
 import { getSettings, updateSettings } from './features/admin/admin.settings.js';
 import { importCSV } from './features/admin/admin.import.js';
 

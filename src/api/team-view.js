@@ -4,17 +4,7 @@
 
 import { json, error } from '../lib/router.js';
 import * as db from '../lib/db.js';
-
-/**
- * Hash password using Web Crypto API
- */
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
+import { hashPassword, verifyPassword, needsHashUpgrade } from '../shared/crypto.js';
 
 /**
  * POST /api/teams/:id/view - View team members with password
@@ -33,12 +23,23 @@ export async function viewTeamMembers(request, env, ctx, params) {
       return error('Team not found', 404);
     }
 
-    // Verify password
-    const passwordHash = await hashPassword(password);
-    const isValid = await db.verifyTeamPassword(env.DB, teamId, passwordHash);
+    // Verify password using the new verifyPassword function
+    // which handles both legacy SHA-256 and new PBKDF2 formats
+    const isValid = await verifyPassword(password, team.password_hash);
 
     if (!isValid) {
       return error('Mot de passe incorrect', 403);
+    }
+
+    // Upgrade legacy hash to new format on successful login
+    if (needsHashUpgrade(team.password_hash)) {
+      try {
+        const newHash = await hashPassword(password);
+        await db.updateTeam(env.DB, teamId, { passwordHash: newHash });
+      } catch (upgradeErr) {
+        // Log but don't fail the request if upgrade fails
+        console.error('Failed to upgrade password hash:', upgradeErr);
+      }
     }
 
     // Return team info with members (exclude sensitive data)

@@ -5,17 +5,7 @@
 import { json, error } from '../lib/router.js';
 import * as db from '../lib/db.js';
 import { validateRegistration, sanitizeString } from '../lib/validation.js';
-
-/**
- * Hash password using Web Crypto API (SHA-256)
- */
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
+import { hashPassword, verifyPassword, needsHashUpgrade } from '../shared/crypto.js';
 
 /**
  * POST /api/register - Register team members
@@ -81,10 +71,22 @@ export async function register(request, env) {
         return error('Selected team not found', 404);
       }
 
-      // Verify password
-      const passwordValid = await db.verifyTeamPassword(env.DB, teamId, passwordHash);
+      // Verify password using the new verifyPassword function
+      // which handles both legacy SHA-256 and new PBKDF2 formats
+      const passwordValid = await verifyPassword(password, team.password_hash);
       if (!passwordValid) {
         return error('Incorrect password', 403);
+      }
+
+      // Upgrade legacy hash to new format on successful verification
+      if (needsHashUpgrade(team.password_hash)) {
+        try {
+          const newHash = await hashPassword(password);
+          await db.updateTeam(env.DB, teamId, { passwordHash: newHash });
+        } catch (upgradeErr) {
+          // Log but don't fail the request if upgrade fails
+          console.error('Failed to upgrade password hash:', upgradeErr);
+        }
       }
 
       teamName = team.name;
@@ -101,22 +103,36 @@ export async function register(request, env) {
       }
     }
 
-    // Check for existing members
-    for (const member of validation.members) {
-      const exists = await db.memberExists(env.DB, member.firstName, member.lastName);
-      if (exists) {
-        return error(
-          `${member.firstName} ${member.lastName} is already registered`,
-          400
-        );
-      }
-    }
+    // Use batch insert for atomicity - prevents race conditions where two
+    // concurrent registrations could both pass existence checks
+    const insertStatements = validation.members.map(member =>
+      env.DB.prepare(`
+        INSERT INTO members (team_id, first_name, last_name, email, bac_level, is_leader, food_diet)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        teamId,
+        member.firstName,
+        member.lastName,
+        member.email,
+        member.bacLevel || 0,
+        member.isLeader ? 1 : 0,
+        member.foodDiet || ''
+      )
+    );
 
-    // Add all members
-    const addedMembers = [];
-    for (const member of validation.members) {
-      const added = await db.addMember(env.DB, teamId, member);
-      addedMembers.push(added);
+    let addedMembers;
+    try {
+      const results = await env.DB.batch(insertStatements);
+      addedMembers = validation.members.map((member, i) => ({
+        id: results[i].meta.last_row_id,
+        ...member
+      }));
+    } catch (err) {
+      // Handle unique constraint violation (member already exists)
+      if (err.message && err.message.includes('UNIQUE constraint')) {
+        return error('One or more members are already registered', 400);
+      }
+      throw err;
     }
 
     // Send confirmation email (non-blocking)

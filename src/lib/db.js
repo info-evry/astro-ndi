@@ -39,6 +39,41 @@ export async function getTeamById(db, id) {
 }
 
 /**
+ * Get all teams with their members in 2 queries (avoids N+1)
+ */
+export async function getAllTeamsWithMembers(db) {
+  // Fetch all teams
+  const teamsResult = await db.prepare(
+    'SELECT id, name, description, room, password_hash, created_at FROM teams ORDER BY created_at DESC'
+  ).all();
+
+  const teams = teamsResult.results || [];
+  if (teams.length === 0) return [];
+
+  // Fetch all members
+  const membersResult = await db.prepare(
+    'SELECT * FROM members ORDER BY created_at'
+  ).all();
+
+  const members = membersResult.results || [];
+
+  // Group members by team_id
+  const membersByTeam = new Map();
+  for (const member of members) {
+    if (!membersByTeam.has(member.team_id)) {
+      membersByTeam.set(member.team_id, []);
+    }
+    membersByTeam.get(member.team_id).push(member);
+  }
+
+  // Assemble teams with their members
+  return teams.map(team => ({
+    ...team,
+    members: membersByTeam.get(team.id) || []
+  }));
+}
+
+/**
  * Get team by name
  */
 export async function getTeamByName(db, name) {
