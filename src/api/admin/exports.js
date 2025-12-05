@@ -248,12 +248,21 @@ function generateCSV(members) {
 }
 
 /**
- * Escape CSV field
+ * Escape CSV field with formula injection protection
+ * Prevents CSV injection attacks by prefixing dangerous characters
  */
 function escapeCSV(field) {
   if (field === null || field === undefined) return '';
-  const str = String(field);
-  if (str.includes(';') || str.includes('"') || str.includes('\n')) {
+  let str = String(field);
+
+  // Protect against formula injection
+  // These characters can trigger formula execution in spreadsheets
+  if (/^[=+\-@\t\r|;]/.test(str)) {
+    str = "'" + str;
+  }
+
+  // Quote fields containing delimiter, quotes, or newlines
+  if (str.includes(';') || str.includes('"') || str.includes('\n') || str.includes("'")) {
     return `"${str.replace(/"/g, '""')}"`;
   }
   return str;
