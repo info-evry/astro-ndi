@@ -336,8 +336,12 @@ import AdminLayout from '../layouts/AdminLayout.astro';
             </div>
           </div>
           <div class="disclosure-body">
+            <h3 style="margin-bottom: var(--space-3); font-size: var(--text-sm); color: var(--text-muted);">Tous les inscrits</h3>
             <div id="pizza-stats-grid" class="stats-grid"></div>
             <div id="pizza-by-type-grid" class="stats-grid" style="margin-top: var(--space-4);"></div>
+            <h3 style="margin-top: var(--space-6); margin-bottom: var(--space-3); font-size: var(--text-sm); color: var(--text-muted);">Présents uniquement (pizzas à préparer)</h3>
+            <div id="pizza-present-stats-grid" class="stats-grid"></div>
+            <div id="pizza-present-by-type-grid" class="stats-grid" style="margin-top: var(--space-4);"></div>
           </div>
         </div>
 
@@ -405,6 +409,16 @@ import AdminLayout from '../layouts/AdminLayout.astro';
           <div class="disclosure-body">
             <div id="room-stats-grid" class="stats-grid"></div>
             <div id="room-by-room-grid" class="stats-grid" style="margin-top: var(--space-4);"></div>
+          </div>
+        </div>
+
+        <!-- Pizza per Room -->
+        <div class="disclosure-group open" data-disclosure="room-pizza">
+          <div class="disclosure-header" onclick="toggleDisclosure('room-pizza')">
+            <h2><span class="disclosure-chevron">&#x276F;</span> Pizzas par salle</h2>
+          </div>
+          <div class="disclosure-body">
+            <div id="room-pizza-container"></div>
           </div>
         </div>
 
@@ -2419,6 +2433,7 @@ async function loadPizzaData() {
 }
 
 function renderPizzaStats(stats) {
+  // All members stats
   const grid = $('pizza-stats-grid');
   if (!grid) return;
 
@@ -2443,10 +2458,47 @@ function renderPizzaStats(stats) {
     </div>
   `;
 
-  // By type stats
+  // By type stats (all members)
   const typeGrid = $('pizza-by-type-grid');
   if (typeGrid && stats.by_type && stats.by_type.length > 0) {
     typeGrid.innerHTML = stats.by_type.map(t => `
+      <div class="stat-card stat-card-sm">
+        <div class="stat-value">${t.received}/${t.total}</div>
+        <div class="stat-label">${pizzaTypes[t.food_diet] || t.food_diet}</div>
+      </div>
+    `).join('');
+  }
+
+  // Present members stats
+  const presentGrid = $('pizza-present-stats-grid');
+  if (presentGrid && stats.present) {
+    const present = stats.present;
+    const presentPercentage = present.total > 0 ? Math.round((present.received / present.total) * 100) : 0;
+
+    presentGrid.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-value">${present.received}</div>
+        <div class="stat-label">Servis</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${present.pending}</div>
+        <div class="stat-label">À servir</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${present.total}</div>
+        <div class="stat-label">Présents</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${presentPercentage}%</div>
+        <div class="stat-label">Progression</div>
+      </div>
+    `;
+  }
+
+  // By type stats (present members only)
+  const presentTypeGrid = $('pizza-present-by-type-grid');
+  if (presentTypeGrid && stats.present?.by_type && stats.present.by_type.length > 0) {
+    presentTypeGrid.innerHTML = stats.present.by_type.map(t => `
       <div class="stat-card stat-card-sm">
         <div class="stat-value">${t.received}/${t.total}</div>
         <div class="stat-label">${pizzaTypes[t.food_diet] || t.food_diet}</div>
@@ -2705,12 +2757,44 @@ async function loadRoomsData() {
     roomsData = data.teams || [];
     availableRooms = data.rooms || [];
     renderRoomsStats(data.stats);
+    renderPizzaByRoom(data.pizza_by_room || []);
     renderRooms();
     updateRoomsBadge(data.stats?.unassigned_teams || 0);
   } catch (err) {
     console.error('Error loading rooms data:', err);
     toastError('Erreur lors du chargement des salles');
   }
+}
+
+function renderPizzaByRoom(pizzaByRoom) {
+  const container = $('room-pizza-container');
+  if (!container) return;
+
+  if (!pizzaByRoom || pizzaByRoom.length === 0) {
+    container.innerHTML = '<p class="text-muted">Aucune salle avec des équipes assignées</p>';
+    return;
+  }
+
+  container.innerHTML = pizzaByRoom.map(room => `
+    <div class="room-pizza-block" style="margin-bottom: var(--space-4); padding: var(--space-4); background: var(--bg-secondary); border-radius: var(--radius-md);">
+      <h4 style="margin-bottom: var(--space-3); display: flex; align-items: center; gap: var(--space-2);">
+        <span>${escapeHtml(room.room)}</span>
+        <span class="badge badge-muted">${room.totals.present} présents</span>
+      </h4>
+      <div class="stats-grid">
+        ${room.pizzas.map(p => `
+          <div class="stat-card stat-card-sm">
+            <div class="stat-value">${p.present}</div>
+            <div class="stat-label">${pizzaTypes[p.food_diet] || p.food_diet}</div>
+          </div>
+        `).join('')}
+        <div class="stat-card stat-card-sm" style="background: var(--bg-tertiary);">
+          <div class="stat-value">${room.totals.present}</div>
+          <div class="stat-label">Total</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
 }
 
 function renderRoomsStats(stats) {

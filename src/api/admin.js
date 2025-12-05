@@ -911,6 +911,7 @@ export async function getRooms(request, env) {
     const teams = await db.getTeamsWithRooms(env.DB);
     const stats = await db.getRoomStats(env.DB);
     const rooms = await db.getDistinctRooms(env.DB);
+    const pizzaByRoom = await db.getPizzaStatsByRoom(env.DB);
 
     return json({
       teams,
@@ -920,7 +921,8 @@ export async function getRooms(request, env) {
         unassigned_teams: stats?.unassigned_teams || 0,
         by_room: stats?.by_room || []
       },
-      rooms
+      rooms,
+      pizza_by_room: pizzaByRoom
     });
   } catch (err) {
     console.error('Error fetching rooms:', err);

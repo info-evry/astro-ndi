@@ -462,6 +462,7 @@ export async function getAllMembersWithPizzaStatus(db) {
  * Get pizza distribution statistics
  */
 export async function getPizzaStats(db) {
+  // All members stats
   const result = await db.prepare(`
     SELECT
       COUNT(*) as total,
@@ -471,7 +472,18 @@ export async function getPizzaStats(db) {
     JOIN teams t ON m.team_id = t.id
   `).first();
 
-  // Stats by pizza type
+  // Stats for present (checked-in) members only
+  const presentResult = await db.prepare(`
+    SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN pizza_received = 1 THEN 1 ELSE 0 END) as received,
+      SUM(CASE WHEN pizza_received = 0 OR pizza_received IS NULL THEN 1 ELSE 0 END) as pending
+    FROM members m
+    JOIN teams t ON m.team_id = t.id
+    WHERE m.checked_in = 1
+  `).first();
+
+  // Stats by pizza type (all members)
   const byType = await db.prepare(`
     SELECT
       food_diet,
@@ -483,7 +495,28 @@ export async function getPizzaStats(db) {
     ORDER BY total DESC
   `).all();
 
-  return { ...result, by_type: byType.results };
+  // Stats by pizza type (present members only)
+  const byTypePresent = await db.prepare(`
+    SELECT
+      food_diet,
+      COUNT(*) as total,
+      SUM(CASE WHEN pizza_received = 1 THEN 1 ELSE 0 END) as received
+    FROM members
+    WHERE food_diet IS NOT NULL AND food_diet != '' AND checked_in = 1
+    GROUP BY food_diet
+    ORDER BY total DESC
+  `).all();
+
+  return {
+    ...result,
+    by_type: byType.results,
+    present: {
+      total: presentResult?.total || 0,
+      received: presentResult?.received || 0,
+      pending: presentResult?.pending || 0,
+      by_type: byTypePresent.results
+    }
+  };
 }
 
 /**
@@ -654,6 +687,50 @@ export async function getRoomStats(db) {
   `).all();
 
   return { ...result, by_room: byRoom.results };
+}
+
+/**
+ * Get pizza stats grouped by room
+ */
+export async function getPizzaStatsByRoom(db) {
+  const result = await db.prepare(`
+    SELECT
+      t.room,
+      m.food_diet,
+      COUNT(*) as total,
+      SUM(CASE WHEN m.checked_in = 1 THEN 1 ELSE 0 END) as present,
+      SUM(CASE WHEN m.pizza_received = 1 THEN 1 ELSE 0 END) as received
+    FROM members m
+    JOIN teams t ON m.team_id = t.id
+    WHERE t.name != 'Organisation'
+      AND t.room IS NOT NULL AND t.room != ''
+      AND m.food_diet IS NOT NULL AND m.food_diet != ''
+    GROUP BY t.room, m.food_diet
+    ORDER BY t.room, m.food_diet
+  `).all();
+
+  // Group by room
+  const byRoom = {};
+  for (const row of result.results) {
+    if (!byRoom[row.room]) {
+      byRoom[row.room] = {
+        room: row.room,
+        pizzas: [],
+        totals: { total: 0, present: 0, received: 0 }
+      };
+    }
+    byRoom[row.room].pizzas.push({
+      food_diet: row.food_diet,
+      total: row.total,
+      present: row.present,
+      received: row.received
+    });
+    byRoom[row.room].totals.total += row.total;
+    byRoom[row.room].totals.present += row.present;
+    byRoom[row.room].totals.received += row.received;
+  }
+
+  return Object.values(byRoom);
 }
 
 /**
