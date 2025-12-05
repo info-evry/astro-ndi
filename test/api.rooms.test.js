@@ -383,3 +383,101 @@ describe('POST /api/admin/rooms/batch', () => {
     expect(getData.stats.unassigned_teams).toBe(3);
   });
 });
+
+describe('GET /api/admin/rooms - Pizza by room', () => {
+  beforeEach(async () => {
+    // Add food_diet and checked_in to members for pizza stats
+    await env.DB.exec(`UPDATE members SET food_diet = 'margherita', checked_in = 1 WHERE id = 1`);
+    await env.DB.exec(`UPDATE members SET food_diet = '4fromages', checked_in = 1 WHERE id = 2`);
+    await env.DB.exec(`UPDATE members SET food_diet = 'margherita', checked_in = 0 WHERE id = 3`);
+    await env.DB.exec(`UPDATE members SET food_diet = 'vegetarienne', checked_in = 1 WHERE id = 4`);
+  });
+
+  it('should return pizza_by_room data', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/rooms', {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+    });
+
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.pizza_by_room).toBeDefined();
+    expect(Array.isArray(data.pizza_by_room)).toBe(true);
+  });
+
+  it('should group pizza stats by room', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/rooms', {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+    });
+
+    const data = await response.json();
+
+    // Should have 2 rooms with assigned teams (Salle A and Salle B)
+    expect(data.pizza_by_room.length).toBe(2);
+
+    const salleA = data.pizza_by_room.find(r => r.room === 'Salle A');
+    const salleB = data.pizza_by_room.find(r => r.room === 'Salle B');
+
+    expect(salleA).toBeDefined();
+    expect(salleB).toBeDefined();
+  });
+
+  it('should include total and present counts per pizza type', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/rooms', {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+    });
+
+    const data = await response.json();
+
+    const salleA = data.pizza_by_room.find(r => r.room === 'Salle A');
+    expect(salleA.pizzas).toBeDefined();
+    expect(salleA.pizzas.length).toBe(2); // margherita and 4fromages
+
+    // Check that each pizza type has total and present counts
+    const margherita = salleA.pizzas.find(p => p.food_diet === 'margherita');
+    expect(margherita).toBeDefined();
+    expect(margherita.total).toBe(1);
+    expect(margherita.present).toBe(1); // Alice is checked in
+
+    const quatreFromages = salleA.pizzas.find(p => p.food_diet === '4fromages');
+    expect(quatreFromages).toBeDefined();
+    expect(quatreFromages.total).toBe(1);
+    expect(quatreFromages.present).toBe(1); // Bob is checked in
+  });
+
+  it('should include room totals', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/rooms', {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+    });
+
+    const data = await response.json();
+
+    const salleA = data.pizza_by_room.find(r => r.room === 'Salle A');
+    expect(salleA.totals).toBeDefined();
+    expect(salleA.totals.total).toBe(2); // Alice + Bob
+    expect(salleA.totals.present).toBe(2); // Both checked in
+
+    const salleB = data.pizza_by_room.find(r => r.room === 'Salle B');
+    expect(salleB.totals).toBeDefined();
+    expect(salleB.totals.total).toBe(1); // Diana
+    expect(salleB.totals.present).toBe(1); // Diana is checked in
+  });
+
+  it('should not include teams without rooms in pizza_by_room', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/rooms', {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+    });
+
+    const data = await response.json();
+
+    // Team Beta has no room, so Charlie's pizza should not appear
+    const roomNames = data.pizza_by_room.map(r => r.room);
+    expect(roomNames).not.toContain(null);
+    expect(roomNames).not.toContain('');
+  });
+});

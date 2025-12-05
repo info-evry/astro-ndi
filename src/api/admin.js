@@ -768,7 +768,8 @@ export async function getPizza(request, env) {
         total: stats?.total || 0,
         received: stats?.received || 0,
         pending: stats?.pending || 0,
-        by_type: stats?.by_type || []
+        by_type: stats?.by_type || [],
+        present: stats?.present || { total: 0, received: 0, pending: 0, by_type: [] }
       }
     });
   } catch (err) {

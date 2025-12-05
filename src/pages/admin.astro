@@ -336,10 +336,10 @@ import AdminLayout from '../layouts/AdminLayout.astro';
             </div>
           </div>
           <div class="disclosure-body">
-            <h3 style="margin-bottom: var(--space-3); font-size: var(--text-sm); color: var(--text-muted);">Tous les inscrits</h3>
+            <h3 style="margin-bottom: var(--space-3); font-size: var(--text-sm); color: var(--text-muted);">📋 Tous les inscrits</h3>
             <div id="pizza-stats-grid" class="stats-grid"></div>
             <div id="pizza-by-type-grid" class="stats-grid" style="margin-top: var(--space-4);"></div>
-            <h3 style="margin-top: var(--space-6); margin-bottom: var(--space-3); font-size: var(--text-sm); color: var(--text-muted);">Présents uniquement (pizzas à préparer)</h3>
+            <h3 style="margin-top: var(--space-6); margin-bottom: var(--space-3); font-size: var(--text-sm); color: var(--text-muted);">✅ Présents uniquement (pizzas réellement nécessaires)</h3>
             <div id="pizza-present-stats-grid" class="stats-grid"></div>
             <div id="pizza-present-by-type-grid" class="stats-grid" style="margin-top: var(--space-4);"></div>
           </div>
@@ -2461,12 +2461,16 @@ function renderPizzaStats(stats) {
   // By type stats (all members)
   const typeGrid = $('pizza-by-type-grid');
   if (typeGrid && stats.by_type && stats.by_type.length > 0) {
-    typeGrid.innerHTML = stats.by_type.map(t => `
-      <div class="stat-card stat-card-sm">
-        <div class="stat-value">${t.received}/${t.total}</div>
-        <div class="stat-label">${pizzaTypes[t.food_diet] || t.food_diet}</div>
-      </div>
-    `).join('');
+    typeGrid.innerHTML = stats.by_type.map(t => {
+      const toServe = t.total - t.received;
+      return `
+        <div class="stat-card stat-card-sm">
+          <div class="stat-value">${t.total}</div>
+          <div class="stat-label">${pizzaTypes[t.food_diet] || t.food_diet}</div>
+          <div class="stat-sublabel">${t.received} servis${toServe > 0 ? `, ${toServe} restants` : ''}</div>
+        </div>
+      `;
+    }).join('');
   }
 
   // Present members stats
@@ -2495,15 +2499,19 @@ function renderPizzaStats(stats) {
     `;
   }
 
-  // By type stats (present members only)
+  // By type stats (present members only) - show total present and how many still need pizza
   const presentTypeGrid = $('pizza-present-by-type-grid');
   if (presentTypeGrid && stats.present?.by_type && stats.present.by_type.length > 0) {
-    presentTypeGrid.innerHTML = stats.present.by_type.map(t => `
-      <div class="stat-card stat-card-sm">
-        <div class="stat-value">${t.received}/${t.total}</div>
-        <div class="stat-label">${pizzaTypes[t.food_diet] || t.food_diet}</div>
-      </div>
-    `).join('');
+    presentTypeGrid.innerHTML = stats.present.by_type.map(t => {
+      const toServe = t.total - t.received;
+      return `
+        <div class="stat-card stat-card-sm">
+          <div class="stat-value">${t.total}</div>
+          <div class="stat-label">${pizzaTypes[t.food_diet] || t.food_diet}</div>
+          <div class="stat-sublabel">${toServe > 0 ? `${toServe} à servir` : 'Tous servis'}</div>
+        </div>
+      `;
+    }).join('');
   }
 }
 
@@ -2779,18 +2787,21 @@ function renderPizzaByRoom(pizzaByRoom) {
     <div class="room-pizza-block" style="margin-bottom: var(--space-4); padding: var(--space-4); background: var(--bg-secondary); border-radius: var(--radius-md);">
       <h4 style="margin-bottom: var(--space-3); display: flex; align-items: center; gap: var(--space-2);">
         <span>${escapeHtml(room.room)}</span>
-        <span class="badge badge-muted">${room.totals.present} présents</span>
+        <span class="badge badge-muted">${room.totals.total} inscrits</span>
+        <span class="badge badge-success">${room.totals.present} présents</span>
       </h4>
       <div class="stats-grid">
         ${room.pizzas.map(p => `
           <div class="stat-card stat-card-sm">
-            <div class="stat-value">${p.present}</div>
+            <div class="stat-value">${p.total}</div>
             <div class="stat-label">${pizzaTypes[p.food_diet] || p.food_diet}</div>
+            <div class="stat-sublabel">${p.present} présents</div>
           </div>
         `).join('')}
         <div class="stat-card stat-card-sm" style="background: var(--bg-tertiary);">
-          <div class="stat-value">${room.totals.present}</div>
+          <div class="stat-value">${room.totals.total}</div>
           <div class="stat-label">Total</div>
+          <div class="stat-sublabel">${room.totals.present} présents</div>
         </div>
       </div>
     </div>

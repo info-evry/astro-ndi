@@ -463,3 +463,119 @@ describe('Pizza Distribution Workflow', () => {
     expect(notCheckedInMember.checked_in).toBe(0);
   });
 });
+
+describe('Present-only Pizza Stats', () => {
+  it('should return stats for present (checked-in) members', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/pizza', {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+    });
+
+    const data = await response.json();
+
+    expect(data.stats.present).toBeDefined();
+    expect(data.stats.present.total).toBeDefined();
+    expect(data.stats.present.received).toBeDefined();
+    expect(data.stats.present.pending).toBeDefined();
+  });
+
+  it('should count only checked-in members in present stats', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/pizza', {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+    });
+
+    const data = await response.json();
+
+    // Members 1, 2, and 4 are checked in; member 3 is not
+    expect(data.stats.total).toBe(4);
+    expect(data.stats.present.total).toBe(3);
+  });
+
+  it('should track present by_type stats separately', async () => {
+    const response = await SELF.fetch('http://localhost/api/admin/pizza', {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+    });
+
+    const data = await response.json();
+
+    expect(data.stats.present.by_type).toBeDefined();
+    expect(Array.isArray(data.stats.present.by_type)).toBe(true);
+  });
+
+  it('should update present stats when pizza is given to checked-in member', async () => {
+    // Give pizza to member 1 (checked in)
+    await SELF.fetch('http://localhost/api/admin/pizza/give/1', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${ADMIN_TOKEN}`,
+        'Origin': 'http://localhost'
+      }
+    });
+
+    const response = await SELF.fetch('http://localhost/api/admin/pizza', {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+    });
+
+    const data = await response.json();
+
+    expect(data.stats.present.received).toBe(1);
+    expect(data.stats.present.pending).toBe(2); // Members 2 and 4 are checked in but no pizza yet
+  });
+
+  it('should not affect present stats when pizza is given to non-checked-in member', async () => {
+    // Get initial present stats
+    let response = await SELF.fetch('http://localhost/api/admin/pizza', {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+    });
+    let data = await response.json();
+    const initialPresentReceived = data.stats.present.received;
+
+    // Give pizza to member 3 (not checked in)
+    await SELF.fetch('http://localhost/api/admin/pizza/give/3', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${ADMIN_TOKEN}`,
+        'Origin': 'http://localhost'
+      }
+    });
+
+    // Present stats should not change
+    response = await SELF.fetch('http://localhost/api/admin/pizza', {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+    });
+    data = await response.json();
+
+    expect(data.stats.present.received).toBe(initialPresentReceived);
+    // But overall stats should change
+    expect(data.stats.received).toBe(1);
+  });
+
+  it('should calculate correct present by_type counts', async () => {
+    // Give pizza to member 1 (checked in, margherita)
+    await SELF.fetch('http://localhost/api/admin/pizza/give/1', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${ADMIN_TOKEN}`,
+        'Origin': 'http://localhost'
+      }
+    });
+
+    const response = await SELF.fetch('http://localhost/api/admin/pizza', {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${ADMIN_TOKEN}` }
+    });
+
+    const data = await response.json();
+
+    // Find margherita in present by_type
+    const presentMargherita = data.stats.present.by_type.find(t => t.food_diet === 'margherita');
+    expect(presentMargherita).toBeDefined();
+    expect(presentMargherita.received).toBe(1);
+    expect(presentMargherita.total).toBe(1); // Only member 1 has margherita and is checked in
+  });
+});
