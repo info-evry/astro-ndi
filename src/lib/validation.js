@@ -1,25 +1,11 @@
 /**
  * Input validation utilities
+ * Re-exports common utilities from astro-core, plus NDI-specific validators
  */
 
-/**
- * Sanitize string input - trim and limit length
- */
-export function sanitizeString(str, maxLength = 256) {
-  if (typeof str !== 'string') return '';
-  return str.trim().slice(0, maxLength);
-}
-
-/**
- * Validate email format
- * Uses a simple pattern that avoids ReDoS vulnerability
- */
-export function isValidEmail(email) {
-  if (!email || typeof email !== 'string' || email.length > 254) return false;
-  const atIndex = email.indexOf('@');
-  const dotIndex = email.lastIndexOf('.');
-  return atIndex > 0 && dotIndex > atIndex + 1 && dotIndex < email.length - 1 && !email.includes(' ');
-}
+// Import and re-export common utilities from astro-core
+import { sanitizeString, isValidEmail } from '../../core/src/lib/validation.js';
+export { sanitizeString, isValidEmail };
 
 /**
  * Validate team name
