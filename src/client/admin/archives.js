@@ -210,31 +210,6 @@ export async function exportArchiveJson(apiBase, adminToken) {
 }
 
 /**
- * Export archive as ZIP
- * @param {string} apiBase - API base URL
- * @param {string} adminToken - Admin token
- */
-export async function exportArchiveZip(apiBase, adminToken) {
-  if (!selectedArchive) return;
-  try {
-    const response = await fetch(`${apiBase}/api/admin/archives/${selectedArchive.event_year}/export?format=zip`, {
-      headers: { 'Authorization': `Bearer ${adminToken}` }
-    });
-    const blob = await response.blob();
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `ndi-${selectedArchive.event_year}-archive.zip`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toastSuccess('Export ZIP téléchargé');
-  } catch {
-    toastError('Erreur lors de l\'export');
-  }
-}
-
-/**
  * Create new archive
  * @param {Function} api - API function
  * @param {Function} loadResetSafetyCheck - Callback to reload safety check
@@ -336,20 +311,26 @@ export async function loadResetSafetyCheck(api) {
   try {
     const response = await api('/admin/reset/check', { method: 'GET' });
 
-    if (response.needsArchive) {
+    // Response contains: year, archiveExists, counts, has_data, safe, message
+    const hasData = response.has_data;
+    const needsArchive = hasData && !response.archiveExists;
+    const teamsCount = response.counts?.teams || 0;
+    const membersCount = response.counts?.members || 0;
+
+    if (needsArchive) {
       container.className = 'reset-safety-check warning';
       container.innerHTML = `
         <p><strong><span class="sf-symbol">@sfs:exclamationmark.triangle@</span> Données non archivées</strong></p>
-        <p>Il y a actuellement ${response.teamsCount} équipes et ${response.membersCount} participants.</p>
+        <p>Il y a actuellement ${teamsCount} équipes et ${membersCount} participants.</p>
         <p>Créez une archive avant de réinitialiser pour ne pas perdre ces données.</p>
       `;
       if (resetBtn) resetBtn.disabled = true;
-    } else if (response.hasData) {
+    } else if (hasData) {
       container.className = 'reset-safety-check safe';
       container.innerHTML = `
         <p><strong><span class="sf-symbol">@sfs:checkmark.circle@</span> Prêt à réinitialiser</strong></p>
         <p>Les données ont été archivées. Vous pouvez réinitialiser en toute sécurité.</p>
-        <p>Dernière archive : ${response.latestArchiveYear || 'N/A'}</p>
+        <p>Archive : ${response.year}</p>
       `;
       if (resetBtn) resetBtn.disabled = false;
     } else {
@@ -446,11 +427,6 @@ export function initArchives(api, apiBase, adminToken, loadData) {
   const exportJsonBtn = $('export-archive-json-btn');
   if (exportJsonBtn) {
     exportJsonBtn.addEventListener('click', () => exportArchiveJson(apiBase, adminToken));
-  }
-
-  const exportZipBtn = $('export-archive-zip-btn');
-  if (exportZipBtn) {
-    exportZipBtn.addEventListener('click', () => exportArchiveZip(apiBase, adminToken));
   }
 
   // Create archive button
