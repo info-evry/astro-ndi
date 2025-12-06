@@ -81,16 +81,19 @@ export async function updateSettings(request, env) {
       return error(`Invalid setting keys: ${invalidKeys.join(', ')}`, 400);
     }
 
-    // Validate each setting value
+    // Validate each setting value and collect converted values
+    const validatedUpdates = {};
     for (const [key, value] of Object.entries(updates)) {
       const validation = validateSetting(key, value);
       if (!validation.valid) {
         return error(`Invalid value for ${key}: ${validation.error}`, 400);
       }
+      // Use converted value if provided, otherwise use original
+      validatedUpdates[key] = validation.value === undefined ? value : validation.value;
     }
 
-    // Apply updates
-    for (const [key, value] of Object.entries(updates)) {
+    // Apply updates with validated/converted values
+    for (const [key, value] of Object.entries(validatedUpdates)) {
       await (key === 'pizzas' || key === 'bac_levels' ? settingsDb.setSettingJson(env.DB, key, value) : settingsDb.setSetting(env.DB, key, String(value)));
     }
 
@@ -178,10 +181,14 @@ const VALIDATORS = {
   price_tier2: (v) => validateNumber(v, 0, 100_000),
   tier1_cutoff_days: (v) => validateNumber(v, 1, 365),
   payment_enabled: (v) => {
-    if (typeof v !== 'string' || !['true', 'false'].includes(v)) {
-      return { valid: false, error: 'Must be "true" or "false"' };
+    // Accept both string and boolean values
+    if (typeof v === 'boolean') {
+      return { valid: true, value: String(v) };
     }
-    return { valid: true };
+    if (typeof v === 'string' && ['true', 'false'].includes(v)) {
+      return { valid: true };
+    }
+    return { valid: false, error: 'Must be "true" or "false"' };
   },
   registration_deadline: (v) => {
     if (typeof v !== 'string') {
