@@ -1,6 +1,7 @@
 /**
  * Admin API client
  */
+/* eslint-env browser */
 
 // Token from localStorage
 let adminToken = localStorage.getItem('ndi_admin_token') || '';

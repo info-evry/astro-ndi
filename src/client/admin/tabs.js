@@ -1,8 +1,7 @@
 /**
  * Tab switching functionality
  */
-
-import { $ } from './utils.js';
+/* eslint-env browser */
 
 /**
  * Switch to a tab
@@ -10,19 +9,19 @@ import { $ } from './utils.js';
  */
 export function switchTab(tabId) {
   // Update tab buttons
-  document.querySelectorAll('.tabs-nav button').forEach(btn => {
+  for (const btn of document.querySelectorAll('.tabs-nav button')) {
     btn.classList.toggle('active', btn.dataset.tab === tabId);
-  });
+  }
 
   // Update sidebar items
-  document.querySelectorAll('.admin-sidebar-item').forEach(btn => {
+  for (const btn of document.querySelectorAll('.admin-sidebar-item')) {
     btn.classList.toggle('active', btn.dataset.tab === tabId);
-  });
+  }
 
   // Update tab panels
-  document.querySelectorAll('.tab-panel').forEach(panel => {
+  for (const panel of document.querySelectorAll('.tab-panel')) {
     panel.classList.toggle('hidden', panel.id !== `tab-${tabId}`);
-  });
+  }
 }
 
 /**
@@ -30,22 +29,22 @@ export function switchTab(tabId) {
  */
 export function initTabs() {
   // Tab button clicks
-  document.querySelectorAll('.tabs-nav button').forEach(btn => {
+  for (const btn of document.querySelectorAll('.tabs-nav button')) {
     btn.addEventListener('click', () => {
       const tabId = btn.dataset.tab;
       if (tabId) {
         switchTab(tabId);
       }
     });
-  });
+  }
 
   // Sidebar item clicks
-  document.querySelectorAll('.admin-sidebar-item').forEach(btn => {
+  for (const btn of document.querySelectorAll('.admin-sidebar-item')) {
     btn.addEventListener('click', () => {
       const tabId = btn.dataset.tab;
       if (tabId) {
         switchTab(tabId);
       }
     });
-  });
+  }
 }

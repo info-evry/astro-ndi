@@ -1,6 +1,7 @@
 /**
  * Toast notification system
  */
+/* eslint-env browser */
 
 /**
  * Show a toast notification

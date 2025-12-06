@@ -2,6 +2,7 @@
  * Admin utility functions
  * DOM helpers and text formatting
  */
+/* eslint-env browser */
 
 /**
  * Shorthand for document.getElementById
@@ -32,7 +33,7 @@ export function escapeHtml(str) {
  */
 export function truncateText(str, maxLength = 40) {
   if (!str || str.length <= maxLength) return str;
-  return str.substring(0, maxLength - 1) + '…';
+  return str.slice(0, maxLength - 1) + '…';
 }
 
 /**

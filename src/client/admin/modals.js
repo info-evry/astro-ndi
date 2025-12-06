@@ -1,6 +1,7 @@
 /**
  * Modal and disclosure toggle functions
  */
+/* eslint-env browser */
 
 import { $ } from './utils.js';
 
@@ -41,13 +42,13 @@ export function toggleDisclosure(name) {
  * Initialize modal close on backdrop click
  */
 export function initModalBackdropClose() {
-  document.querySelectorAll('.modal').forEach(modal => {
+  for (const modal of document.querySelectorAll('.modal')) {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
         modal.classList.add('hidden');
       }
     });
-  });
+  }
 }
 
 /**
@@ -56,9 +57,9 @@ export function initModalBackdropClose() {
 export function initModalEscapeClose() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      document.querySelectorAll('.modal:not(.hidden)').forEach(modal => {
+      for (const modal of document.querySelectorAll('.modal:not(.hidden)')) {
         modal.classList.add('hidden');
-      });
+      }
     }
   });
 }

@@ -3,8 +3,6 @@
  * Pure functions that can be tested without DOM
  */
 
-/* global Blob, document */
-
 /**
  * Escape a CSV field value
  * @param {*} value - Value to escape
