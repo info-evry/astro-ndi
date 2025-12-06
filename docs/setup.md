@@ -55,11 +55,16 @@ id = "YOUR_KV_ID"
 Run migrations to create the database schema:
 
 ```bash
-# Apply all migrations
-bunx wrangler d1 execute ndi-db --remote --file=./migrations/0001_initial.sql
+# Apply schema
+bunx wrangler d1 execute ndi-db --remote --file=./db/schema.sql
+
+# Apply migrations in order
+bunx wrangler d1 execute ndi-db --remote --file=./db/migrate-001-settings.sql
+bunx wrangler d1 execute ndi-db --remote --file=./db/migrate-002-attendance.sql
+# ... continue with remaining migrations
 ```
 
-If migrations folder doesn't exist, create the schema manually:
+Or create the schema manually:
 
 ```bash
 bunx wrangler d1 execute ndi-db --remote --command="
@@ -129,9 +134,9 @@ bun run deploy
 
 ### "D1_ERROR: no such table"
 
-Run the database migrations:
+Run the database schema and migrations:
 ```bash
-bunx wrangler d1 execute ndi-db --remote --file=./migrations/0001_initial.sql
+bunx wrangler d1 execute ndi-db --remote --file=./db/schema.sql
 ```
 
 ### "Invalid binding SESSION"
