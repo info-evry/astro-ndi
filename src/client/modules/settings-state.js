@@ -44,7 +44,7 @@ export function createSettingsState(initialSettings = {}) {
   const listeners = new Set();
 
   function notifyListeners() {
-    listeners.forEach(fn => fn(state));
+    for (const fn of listeners) fn(state);
   }
 
   return {
@@ -91,20 +91,20 @@ export function createSettingsState(initialSettings = {}) {
      */
     loadFromAPI(apiSettings) {
       state = {
-        maxTeamSize: parseInt(apiSettings.max_team_size, 10) || 15,
-        maxTotalParticipants: parseInt(apiSettings.max_total_participants, 10) || 200,
-        minTeamSize: parseInt(apiSettings.min_team_size, 10) || 1,
+        maxTeamSize: Number.parseInt(apiSettings.max_team_size, 10) || 15,
+        maxTotalParticipants: Number.parseInt(apiSettings.max_total_participants, 10) || 200,
+        minTeamSize: Number.parseInt(apiSettings.min_team_size, 10) || 1,
         schoolName: apiSettings.school_name || "Université d'Evry",
         pizzas: apiSettings.pizzas || [],
         bacLevels: apiSettings.bac_levels || [],
-        priceAssoMember: parseInt(apiSettings.price_asso_member, 10) || 500,
-        priceNonMember: parseInt(apiSettings.price_non_member, 10) || 800,
-        priceLate: parseInt(apiSettings.price_late, 10) || 1000,
+        priceAssoMember: Number.parseInt(apiSettings.price_asso_member, 10) || 500,
+        priceNonMember: Number.parseInt(apiSettings.price_non_member, 10) || 800,
+        priceLate: Number.parseInt(apiSettings.price_late, 10) || 1000,
         lateCutoffTime: apiSettings.late_cutoff_time || '19:00',
         paymentEnabled: apiSettings.payment_enabled === 'true' || apiSettings.payment_enabled === true,
-        priceTier1: parseInt(apiSettings.price_tier1, 10) || 500,
-        priceTier2: parseInt(apiSettings.price_tier2, 10) || 700,
-        tier1CutoffDays: parseInt(apiSettings.tier1_cutoff_days, 10) || 7,
+        priceTier1: Number.parseInt(apiSettings.price_tier1, 10) || 500,
+        priceTier2: Number.parseInt(apiSettings.price_tier2, 10) || 700,
+        tier1CutoffDays: Number.parseInt(apiSettings.tier1_cutoff_days, 10) || 7,
         registrationDeadline: apiSettings.registration_deadline || '',
         isDirty: false
       };

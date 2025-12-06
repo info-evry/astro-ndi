@@ -14,7 +14,7 @@ export function calculateTier(deadline, cutoffDays = 7, now = new Date()) {
   if (!deadline) return 'tier2';
 
   const deadlineDate = deadline instanceof Date ? deadline : new Date(deadline);
-  if (isNaN(deadlineDate.getTime())) return 'tier2';
+  if (Number.isNaN(deadlineDate.getTime())) return 'tier2';
 
   // Calculate cutoff date (deadline minus cutoff days)
   const cutoffDate = new Date(deadlineDate);
@@ -51,14 +51,18 @@ export function getOnsitePrice(tier, config) {
   } = config || {};
 
   switch (tier) {
-    case 'asso_member':
+    case 'asso_member': {
       return priceAssoMember;
-    case 'non_member':
+    }
+    case 'non_member': {
       return priceNonMember;
-    case 'late':
+    }
+    case 'late': {
       return priceLate;
-    default:
+    }
+    default: {
       return priceAssoMember;
+    }
   }
 }
 
@@ -132,7 +136,7 @@ export function getPricingSummary(config, now = new Date()) {
 
   if (registrationDeadline) {
     deadlineDate = new Date(registrationDeadline);
-    if (!isNaN(deadlineDate.getTime())) {
+    if (!Number.isNaN(deadlineDate.getTime())) {
       cutoffDate = new Date(deadlineDate);
       cutoffDate.setDate(cutoffDate.getDate() - tier1CutoffDays);
 
@@ -178,7 +182,7 @@ export function calculateRevenue(members) {
   const byTier = {};
   let count = 0;
 
-  members.forEach(m => {
+  for (const m of members) {
     if (m.payment_amount > 0) {
       total += m.payment_amount;
       count++;
@@ -195,7 +199,7 @@ export function calculateRevenue(members) {
         onsiteTotal += m.payment_amount;
       }
     }
-  });
+  }
 
   return {
     total,

@@ -23,12 +23,10 @@ export function createSortComparator(key, direction = 'asc', options = {}) {
     if (valB == null) return nullsLast ? -1 : 1;
 
     // Handle strings
-    if (typeof valA === 'string' && typeof valB === 'string') {
-      if (caseInsensitive) {
+    if (typeof valA === 'string' && typeof valB === 'string' && caseInsensitive) {
         valA = valA.toLowerCase();
         valB = valB.toLowerCase();
       }
-    }
 
     // Compare
     let result = 0;
@@ -52,7 +50,7 @@ export function sortMembers(members, sortKey, direction = 'asc') {
   const sorted = [...members];
 
   switch (sortKey) {
-    case 'name':
+    case 'name': {
       sorted.sort((a, b) => {
         const nameA = `${a.first_name || ''} ${a.last_name || ''}`.toLowerCase();
         const nameB = `${b.first_name || ''} ${b.last_name || ''}`.toLowerCase();
@@ -60,25 +58,30 @@ export function sortMembers(members, sortKey, direction = 'asc') {
         return direction === 'desc' ? -result : result;
       });
       break;
+    }
 
-    case 'email':
+    case 'email': {
       sorted.sort(createSortComparator('email', direction));
       break;
+    }
 
-    case 'team':
+    case 'team': {
       sorted.sort(createSortComparator('team_name', direction));
       break;
+    }
 
-    case 'pizza':
+    case 'pizza': {
       sorted.sort(createSortComparator('food_diet', direction));
       break;
+    }
 
-    case 'bac':
+    case 'bac': {
       sorted.sort(createSortComparator('bac_level', direction, { caseInsensitive: false }));
       break;
+    }
 
     case 'manager':
-    case 'leader':
+    case 'leader': {
       sorted.sort((a, b) => {
         const valA = a.is_manager ? 1 : 0;
         const valB = b.is_manager ? 1 : 0;
@@ -86,18 +89,21 @@ export function sortMembers(members, sortKey, direction = 'asc') {
         return direction === 'desc' ? -result : result;
       });
       break;
+    }
 
     case 'status':
-    case 'checked_in':
+    case 'checked_in': {
       sorted.sort(createSortComparator('checked_in', direction, { caseInsensitive: false }));
       break;
+    }
 
     case 'time':
-    case 'checked_in_at':
+    case 'checked_in_at': {
       sorted.sort(createSortComparator('checked_in_at', direction));
       break;
+    }
 
-    case 'payment':
+    case 'payment': {
       sorted.sort((a, b) => {
         const valA = a.payment_status || a.payment_tier || '';
         const valB = b.payment_status || b.payment_tier || '';
@@ -105,9 +111,11 @@ export function sortMembers(members, sortKey, direction = 'asc') {
         return direction === 'desc' ? -result : result;
       });
       break;
+    }
 
-    default:
+    default: {
       sorted.sort(createSortComparator(sortKey, direction));
+    }
   }
 
   return sorted;
@@ -126,21 +134,25 @@ export function sortTeams(teams, sortKey, direction = 'asc') {
   const sorted = [...teams];
 
   switch (sortKey) {
-    case 'name':
+    case 'name': {
       sorted.sort(createSortComparator('name', direction));
       break;
+    }
 
     case 'members':
-    case 'member_count':
+    case 'member_count': {
       sorted.sort(createSortComparator('member_count', direction, { caseInsensitive: false }));
       break;
+    }
 
-    case 'room':
+    case 'room': {
       sorted.sort(createSortComparator('room', direction));
       break;
+    }
 
-    default:
+    default: {
       sorted.sort(createSortComparator(sortKey, direction));
+    }
   }
 
   return sorted;
@@ -185,30 +197,37 @@ export function filterMembersByStatus(members, filter) {
   if (filter === 'all') return members;
 
   switch (filter) {
-    case 'present':
+    case 'present': {
       return members.filter(m => m.checked_in === 1);
+    }
 
-    case 'absent':
+    case 'absent': {
       return members.filter(m => m.checked_in === 0 || m.checked_in === null);
+    }
 
-    case 'paid':
+    case 'paid': {
       return members.filter(m =>
         m.payment_status === 'paid' || m.payment_tier
       );
+    }
 
-    case 'unpaid':
+    case 'unpaid': {
       return members.filter(m =>
         !m.payment_status || m.payment_status === 'unpaid' || m.payment_status === 'delayed'
       );
+    }
 
-    case 'pending':
+    case 'pending': {
       return members.filter(m => m.payment_status === 'pending');
+    }
 
-    case 'delayed':
+    case 'delayed': {
       return members.filter(m => m.payment_status === 'delayed');
+    }
 
-    default:
+    default: {
       return members;
+    }
   }
 }
 
@@ -223,14 +242,17 @@ export function filterTeamsByRoom(teams, filter) {
   if (filter === 'all') return teams;
 
   switch (filter) {
-    case 'assigned':
+    case 'assigned': {
       return teams.filter(t => t.room && t.room !== '');
+    }
 
-    case 'unassigned':
+    case 'unassigned': {
       return teams.filter(t => !t.room || t.room === '');
+    }
 
-    default:
+    default: {
       return teams;
+    }
   }
 }
 

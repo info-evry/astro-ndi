@@ -11,11 +11,11 @@
 export function escapeHtml(str) {
   if (!str) return '';
   return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('\'', '&#039;');
 }
 
 /**
@@ -26,7 +26,7 @@ export function escapeHtml(str) {
  */
 export function truncateText(str, maxLength = 40) {
   if (!str || str.length <= maxLength) return str || '';
-  return str.substring(0, maxLength - 1) + '…';
+  return str.slice(0, Math.max(0, maxLength - 1)) + '…';
 }
 
 /**
@@ -52,7 +52,7 @@ export function formatTeamWithRoom(teamName, teamRoom, maxLength = 40) {
  * @returns {string} Formatted currency string
  */
 export function formatCurrency(cents, locale = 'fr-FR', currency = 'EUR') {
-  if (typeof cents !== 'number' || isNaN(cents)) return '0,00 €';
+  if (typeof cents !== 'number' || Number.isNaN(cents)) return '0,00 €';
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency
@@ -68,7 +68,7 @@ export function formatCurrency(cents, locale = 'fr-FR', currency = 'EUR') {
 export function formatDate(date, locale = 'fr-FR') {
   if (!date) return '-';
   const d = date instanceof Date ? date : new Date(date);
-  if (isNaN(d.getTime())) return '-';
+  if (Number.isNaN(d.getTime())) return '-';
   return d.toLocaleDateString(locale, {
     year: 'numeric',
     month: 'long',
@@ -85,7 +85,7 @@ export function formatDate(date, locale = 'fr-FR') {
 export function formatTime(date, locale = 'fr-FR') {
   if (!date) return '-';
   const d = date instanceof Date ? date : new Date(date);
-  if (isNaN(d.getTime())) return '-';
+  if (Number.isNaN(d.getTime())) return '-';
   return d.toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit'
@@ -101,7 +101,7 @@ export function formatTime(date, locale = 'fr-FR') {
 export function formatDateTime(date, locale = 'fr-FR') {
   if (!date) return '-';
   const d = date instanceof Date ? date : new Date(date);
-  if (isNaN(d.getTime())) return '-';
+  if (Number.isNaN(d.getTime())) return '-';
   return d.toLocaleString(locale, {
     year: 'numeric',
     month: 'short',
@@ -117,8 +117,8 @@ export function formatDateTime(date, locale = 'fr-FR') {
  * @returns {string} Formatted BAC level
  */
 export function formatBacLevel(level) {
-  const num = parseInt(level, 10);
-  if (isNaN(num) || num < 0) return '-';
+  const num = Number.parseInt(level, 10);
+  if (Number.isNaN(num) || num < 0) return '-';
   if (num === 0) return 'Non bachelier';
   return `BAC+${num}`;
 }

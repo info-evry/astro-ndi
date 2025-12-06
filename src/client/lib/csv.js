@@ -3,6 +3,21 @@
  * Pure functions that can be tested without DOM
  */
 
+/* global Blob, document */
+
+/**
+ * Escape a CSV field value
+ * @param {*} value - Value to escape
+ * @returns {string} Escaped value
+ */
+function escapeField(value) {
+  const str = String(value ?? '');
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return `"${str.replaceAll('"', '""')}"`;
+  }
+  return str;
+}
+
 /**
  * Parse a CSV line respecting quoted fields
  * @param {string} line - CSV line to parse
@@ -12,33 +27,35 @@ export function parseCSVLine(line) {
   const result = [];
   let current = '';
   let inQuotes = false;
+  let skipNext = false;
 
   for (let i = 0; i < line.length; i++) {
+    if (skipNext) {
+      skipNext = false;
+      continue;
+    }
+
     const char = line[i];
     const nextChar = line[i + 1];
 
     if (inQuotes) {
-      if (char === '"') {
-        if (nextChar === '"') {
-          // Escaped quote
-          current += '"';
-          i++;
-        } else {
-          // End of quoted field
-          inQuotes = false;
-        }
+      if (char === '"' && nextChar === '"') {
+        // Escaped quote
+        current += '"';
+        skipNext = true;
+      } else if (char === '"') {
+        // End of quoted field
+        inQuotes = false;
       } else {
         current += char;
       }
+    } else if (char === '"') {
+      inQuotes = true;
+    } else if (char === ',') {
+      result.push(current.trim());
+      current = '';
     } else {
-      if (char === '"') {
-        inQuotes = true;
-      } else if (char === ',') {
-        result.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
+      current += char;
     }
   }
 
@@ -96,9 +113,9 @@ export function validateCSVHeaders(headers, expectedHeaders) {
  */
 export function rowToObject(headers, row) {
   const obj = {};
-  headers.forEach((header, index) => {
+  for (const [index, header] of headers.entries()) {
     obj[header] = row[index] || '';
-  });
+  }
   return obj;
 }
 
@@ -129,24 +146,24 @@ export function parseImportCSV(csv) {
     }
 
     // Parse each row
-    rows.forEach((row, index) => {
+    for (const [index, row] of rows.entries()) {
       const obj = rowToObject(headers, row);
       const lineNum = index + 2; // +2 for 1-indexed and header row
 
       // Validate required fields
       if (!obj.firstname?.trim() || !obj.lastname?.trim()) {
         errors.push(`Line ${lineNum}: Missing name`);
-        return;
+        continue;
       }
 
       if (!obj.email?.trim()) {
         errors.push(`Line ${lineNum}: Missing email`);
-        return;
+        continue;
       }
 
       if (!obj.teamName?.trim()) {
         errors.push(`Line ${lineNum}: Missing team name`);
-        return;
+        continue;
       }
 
       members.push({
@@ -154,15 +171,15 @@ export function parseImportCSV(csv) {
         lastName: obj.lastname.trim(),
         email: obj.email.trim().toLowerCase(),
         foodDiet: obj.fooddiet?.trim() || '',
-        bacLevel: parseInt(obj.baclevel, 10) || 0,
+        bacLevel: Number.parseInt(obj.baclevel, 10) || 0,
         isManager: obj.ismanager === '1' || obj.ismanager?.toLowerCase() === 'true',
         teamName: obj.teamName.trim(),
         externalId: obj.id?.trim() || null,
         importDate: obj.date?.trim() || null
       });
-    });
-  } catch (err) {
-    errors.push(err.message);
+    }
+  } catch (error) {
+    errors.push(error.message);
   }
 
   return { members, errors };
@@ -175,15 +192,7 @@ export function parseImportCSV(csv) {
  * @returns {string} CSV content
  */
 export function generateCSV(headers, rows) {
-  const escapeField = (value) => {
-    const str = String(value ?? '');
-    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-      return `"${str.replace(/"/g, '""')}"`;
-    }
-    return str;
-  };
-
-  const headerLine = headers.map(escapeField).join(',');
+  const headerLine = headers.map(h => escapeField(h)).join(',');
   const dataLines = rows.map(row =>
     headers.map(h => escapeField(row[h])).join(',')
   );
