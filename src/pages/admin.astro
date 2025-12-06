@@ -782,6 +782,14 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         <input type="hidden" id="checkin-member-id">
 
         <div class="payment-options">
+          <label class="payment-option" id="option-org">
+            <input type="radio" name="payment-tier" value="organisation">
+            <span class="payment-option-content">
+              <span class="payment-option-title">Organisation</span>
+              <span class="payment-option-price">Gratuit</span>
+            </span>
+          </label>
+
           <label class="payment-option" id="option-asso">
             <input type="radio" name="payment-tier" value="asso_member" checked>
             <span class="payment-option-content">
