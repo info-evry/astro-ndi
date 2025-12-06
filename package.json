@@ -16,7 +16,7 @@
   "dependencies": {
     "astro": "^5.16.4",
     "@astrojs/cloudflare": "^12.6.12",
-    "astro-payments": "file:../astro-payments"
+    "astro-payments": "file:./payments"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.10.14",
