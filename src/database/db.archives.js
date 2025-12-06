@@ -15,7 +15,7 @@ export async function detectEventYear(db) {
   // First, check if admin has set the event year
   const settingYear = await getSetting(db, 'event_year');
   if (settingYear) {
-    return parseInt(settingYear, 10);
+    return Number.parseInt(settingYear, 10);
   }
 
   // Fallback: infer from registration dates
@@ -35,8 +35,8 @@ export async function detectEventYear(db) {
       return new Date().getFullYear();
     }
 
-    const year = parseInt(result.year, 10);
-    const month = parseInt(result.month, 10);
+    const year = Number.parseInt(result.year, 10);
+    const month = Number.parseInt(result.month, 10);
 
     // If January registrations, likely for previous year's event
     return month === 1 ? year - 1 : year;
@@ -112,7 +112,7 @@ export async function getArchiveByYear(db, year) {
  */
 export async function createArchive(db, year) {
   // Get retention period from settings
-  const retentionYears = parseInt(await getSetting(db, 'gdpr_retention_years') || '3', 10);
+  const retentionYears = Number.parseInt(await getSetting(db, 'gdpr_retention_years') || '3', 10);
   
   // Calculate expiration date
   const expirationDate = new Date();
@@ -287,7 +287,7 @@ async function fetchPaymentEventsForArchive(db) {
  * @param {Array} paymentEvents
  * @returns {object}
  */
-export function calculateStats(teams, members, paymentEvents) {
+export function calculateStats(teams, members, _paymentEvents) {
   // BAC level distribution
   const participantsByBacLevel = {};
   for (const member of members) {
@@ -368,7 +368,7 @@ export function generateDataHash(data) {
  * @returns {Array}
  */
 export function anonymizeMembers(members) {
-  return members.map((member, index) => ({
+  return members.map((member) => ({
     ...member,
     // Anonymize personal data
     first_name: 'Participant',

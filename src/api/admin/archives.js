@@ -46,8 +46,8 @@ export async function getArchive(request, env, ctx, params) {
   }
 
   try {
-    const year = parseInt(params.year, 10);
-    if (isNaN(year)) {
+    const year = Number.parseInt(params.year, 10);
+    if (Number.isNaN(year)) {
       return error('Invalid year', 400);
     }
 
@@ -77,16 +77,16 @@ export async function createArchive(request, env) {
   try {
     const body = await request.json().catch(() => ({}));
     
-    // Get year from body or detect it
-    let year = body.year;
-    if (!year) {
-      year = await archivesDb.detectEventYear(env.DB);
-    } else {
-      year = parseInt(year, 10);
-      if (isNaN(year) || year < 2000 || year > 2100) {
-        return error('Invalid year', 400);
-      }
+  // Get year from body or detect it
+  let year = body.year;
+  if (year) {
+    year = Number.parseInt(year, 10);
+    if (Number.isNaN(year) || year < 2000 || year > 2100) {
+      return error('Invalid year', 400);
     }
+  } else {
+    year = await archivesDb.detectEventYear(env.DB);
+  }
 
     // Check if archive already exists
     const exists = await archivesDb.archiveExists(env.DB, year);
@@ -128,8 +128,8 @@ export async function exportArchive(request, env, ctx, params) {
   }
 
   try {
-    const year = parseInt(params.year, 10);
-    if (isNaN(year)) {
+    const year = Number.parseInt(params.year, 10);
+    if (Number.isNaN(year)) {
       return error('Invalid year', 400);
     }
 
