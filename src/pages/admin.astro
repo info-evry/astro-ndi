@@ -33,31 +33,31 @@ import AdminLayout from '../layouts/AdminLayout.astro';
       <!-- Tab Navigation -->
       <nav class="tab-nav" role="tablist">
         <button type="button" role="tab" id="tab-registrations" aria-controls="panel-registrations" aria-selected="true" class="tab-item active" data-tab="registrations">
-          <span class="tab-icon">&#x1F4DD;</span>
+          <span class="tab-icon sf-symbol">@sfs:list.bullet@</span>
           <span class="tab-label">Inscriptions</span>
         </button>
         <button type="button" role="tab" id="tab-attendance" aria-controls="panel-attendance" aria-selected="false" class="tab-item" data-tab="attendance">
-          <span class="tab-icon">&#x2705;</span>
+          <span class="tab-icon sf-symbol">@sfs:person.badge.clock@</span>
           <span class="tab-label">Présences</span>
           <span id="attendance-badge" class="tab-badge">0</span>
         </button>
         <button type="button" role="tab" id="tab-pizza" aria-controls="panel-pizza" aria-selected="false" class="tab-item" data-tab="pizza">
-          <span class="tab-icon">&#x1F355;</span>
+          <span class="tab-icon sf-symbol">@sfs:fork.knife@</span>
           <span class="tab-label">Pizzas</span>
           <span id="pizza-badge" class="tab-badge">0</span>
         </button>
         <button type="button" role="tab" id="tab-rooms" aria-controls="panel-rooms" aria-selected="false" class="tab-item" data-tab="rooms">
-          <span class="tab-icon">&#x1F3E0;</span>
+          <span class="tab-icon sf-symbol">@sfs:building.2@</span>
           <span class="tab-label">Salles</span>
           <span id="rooms-badge" class="tab-badge">0</span>
         </button>
         <button type="button" role="tab" id="tab-archives" aria-controls="panel-archives" aria-selected="false" class="tab-item" data-tab="archives">
-          <span class="tab-icon">&#x1F4C1;</span>
+          <span class="tab-icon sf-symbol">@sfs:archivebox@</span>
           <span class="tab-label">Archives</span>
           <span id="archives-badge" class="tab-badge hidden">0</span>
         </button>
         <button type="button" role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false" class="tab-item" data-tab="settings">
-          <span class="tab-icon">&#x2699;</span>
+          <span class="tab-icon sf-symbol">@sfs:gear@</span>
           <span class="tab-label">Paramètres</span>
         </button>
       </nav>
@@ -68,7 +68,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
       <!-- Stats Section -->
       <div class="disclosure-group open" data-disclosure="stats">
         <div class="disclosure-header" onclick="toggleDisclosure('stats')">
-          <h2><span class="disclosure-chevron">􀆊</span> Vue d'ensemble</h2>
+          <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Vue d'ensemble</h2>
           <div class="header-actions" onclick="event.stopPropagation()">
             <button type="button" id="export-official-btn" class="btn btn-primary btn-sm">Export Officiel</button>
             <button type="button" id="export-all-btn" class="btn btn-secondary btn-sm">Exporter CSV</button>
@@ -83,7 +83,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
       <!-- Food Stats -->
       <div class="disclosure-group open" data-disclosure="food">
         <div class="disclosure-header" onclick="toggleDisclosure('food')">
-          <h2><span class="disclosure-chevron">􀆊</span> Préférences alimentaires</h2>
+          <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Préférences alimentaires</h2>
         </div>
         <div class="disclosure-body">
           <div id="food-stats" class="food-stats"></div>
@@ -93,7 +93,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
       <!-- Import Section -->
       <div class="disclosure-group" data-disclosure="import">
         <div class="disclosure-header" onclick="toggleDisclosure('import')">
-          <h2><span class="disclosure-chevron">􀆊</span> Importer des données</h2>
+          <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Importer des données</h2>
         </div>
         <div class="disclosure-body">
           <div class="settings-card">
@@ -124,7 +124,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
       <!-- Quick Actions -->
       <div class="disclosure-group open" data-disclosure="actions">
         <div class="disclosure-header" onclick="toggleDisclosure('actions')">
-          <h2><span class="disclosure-chevron">􀆊</span> Actions rapides</h2>
+          <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Actions rapides</h2>
         </div>
         <div class="disclosure-body">
           <div class="quick-actions">
@@ -139,10 +139,10 @@ import AdminLayout from '../layouts/AdminLayout.astro';
       <!-- Teams Section -->
       <div class="disclosure-group open" data-disclosure="teams">
         <div class="disclosure-header" onclick="toggleDisclosure('teams')">
-          <h2><span class="disclosure-chevron">􀆊</span> Équipes et membres</h2>
+          <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Équipes et membres</h2>
           <div class="header-actions" onclick="event.stopPropagation()">
             <div class="search-input-wrapper">
-              <span class="search-icon" aria-hidden="true">&#x1F50D;</span>
+              <span class="search-icon sf-symbol" aria-hidden="true">@sfs:magnifyingglass@</span>
               <input type="search" id="teams-search" class="search-input" placeholder="Rechercher...">
             </div>
           </div>
@@ -155,10 +155,10 @@ import AdminLayout from '../layouts/AdminLayout.astro';
       <!-- All Participants List Section -->
       <div class="disclosure-group" data-disclosure="all-participants">
         <div class="disclosure-header" onclick="toggleDisclosure('all-participants')">
-          <h2><span class="disclosure-chevron">􀆊</span> Tous les participants</h2>
+          <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Tous les participants</h2>
           <div class="header-actions" onclick="event.stopPropagation()">
             <div class="search-input-wrapper">
-              <span class="search-icon" aria-hidden="true">&#x1F50D;</span>
+              <span class="search-icon sf-symbol" aria-hidden="true">@sfs:magnifyingglass@</span>
               <input type="search" id="all-participants-search" class="search-input" placeholder="Rechercher un participant...">
             </div>
           </div>
@@ -168,12 +168,12 @@ import AdminLayout from '../layouts/AdminLayout.astro';
             <table id="all-participants-table" class="members-table">
               <thead>
                 <tr>
-                  <th class="sortable-header" data-sort="name" onclick="sortAllParticipants('name')">Nom <span class="sort-indicator">⇅</span></th>
-                  <th class="sortable-header" data-sort="email" onclick="sortAllParticipants('email')">Email <span class="sort-indicator">⇅</span></th>
-                  <th class="sortable-header team-col" data-sort="team" onclick="sortAllParticipants('team')">Équipe <span class="sort-indicator">⇅</span></th>
-                  <th class="sortable-header" data-sort="pizza" onclick="sortAllParticipants('pizza')">Pizza <span class="sort-indicator">⇅</span></th>
-                  <th class="sortable-header" data-sort="bac" onclick="sortAllParticipants('bac')">BAC <span class="sort-indicator">⇅</span></th>
-                  <th class="sortable-header" data-sort="manager" onclick="sortAllParticipants('manager')">Rôle <span class="sort-indicator">⇅</span></th>
+                  <th class="sortable-header" data-sort="name" onclick="sortAllParticipants('name')">Nom <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+                  <th class="sortable-header" data-sort="email" onclick="sortAllParticipants('email')">Email <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+                  <th class="sortable-header team-col" data-sort="team" onclick="sortAllParticipants('team')">Équipe <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+                  <th class="sortable-header" data-sort="pizza" onclick="sortAllParticipants('pizza')">Pizza <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+                  <th class="sortable-header" data-sort="bac" onclick="sortAllParticipants('bac')">BAC <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+                  <th class="sortable-header" data-sort="manager" onclick="sortAllParticipants('manager')">Rôle <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
                 </tr>
               </thead>
               <tbody id="all-participants-tbody"></tbody>
@@ -189,7 +189,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         <!-- Attendance Stats -->
         <div class="disclosure-group open" data-disclosure="attendance-stats">
           <div class="disclosure-header" onclick="toggleDisclosure('attendance-stats')">
-            <h2><span class="disclosure-chevron">􀆊</span> Statistiques de présence</h2>
+            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Statistiques de présence</h2>
             <div class="header-actions" onclick="event.stopPropagation()">
               <button type="button" id="refresh-attendance-btn" class="btn btn-secondary btn-sm">Rafraîchir</button>
             </div>
@@ -202,10 +202,10 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         <!-- Attendance List -->
         <div class="disclosure-group open" data-disclosure="attendance-list">
           <div class="disclosure-header" onclick="toggleDisclosure('attendance-list')">
-            <h2><span class="disclosure-chevron">􀆊</span> Liste des participants</h2>
+            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Liste des participants</h2>
             <div class="header-actions" onclick="event.stopPropagation()">
               <div class="search-input-wrapper">
-                <span class="search-icon" aria-hidden="true">&#x1F50D;</span>
+                <span class="search-icon sf-symbol" aria-hidden="true">@sfs:magnifyingglass@</span>
                 <input type="search" id="attendance-search" class="search-input" placeholder="Rechercher un participant...">
               </div>
             </div>
@@ -226,12 +226,12 @@ import AdminLayout from '../layouts/AdminLayout.astro';
               <table id="attendance-table" class="members-table attendance-table">
                 <thead>
                   <tr>
-                    <th class="sortable-header" data-sort="name">Nom <span class="sort-indicator">⇅</span></th>
-                    <th class="sortable-header" data-sort="email">Email <span class="sort-indicator">⇅</span></th>
-                    <th class="sortable-header team-col" data-sort="team">Équipe <span class="sort-indicator">⇅</span></th>
-                    <th class="sortable-header status-col" data-sort="status">Statut <span class="sort-indicator">⇅</span></th>
-                    <th class="sortable-header time-col" data-sort="time">Heure <span class="sort-indicator">⇅</span></th>
-                    <th class="sortable-header" data-sort="payment">Paiement <span class="sort-indicator">⇅</span></th>
+                    <th class="sortable-header" data-sort="name">Nom <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+                    <th class="sortable-header" data-sort="email">Email <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+                    <th class="sortable-header team-col" data-sort="team">Équipe <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+                    <th class="sortable-header status-col" data-sort="status">Statut <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+                    <th class="sortable-header time-col" data-sort="time">Heure <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+                    <th class="sortable-header" data-sort="payment">Paiement <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
                     <th class="actions-col">Actions</th>
                   </tr>
                 </thead>
@@ -247,16 +247,16 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         <!-- Pizza Stats -->
         <div class="disclosure-group open" data-disclosure="pizza-stats">
           <div class="disclosure-header" onclick="toggleDisclosure('pizza-stats')">
-            <h2><span class="disclosure-chevron">􀆊</span> Distribution des pizzas</h2>
+            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Distribution des pizzas</h2>
             <div class="header-actions" onclick="event.stopPropagation()">
               <button type="button" id="refresh-pizza-btn" class="btn btn-secondary btn-sm">Rafraîchir</button>
             </div>
           </div>
           <div class="disclosure-body">
-            <h3 style="margin-bottom: var(--space-3); font-size: var(--text-sm); color: var(--text-muted);">📋 Tous les inscrits</h3>
+            <h3 style="margin-bottom: var(--space-3); font-size: var(--text-sm); color: var(--text-muted);"><span class="sf-symbol">@sfs:list.bullet@</span> Tous les inscrits</h3>
             <div id="pizza-stats-grid" class="stats-grid"></div>
             <div id="pizza-by-type-grid" class="stats-grid" style="margin-top: var(--space-4);"></div>
-            <h3 style="margin-top: var(--space-6); margin-bottom: var(--space-3); font-size: var(--text-sm); color: var(--text-muted);">✅ Présents uniquement (pizzas réellement nécessaires)</h3>
+            <h3 style="margin-top: var(--space-6); margin-bottom: var(--space-3); font-size: var(--text-sm); color: var(--text-muted);"><span class="sf-symbol">@sfs:checkmark.circle@</span> Présents uniquement (pizzas réellement nécessaires)</h3>
             <div id="pizza-present-stats-grid" class="stats-grid"></div>
             <div id="pizza-present-by-type-grid" class="stats-grid" style="margin-top: var(--space-4);"></div>
           </div>
@@ -265,10 +265,10 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         <!-- Pizza List -->
         <div class="disclosure-group open" data-disclosure="pizza-list">
           <div class="disclosure-header" onclick="toggleDisclosure('pizza-list')">
-            <h2><span class="disclosure-chevron">􀆊</span> Liste des participants</h2>
+            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Liste des participants</h2>
             <div class="header-actions" onclick="event.stopPropagation()">
               <div class="search-input-wrapper">
-                <span class="search-icon" aria-hidden="true">&#x1F50D;</span>
+                <span class="search-icon sf-symbol" aria-hidden="true">@sfs:magnifyingglass@</span>
                 <input type="search" id="pizza-search" class="search-input" placeholder="Rechercher un participant...">
               </div>
             </div>
@@ -297,12 +297,12 @@ import AdminLayout from '../layouts/AdminLayout.astro';
               <table id="pizza-table" class="members-table attendance-table">
                 <thead>
                   <tr>
-                    <th class="sortable-header" data-sort="name">Nom <span class="sort-indicator">⇅</span></th>
-                    <th class="sortable-header team-col" data-sort="team">Équipe <span class="sort-indicator">⇅</span></th>
-                    <th class="sortable-header" data-sort="pizza">Pizza <span class="sort-indicator">⇅</span></th>
-                    <th class="sortable-header status-col" data-sort="checkin">Présent <span class="sort-indicator">⇅</span></th>
-                    <th class="sortable-header status-col" data-sort="status">Statut <span class="sort-indicator">⇅</span></th>
-                    <th class="sortable-header time-col" data-sort="time">Heure <span class="sort-indicator">⇅</span></th>
+                    <th class="sortable-header" data-sort="name">Nom <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+                    <th class="sortable-header team-col" data-sort="team">Équipe <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+                    <th class="sortable-header" data-sort="pizza">Pizza <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+                    <th class="sortable-header status-col" data-sort="checkin">Présent <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+                    <th class="sortable-header status-col" data-sort="status">Statut <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+                    <th class="sortable-header time-col" data-sort="time">Heure <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
                     <th class="actions-col">Actions</th>
                   </tr>
                 </thead>
@@ -318,7 +318,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         <!-- Room Stats -->
         <div class="disclosure-group open" data-disclosure="room-stats">
           <div class="disclosure-header" onclick="toggleDisclosure('room-stats')">
-            <h2><span class="disclosure-chevron">&#x276F;</span> Attribution des salles</h2>
+            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Attribution des salles</h2>
             <div class="header-actions" onclick="event.stopPropagation()">
               <button type="button" id="refresh-rooms-btn" class="btn btn-secondary btn-sm">Rafraîchir</button>
             </div>
@@ -332,7 +332,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         <!-- Pizza per Room -->
         <div class="disclosure-group open" data-disclosure="room-pizza">
           <div class="disclosure-header" onclick="toggleDisclosure('room-pizza')">
-            <h2><span class="disclosure-chevron">&#x276F;</span> Pizzas par salle</h2>
+            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Pizzas par salle</h2>
           </div>
           <div class="disclosure-body">
             <div id="room-pizza-container"></div>
@@ -342,10 +342,10 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         <!-- Room Assignment List -->
         <div class="disclosure-group open" data-disclosure="room-list">
           <div class="disclosure-header" onclick="toggleDisclosure('room-list')">
-            <h2><span class="disclosure-chevron">&#x276F;</span> Liste des équipes</h2>
+            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Liste des équipes</h2>
             <div class="header-actions" onclick="event.stopPropagation()">
               <div class="search-input-wrapper">
-                <span class="search-icon" aria-hidden="true">&#x1F50D;</span>
+                <span class="search-icon sf-symbol" aria-hidden="true">@sfs:magnifyingglass@</span>
                 <input type="search" id="rooms-search" class="search-input" placeholder="Rechercher une équipe...">
               </div>
             </div>
@@ -353,22 +353,22 @@ import AdminLayout from '../layouts/AdminLayout.astro';
           <div class="disclosure-body">
             <div class="attendance-filters">
               <label class="filter-pill" id="rooms-filter-all-pill">
-                <input type="radio" name="rooms-filter" value="all" checked> &#x25C9; Toutes
+                <input type="radio" name="rooms-filter" value="all" checked> <span class="sf-symbol">@sfs:circle.circle.fill@</span> Toutes
               </label>
               <label class="filter-pill" id="rooms-filter-assigned-pill">
-                <input type="radio" name="rooms-filter" value="assigned"> &#x2713; Assignées
+                <input type="radio" name="rooms-filter" value="assigned"> <span class="sf-symbol">@sfs:checkmark@</span> Assignées
               </label>
               <label class="filter-pill" id="rooms-filter-unassigned-pill">
-                <input type="radio" name="rooms-filter" value="unassigned"> &#x25CB; Non assignées
+                <input type="radio" name="rooms-filter" value="unassigned"> <span class="sf-symbol">@sfs:circle@</span> Non assignées
               </label>
             </div>
             <div class="table-container">
               <table id="rooms-table" class="members-table">
                 <thead>
                   <tr>
-                    <th class="sortable-header" data-sort="name">Équipe <span class="sort-indicator">&#x21C5;</span></th>
-                    <th class="sortable-header" data-sort="members">Membres <span class="sort-indicator">&#x21C5;</span></th>
-                    <th class="sortable-header" data-sort="room">Salle <span class="sort-indicator">&#x21C5;</span></th>
+                    <th class="sortable-header" data-sort="name">Équipe <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+                    <th class="sortable-header" data-sort="members">Membres <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+                    <th class="sortable-header" data-sort="room">Salle <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
                     <th class="actions-col">Actions</th>
                   </tr>
                 </thead>
@@ -391,7 +391,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         <!-- Archives List -->
         <div class="disclosure-group open" data-disclosure="archives-list">
           <div class="disclosure-header" onclick="toggleDisclosure('archives-list')">
-            <h2><span class="disclosure-chevron">&#x276F;</span> Éditions archivées</h2>
+            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Éditions archivées</h2>
           </div>
           <div class="disclosure-body">
             <div id="archives-container" class="archives-container">
@@ -403,7 +403,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         <!-- Archive Detail View (initially hidden) -->
         <div id="archive-detail" class="disclosure-group hidden" data-disclosure="archive-detail">
           <div class="disclosure-header" onclick="toggleDisclosure('archive-detail')">
-            <h2><span class="disclosure-chevron">&#x276F;</span> <span id="archive-detail-title">Détails de l'archive</span></h2>
+            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> <span id="archive-detail-title">Détails de l'archive</span></h2>
             <div class="header-actions" onclick="event.stopPropagation()">
               <button type="button" id="export-archive-json-btn" class="btn btn-secondary btn-sm">Export JSON</button>
               <button type="button" id="export-archive-zip-btn" class="btn btn-primary btn-sm">Export ZIP</button>
@@ -451,7 +451,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
 
             <!-- GDPR Notice -->
             <div id="archive-gdpr-notice" class="archive-gdpr-notice hidden">
-              <p><strong>⚠️ Données anonymisées</strong></p>
+              <p><strong><span class="sf-symbol">@sfs:exclamationmark.triangle@</span> Données anonymisées</strong></p>
               <p>Cette archive a dépassé sa date de rétention GDPR. Les données personnelles (noms, emails) ont été supprimées conformément au RGPD.</p>
             </div>
           </div>
@@ -470,7 +470,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         <!-- General Settings -->
         <div class="disclosure-group open" data-disclosure="settings-general">
           <div class="disclosure-header" onclick="toggleDisclosure('settings-general')">
-            <h2><span class="disclosure-chevron">&#x276F;</span> Général</h2>
+            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Général</h2>
           </div>
           <div class="disclosure-body">
             <div class="settings-card">
@@ -504,7 +504,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         <!-- Pizza Management -->
         <div class="disclosure-group open" data-disclosure="settings-pizzas">
           <div class="disclosure-header" onclick="toggleDisclosure('settings-pizzas')">
-            <h2><span class="disclosure-chevron">&#x276F;</span> Pizzas</h2>
+            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Pizzas</h2>
           </div>
           <div class="disclosure-body">
             <div class="settings-card">
@@ -528,7 +528,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
                       <input type="text" id="new-pizza-desc" placeholder="ex: Tomate, jambon, ananas">
                     </div>
                   </div>
-                  <button type="submit" class="btn btn-secondary btn-sm">&#x2795; Ajouter</button>
+                  <button type="submit" class="btn btn-secondary btn-sm"><span class="sf-symbol">@sfs:plus@</span> Ajouter</button>
                 </form>
               </div>
             </div>
@@ -538,7 +538,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         <!-- Online Payment Settings -->
         <div class="disclosure-group open" data-disclosure="settings-payment">
           <div class="disclosure-header" onclick="toggleDisclosure('settings-payment')">
-            <h2><span class="disclosure-chevron">&#x276F;</span> Paiement en ligne</h2>
+            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Paiement en ligne</h2>
           </div>
           <div class="disclosure-body">
             <div class="settings-card">
@@ -590,7 +590,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         <!-- On-site Pricing Settings -->
         <div class="disclosure-group open" data-disclosure="settings-onsite">
           <div class="disclosure-header" onclick="toggleDisclosure('settings-onsite')">
-            <h2><span class="disclosure-chevron">&#x276F;</span> Tarification sur place</h2>
+            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Tarification sur place</h2>
           </div>
           <div class="disclosure-body">
             <div class="settings-card">
@@ -621,7 +621,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         <!-- Archive & Data Management -->
         <div class="disclosure-group" data-disclosure="settings-archive">
           <div class="disclosure-header" onclick="toggleDisclosure('settings-archive')">
-            <h2><span class="disclosure-chevron">&#x276F;</span> Archivage & Données</h2>
+            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Archivage & Données</h2>
           </div>
           <div class="disclosure-body">
             <div class="settings-card">
@@ -658,7 +658,7 @@ import AdminLayout from '../layouts/AdminLayout.astro';
             </div>
 
             <div class="settings-card danger-zone">
-              <h3>⚠️ Zone dangereuse</h3>
+              <h3><span class="sf-symbol">@sfs:exclamationmark.triangle@</span> Zone dangereuse</h3>
               <p class="settings-description warning-text">
                 Réinitialisez toutes les données pour préparer une nouvelle édition.
                 <strong>Cette action est irréversible.</strong>
@@ -1085,9 +1085,9 @@ function renderMembersTable(members, teamId) {
               <input type="checkbox" onchange="toggleSelectAll(${teamId}, this.checked)">
             </label>
           </th>
-          <th class="sortable-header" data-sort="name" onclick="sortTeamMembers(${teamId}, 'name', this)">Nom <span class="sort-indicator">⇅</span></th>
-          <th class="sortable-header" data-sort="email" onclick="sortTeamMembers(${teamId}, 'email', this)">Email <span class="sort-indicator">⇅</span></th>
-          <th class="sortable-header" data-sort="bac" onclick="sortTeamMembers(${teamId}, 'bac', this)">Niveau <span class="sort-indicator">⇅</span></th>
+          <th class="sortable-header" data-sort="name" onclick="sortTeamMembers(${teamId}, 'name', this)">Nom <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+          <th class="sortable-header" data-sort="email" onclick="sortTeamMembers(${teamId}, 'email', this)">Email <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+          <th class="sortable-header" data-sort="bac" onclick="sortTeamMembers(${teamId}, 'bac', this)">Niveau <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
           <th>Pizza</th>
           <th>Rôle</th>
           <th class="actions-col">Actions</th>
@@ -1238,10 +1238,10 @@ window.sortTeamMembers = function(teamId, sortKey, headerElement) {
   table.querySelectorAll('.sortable-header').forEach(h => {
     if (h.dataset.sort === key) {
       h.setAttribute('data-sort-dir', dir);
-      h.querySelector('.sort-indicator').textContent = dir === 'asc' ? '↑' : '↓';
+      h.querySelector('.sort-indicator').textContent = dir === 'asc' ? '@sfs:chevron.up@' : '@sfs:chevron.down@';
     } else {
       h.removeAttribute('data-sort-dir');
-      h.querySelector('.sort-indicator').textContent = '⇅';
+      h.querySelector('.sort-indicator').textContent = '@sfs:arrow.up.arrow.down@';
     }
   });
 
@@ -1739,9 +1739,9 @@ window.sortAllParticipants = function(key) {
   document.querySelectorAll('#all-participants-table .sortable-header').forEach(h => {
     const indicator = h.querySelector('.sort-indicator');
     if (h.dataset.sort === allParticipantsSortKey) {
-      indicator.textContent = allParticipantsSortDir === 'asc' ? '↑' : '↓';
+      indicator.textContent = allParticipantsSortDir === 'asc' ? '@sfs:chevron.up@' : '@sfs:chevron.down@';
     } else {
-      indicator.textContent = '⇅';
+      indicator.textContent = '@sfs:arrow.up.arrow.down@';
     }
   });
 
@@ -2258,7 +2258,7 @@ async function handleImport() {
       toastSuccess(`Import terminé: ${stats.membersImported} membres, ${stats.teamsCreated} équipes créées`);
 
       if (status) {
-        status.textContent = `✓ ${stats.membersImported} importés, ${stats.membersSkipped} ignorés, ${stats.teamsCreated} équipes créées`;
+        status.innerHTML = `<span class="sf-symbol">@sfs:checkmark@</span> ${stats.membersImported} importés, ${stats.membersSkipped} ignorés, ${stats.teamsCreated} équipes créées`;
         status.className = 'import-status success';
       }
 
@@ -2272,7 +2272,7 @@ async function handleImport() {
     toastError(err.message || 'Erreur lors de l\'import');
 
     if (status) {
-      status.textContent = `✗ Erreur: ${err.message}`;
+      status.innerHTML = `<span class="sf-symbol">@sfs:xmark@</span> Erreur: ${err.message}`;
       status.className = 'import-status error';
     }
   } finally {
@@ -2572,7 +2572,7 @@ async function loadResetSafetyCheck() {
     if (response.needsArchive) {
       container.className = 'reset-safety-check warning';
       container.innerHTML = `
-        <p><strong>⚠️ Données non archivées</strong></p>
+        <p><strong><span class="sf-symbol">@sfs:exclamationmark.triangle@</span> Données non archivées</strong></p>
         <p>Il y a actuellement ${response.teamsCount} équipes et ${response.membersCount} participants.</p>
         <p>Créez une archive avant de réinitialiser pour ne pas perdre ces données.</p>
       `;
@@ -2580,7 +2580,7 @@ async function loadResetSafetyCheck() {
     } else if (response.hasData) {
       container.className = 'reset-safety-check safe';
       container.innerHTML = `
-        <p><strong>✅ Prêt à réinitialiser</strong></p>
+        <p><strong><span class="sf-symbol">@sfs:checkmark.circle@</span> Prêt à réinitialiser</strong></p>
         <p>Les données ont été archivées. Vous pouvez réinitialiser en toute sécurité.</p>
         <p>Dernière archive : ${response.latestArchiveYear || 'N/A'}</p>
       `;
@@ -2588,7 +2588,7 @@ async function loadResetSafetyCheck() {
     } else {
       container.className = 'reset-safety-check safe';
       container.innerHTML = `
-        <p><strong>ℹ️ Aucune donnée</strong></p>
+        <p><strong><span class="sf-symbol">@sfs:info.circle@</span> Aucune donnée</strong></p>
         <p>La base de données est vide. Rien à réinitialiser.</p>
       `;
       if (resetBtn) resetBtn.disabled = true;
@@ -2906,22 +2906,22 @@ function renderAttendance() {
       const tierLabels = { 'tier1': 'Anticipé', 'tier2': 'Standard' };
       const tierLabel = tierLabels[m.registration_tier] || 'En ligne';
       const amount = m.payment_amount ? formatCurrency(m.payment_amount) : '';
-      paymentBadge = `<span class="badge badge-success">&#x1F4B3; ${tierLabel}</span>`;
+      paymentBadge = `<span class="badge badge-success"><span class="sf-symbol">@sfs:creditcard@</span> ${tierLabel}</span>`;
       if (amount) {
         paymentBadge += ` <span class="text-muted text-sm">${amount}</span>`;
       }
     } else if (m.payment_status === 'delayed') {
       // Chose to pay on-site
-      paymentBadge = '<span class="badge badge-warning">&#x1F4C5; À payer</span>';
+      paymentBadge = '<span class="badge badge-warning"><span class="sf-symbol">@sfs:calendar@</span> À payer</span>';
     } else if (m.payment_status === 'pending') {
       // Payment in progress
-      paymentBadge = '<span class="badge badge-info">&#x23F3; En cours</span>';
+      paymentBadge = '<span class="badge badge-info"><span class="sf-symbol">@sfs:hourglass@</span> En cours</span>';
     } else if (m.payment_tier) {
       // On-site payment (existing logic for backward compatibility)
       const tierLabels = {
-        'asso_member': '&#x2713; Membre asso',
-        'non_member': '&#x2713; Non-membre',
-        'late': '&#x23F0; Retardataire'
+        'asso_member': '<span class="sf-symbol">@sfs:checkmark@</span> Membre asso',
+        'non_member': '<span class="sf-symbol">@sfs:checkmark@</span> Non-membre',
+        'late': '<span class="sf-symbol">@sfs:clock@</span> Retardataire'
       };
       const tierLabel = tierLabels[m.payment_tier] || m.payment_tier;
       const amount = m.payment_amount ? formatCurrency(m.payment_amount) : '';
@@ -3125,10 +3125,10 @@ function updateSortIndicators() {
     const sortKey = header.dataset.sort;
     if (sortKey === attendanceSortKey) {
       header.setAttribute('data-sort-dir', attendanceSortDir);
-      header.querySelector('.sort-indicator').textContent = attendanceSortDir === 'asc' ? '↑' : '↓';
+      header.querySelector('.sort-indicator').textContent = attendanceSortDir === 'asc' ? '@sfs:chevron.up@' : '@sfs:chevron.down@';
     } else {
       header.removeAttribute('data-sort-dir');
-      header.querySelector('.sort-indicator').textContent = '⇅';
+      header.querySelector('.sort-indicator').textContent = '@sfs:arrow.up.arrow.down@';
     }
   });
 }
@@ -3466,10 +3466,10 @@ function updatePizzaSortIndicators() {
     const sortKey = header.dataset.sort;
     if (sortKey === pizzaSortKey) {
       header.setAttribute('data-sort-dir', pizzaSortDir);
-      header.querySelector('.sort-indicator').textContent = pizzaSortDir === 'asc' ? '↑' : '↓';
+      header.querySelector('.sort-indicator').textContent = pizzaSortDir === 'asc' ? '@sfs:chevron.up@' : '@sfs:chevron.down@';
     } else {
       header.removeAttribute('data-sort-dir');
-      header.querySelector('.sort-indicator').textContent = '⇅';
+      header.querySelector('.sort-indicator').textContent = '@sfs:arrow.up.arrow.down@';
     }
   });
 }
@@ -3658,7 +3658,7 @@ function renderRooms() {
         <td class="actions-col">
           <div class="action-buttons">
             ${hasRoom
-              ? `<button type="button" class="icon-btn danger" onclick="handleClearRoom(${t.id})" title="Retirer de la salle" aria-label="Retirer de la salle">&#x2716;</button>`
+              ? `<button type="button" class="icon-btn danger" onclick="handleClearRoom(${t.id})" title="Retirer de la salle" aria-label="Retirer de la salle"><span class="sf-symbol">@sfs:xmark@</span></button>`
               : ''}
           </div>
         </td>
@@ -3755,10 +3755,10 @@ function updateRoomsSortIndicators() {
     const sortKey = header.dataset.sort;
     if (sortKey === roomsSortKey) {
       header.setAttribute('data-sort-dir', roomsSortDir);
-      header.querySelector('.sort-indicator').textContent = roomsSortDir === 'asc' ? '↑' : '↓';
+      header.querySelector('.sort-indicator').textContent = roomsSortDir === 'asc' ? '@sfs:chevron.up@' : '@sfs:chevron.down@';
     } else {
       header.removeAttribute('data-sort-dir');
-      header.querySelector('.sort-indicator').textContent = '⇅';
+      header.querySelector('.sort-indicator').textContent = '@sfs:arrow.up.arrow.down@';
     }
   });
 }
