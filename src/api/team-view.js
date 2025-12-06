@@ -11,7 +11,7 @@ import { hashPassword, verifyPassword, needsHashUpgrade } from '../shared/crypto
  */
 export async function viewTeamMembers(request, env, ctx, params) {
   try {
-    const teamId = parseInt(params.id, 10);
+    const teamId = Number.parseInt(params.id, 10);
     const { password } = await request.json();
 
     if (!password) {

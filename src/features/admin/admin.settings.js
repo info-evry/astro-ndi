@@ -85,11 +85,7 @@ export async function updateSettings(request, env) {
 
     // Apply updates
     for (const [key, value] of Object.entries(updates)) {
-      if (key === 'pizzas' || key === 'bac_levels') {
-        await settingsDb.setSettingJson(env.DB, key, value);
-      } else {
-        await settingsDb.setSetting(env.DB, key, String(value));
-      }
+      await (key === 'pizzas' || key === 'bac_levels' ? settingsDb.setSettingJson(env.DB, key, value) : settingsDb.setSetting(env.DB, key, String(value)));
     }
 
     return json({ success: true, updated: Object.keys(updates) });
@@ -103,8 +99,8 @@ export async function updateSettings(request, env) {
  * Validate a number is within range
  */
 function validateNumber(value, min, max) {
-  const num = parseInt(value, 10);
-  if (isNaN(num) || num < min || num > max) {
+  const num = Number.parseInt(value, 10);
+  if (Number.isNaN(num) || num < min || num > max) {
     return { valid: false, error: `Must be a number between ${min} and ${max}` };
   }
   return { valid: true };
@@ -117,8 +113,7 @@ function validatePizzas(value) {
   if (!Array.isArray(value)) {
     return { valid: false, error: 'Must be an array' };
   }
-  for (let i = 0; i < value.length; i++) {
-    const pizza = value[i];
+  for (const [i, pizza] of value.entries()) {
     if (!pizza.id || typeof pizza.id !== 'string') {
       return { valid: false, error: `Pizza at index ${i} must have a string 'id'` };
     }
@@ -139,8 +134,7 @@ function validateBacLevels(value) {
   if (!Array.isArray(value)) {
     return { valid: false, error: 'Must be an array' };
   }
-  for (let i = 0; i < value.length; i++) {
-    const level = value[i];
+  for (const [i, level] of value.entries()) {
     if (typeof level.value !== 'number') {
       return { valid: false, error: `BAC level at index ${i} must have a numeric 'value'` };
     }
@@ -154,7 +148,7 @@ function validateBacLevels(value) {
 // Validator functions for each setting key
 const VALIDATORS = {
   max_team_size: (v) => validateNumber(v, 1, 100),
-  max_total_participants: (v) => validateNumber(v, 1, 10000),
+  max_total_participants: (v) => validateNumber(v, 1, 10_000),
   min_team_size: (v) => validateNumber(v, 1, 50),
   pizzas: validatePizzas,
   bac_levels: validateBacLevels,
@@ -164,9 +158,9 @@ const VALIDATORS = {
     }
     return { valid: true };
   },
-  price_asso_member: (v) => validateNumber(v, 0, 100000),
-  price_non_member: (v) => validateNumber(v, 0, 100000),
-  price_late: (v) => validateNumber(v, 0, 100000),
+  price_asso_member: (v) => validateNumber(v, 0, 100_000),
+  price_non_member: (v) => validateNumber(v, 0, 100_000),
+  price_late: (v) => validateNumber(v, 0, 100_000),
   late_cutoff_time: (v) => {
     if (typeof v !== 'string' || !/^\d{2}:\d{2}$/.test(v)) {
       return { valid: false, error: 'Must be a time in HH:MM format' };

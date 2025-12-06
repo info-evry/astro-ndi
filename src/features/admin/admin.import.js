@@ -28,9 +28,9 @@ function parseCSV(csvText) {
     }
 
     const row = {};
-    headers.forEach((header, idx) => {
+    for (const [idx, header] of headers.entries()) {
       row[header] = values[idx].trim();
-    });
+    }
     rows.push(row);
   }
 
@@ -45,8 +45,7 @@ function parseCSVLine(line) {
   let current = '';
   let inQuotes = false;
 
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
+  for (const char of line) {
 
     if (char === '"') {
       inQuotes = !inQuotes;
@@ -108,7 +107,7 @@ async function importMember(database, teamId, row, stats) {
   const lastName = row.lastname || '';
   const email = (row.email || '').toLowerCase();
   const foodDiet = row.fooddiet || 'none';
-  const bacLevel = parseInt(row.baclevel, 10) || 0;
+  const bacLevel = Number.parseInt(row.baclevel, 10) || 0;
   const isLeader = ['Yes', 'yes', '1'].includes(row.ismanager) ? 1 : 0;
 
   if (!firstName || !lastName || !email) {

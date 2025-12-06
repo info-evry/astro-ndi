@@ -40,7 +40,7 @@ export function validateMember(member) {
   const firstName = sanitizeString(member.firstName, 128);
   const lastName = sanitizeString(member.lastName, 128);
   const email = sanitizeString(member.email, 256).toLowerCase();
-  const bacLevel = parseInt(member.bacLevel, 10) || 0;
+  const bacLevel = Number.parseInt(member.bacLevel, 10) || 0;
   const isLeader = Boolean(member.isLeader);
   const foodDiet = sanitizeString(member.foodDiet, 64);
 
@@ -81,8 +81,8 @@ function validateMembersList(members, errors) {
   const validatedMembers = [];
   const seenNames = new Set();
 
-  for (let i = 0; i < members.length; i++) {
-    const memberValidation = validateMember(members[i]);
+  for (const [i, member] of members.entries()) {
+    const memberValidation = validateMember(member);
     if (!memberValidation.valid) {
       errors.push(`Member ${i + 1}: ${memberValidation.errors.join(', ')}`);
       continue;
@@ -105,7 +105,7 @@ function validateMembersList(members, errors) {
  */
 export function validateRegistration(data, config) {
   const errors = [];
-  const maxTeamSize = parseInt(config.maxTeamSize, 10) || 15;
+  const maxTeamSize = Number.parseInt(config.maxTeamSize, 10) || 15;
 
   validateTeamInfo(data, errors);
 

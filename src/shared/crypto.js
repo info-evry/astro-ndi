@@ -21,7 +21,7 @@ export async function hashPassword(password, existingSalt = null) {
   } else {
     const saltArray = new Uint8Array(16);
     crypto.getRandomValues(saltArray);
-    salt = Array.from(saltArray).map(b => b.toString(16).padStart(2, '0')).join('');
+    salt = [...saltArray].map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
   // Import password as key material
@@ -38,14 +38,14 @@ export async function hashPassword(password, existingSalt = null) {
     {
       name: 'PBKDF2',
       salt: encoder.encode(salt),
-      iterations: 100000,
+      iterations: 100_000,
       hash: 'SHA-256'
     },
     keyMaterial,
     256
   );
 
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashArray = [...new Uint8Array(hashBuffer)];
   const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
   return `${salt}:${hash}`;
@@ -99,7 +99,7 @@ async function legacyHashPassword(password) {
   const encoder = new TextEncoder();
   const data = encoder.encode(password);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashArray = [...new Uint8Array(hashBuffer)];
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 

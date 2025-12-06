@@ -95,21 +95,21 @@ export async function deleteSetting(db, key) {
  * @returns {Promise<{maxTeamSize: number, maxTotalParticipants: number, minTeamSize: number}>}
  */
 export async function getCapacitySettings(db, env) {
-  let maxTeamSize = parseInt(env.MAX_TEAM_SIZE, 10) || 15;
-  let maxTotalParticipants = parseInt(env.MAX_TOTAL_PARTICIPANTS, 10) || 200;
-  let minTeamSize = parseInt(env.MIN_TEAM_SIZE, 10) || 1;
+  let maxTeamSize = Number.parseInt(env.MAX_TEAM_SIZE, 10) || 15;
+  let maxTotalParticipants = Number.parseInt(env.MAX_TOTAL_PARTICIPANTS, 10) || 200;
+  let minTeamSize = Number.parseInt(env.MIN_TEAM_SIZE, 10) || 1;
 
   try {
     const dbMaxTeam = await getSetting(db, 'max_team_size');
-    if (dbMaxTeam) maxTeamSize = parseInt(dbMaxTeam, 10);
+    if (dbMaxTeam) maxTeamSize = Number.parseInt(dbMaxTeam, 10);
 
     const dbMaxTotal = await getSetting(db, 'max_total_participants');
-    if (dbMaxTotal) maxTotalParticipants = parseInt(dbMaxTotal, 10);
+    if (dbMaxTotal) maxTotalParticipants = Number.parseInt(dbMaxTotal, 10);
 
     const dbMinTeam = await getSetting(db, 'min_team_size');
-    if (dbMinTeam) minTeamSize = parseInt(dbMinTeam, 10);
-  } catch (e) {
-    console.error('Error reading capacity settings from DB:', e);
+    if (dbMinTeam) minTeamSize = Number.parseInt(dbMinTeam, 10);
+  } catch (err) {
+    console.error('Error reading capacity settings from DB:', err);
     // Fall back to env values
   }
 

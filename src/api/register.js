@@ -39,7 +39,7 @@ async function createNewTeam(database, data, passwordHash) {
  * Join an existing team with password verification
  */
 async function joinExistingTeam(database, data, password, memberCount, maxTeamSize) {
-  const teamId = parseInt(data.teamId, 10);
+  const teamId = Number.parseInt(data.teamId, 10);
   const team = await db.getTeamById(database, teamId);
 
   if (!team) {
@@ -105,9 +105,9 @@ async function insertMembers(database, teamId, members) {
 export async function register(request, env) {
   try {
     const data = await request.json();
-    const maxTeamSize = parseInt(env.MAX_TEAM_SIZE, 10) || 15;
-    const maxTotal = parseInt(env.MAX_TOTAL_PARTICIPANTS, 10) || 200;
-    const minTeamSize = parseInt(env.MIN_TEAM_SIZE, 10) || 2;
+    const maxTeamSize = Number.parseInt(env.MAX_TEAM_SIZE, 10) || 15;
+    const maxTotal = Number.parseInt(env.MAX_TOTAL_PARTICIPANTS, 10) || 200;
+    const minTeamSize = Number.parseInt(env.MIN_TEAM_SIZE, 10) || 2;
 
     // Validate input
     const validation = validateRegistration(data, { maxTeamSize, minTeamSize });

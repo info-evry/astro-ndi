@@ -72,8 +72,8 @@ const DEFAULT_CONFIG = {
 async function isD1Available(env) {
   try {
     return await settingsDb.settingsTableExists(env.DB);
-  } catch (e) {
-    console.error('D1 check error:', e);
+  } catch (err) {
+    console.error('D1 check error:', err);
     return false;
   }
 }
@@ -94,8 +94,8 @@ async function loadD1Settings(config, env) {
     config.maxTotalParticipants = capacity.maxTotalParticipants;
     config.minTeamSize = capacity.minTeamSize;
     return true;
-  } catch (e) {
-    console.error('D1 settings read error:', e);
+  } catch (err) {
+    console.error('D1 settings read error:', err);
     return false;
   }
 }
@@ -113,8 +113,8 @@ async function loadKVSettings(config, env) {
 
     const kvBacLevels = await env.CONFIG.get('bacLevels', { type: 'json' });
     if (kvBacLevels) config.bacLevels = kvBacLevels;
-  } catch (e) {
-    console.error('KV read error:', e);
+  } catch (err) {
+    console.error('KV read error:', err);
   }
 }
 
@@ -122,9 +122,9 @@ async function loadKVSettings(config, env) {
  * Apply default capacity values from environment
  */
 function applyDefaultCapacity(config, env) {
-  if (!config.maxTeamSize) config.maxTeamSize = parseInt(env.MAX_TEAM_SIZE, 10) || 15;
-  if (!config.maxTotalParticipants) config.maxTotalParticipants = parseInt(env.MAX_TOTAL_PARTICIPANTS, 10) || 200;
-  if (!config.minTeamSize) config.minTeamSize = parseInt(env.MIN_TEAM_SIZE, 10) || 1;
+  if (!config.maxTeamSize) config.maxTeamSize = Number.parseInt(env.MAX_TEAM_SIZE, 10) || 15;
+  if (!config.maxTotalParticipants) config.maxTotalParticipants = Number.parseInt(env.MAX_TOTAL_PARTICIPANTS, 10) || 200;
+  if (!config.minTeamSize) config.minTeamSize = Number.parseInt(env.MIN_TEAM_SIZE, 10) || 1;
 }
 
 /**

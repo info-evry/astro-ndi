@@ -46,7 +46,7 @@ export async function setRoom(request, env, ctx, params) {
   }
 
   try {
-    const teamId = parseInt(params.teamId, 10);
+    const teamId = Number.parseInt(params.teamId, 10);
     if (Number.isNaN(teamId)) {
       return error('Invalid team ID', 400);
     }
@@ -102,7 +102,7 @@ export async function setRoomsBatch(request, env) {
       if (!assignment.teamId) {
         return error('Each assignment must have a teamId', 400);
       }
-      const teamId = parseInt(assignment.teamId, 10);
+      const teamId = Number.parseInt(assignment.teamId, 10);
       if (Number.isNaN(teamId)) {
         return error('Invalid team ID in assignment', 400);
       }

@@ -334,7 +334,7 @@ export async function deleteMember(db, memberId) {
  * Delete multiple members by IDs
  */
 export async function deleteMembers(db, memberIds) {
-  if (!memberIds.length) return 0;
+  if (memberIds.length === 0) return 0;
 
   const placeholders = memberIds.map(() => '?').join(',');
   const result = await db.prepare(
@@ -431,7 +431,7 @@ export async function getAttendanceStats(db) {
  * Batch check-in multiple members
  */
 export async function checkInMembers(db, memberIds) {
-  if (!memberIds.length) return 0;
+  if (memberIds.length === 0) return 0;
 
   const now = new Date().toISOString();
   const placeholders = memberIds.map(() => '?').join(',');
@@ -446,7 +446,7 @@ export async function checkInMembers(db, memberIds) {
  * Batch check-out multiple members
  */
 export async function checkOutMembers(db, memberIds) {
-  if (!memberIds.length) return 0;
+  if (memberIds.length === 0) return 0;
 
   const placeholders = memberIds.map(() => '?').join(',');
   const result = await db.prepare(`
@@ -578,7 +578,7 @@ export async function revokePizza(db, memberId) {
  * Batch give pizza to multiple members
  */
 export async function givePizzaBatch(db, memberIds) {
-  if (!memberIds.length) return 0;
+  if (memberIds.length === 0) return 0;
 
   const now = new Date().toISOString();
   const placeholders = memberIds.map(() => '?').join(',');
@@ -593,7 +593,7 @@ export async function givePizzaBatch(db, memberIds) {
  * Batch revoke pizza from multiple members
  */
 export async function revokePizzaBatch(db, memberIds) {
-  if (!memberIds.length) return 0;
+  if (memberIds.length === 0) return 0;
 
   const placeholders = memberIds.map(() => '?').join(',');
   const result = await db.prepare(

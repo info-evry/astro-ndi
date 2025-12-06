@@ -16,7 +16,7 @@ export async function updateTeamAdmin(request, env, ctx, params) {
   }
 
   try {
-    const teamId = parseInt(params.id, 10);
+    const teamId = Number.parseInt(params.id, 10);
     const updates = await request.json();
 
     const team = await db.getTeamById(env.DB, teamId);
@@ -51,7 +51,7 @@ export async function deleteTeamAdmin(request, env, ctx, params) {
   }
 
   try {
-    const teamId = parseInt(params.id, 10);
+    const teamId = Number.parseInt(params.id, 10);
 
     const team = await db.getTeamById(env.DB, teamId);
     if (!team) {

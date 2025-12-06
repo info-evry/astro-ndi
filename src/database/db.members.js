@@ -130,7 +130,7 @@ export async function deleteMember(db, memberId) {
  * @returns {Promise<number>}
  */
 export async function deleteMembers(db, memberIds) {
-  if (!memberIds.length) return 0;
+  if (memberIds.length === 0) return 0;
 
   const placeholders = memberIds.map(() => '?').join(',');
   const result = await db.prepare(

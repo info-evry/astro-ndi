@@ -38,9 +38,9 @@ export class Router {
   pathToRegex(path) {
     // Escape backslashes first, then forward slashes, then convert :params
     return path
-      .replace(/\\/g, '\\\\')
-      .replace(/\//g, '\\/')
-      .replace(/:(\w+)/g, '(?<$1>[^/]+)');
+      .replaceAll('\\', '\\\\')
+      .replaceAll('/', '\\/')
+      .replaceAll(/:(\w+)/g, '(?<$1>[^/]+)');
   }
 
   get(path, handler) { return this.add('GET', path, handler); }
@@ -56,7 +56,7 @@ export class Router {
     // Check request body size for POST/PUT requests
     if (method === 'POST' || method === 'PUT') {
       const contentLength = request.headers.get('Content-Length');
-      if (contentLength && parseInt(contentLength, 10) > this.maxBodySize) {
+      if (contentLength && Number.parseInt(contentLength, 10) > this.maxBodySize) {
         return error(`Request body too large. Maximum size is ${Math.round(this.maxBodySize / 1024)}KB`, 413);
       }
     }

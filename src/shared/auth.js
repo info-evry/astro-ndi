@@ -22,16 +22,16 @@ function timingSafeEqual(a, b) {
   if (aBytes.length !== bBytes.length) {
     // Still do the comparison to prevent length-based timing attacks
     let _unused = 0;
-    for (let i = 0; i < aBytes.length; i++) {
-      _unused |= aBytes[i] ^ aBytes[i];
+    for (const aByte of aBytes) {
+      _unused |= aByte ^ aByte;
     }
     return false;
   }
 
   // XOR all bytes and accumulate differences
   let result = 0;
-  for (let i = 0; i < aBytes.length; i++) {
-    result |= aBytes[i] ^ bBytes[i];
+  for (const [i, aByte] of aBytes.entries()) {
+    result |= aByte ^ bBytes[i];
   }
 
   return result === 0;

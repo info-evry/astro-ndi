@@ -54,7 +54,7 @@ export async function checkInMember(request, env, ctx, params) {
   }
 
   try {
-    const memberId = parseInt(params.id, 10);
+    const memberId = Number.parseInt(params.id, 10);
 
     const member = await db.getMemberById(env.DB, memberId);
     if (!member) {
@@ -69,20 +69,16 @@ export async function checkInMember(request, env, ctx, params) {
       const body = await request.json();
       if (body.paymentTier && body.paymentAmount !== undefined) {
         paymentTier = body.paymentTier;
-        paymentAmount = parseInt(body.paymentAmount, 10);
+        paymentAmount = Number.parseInt(body.paymentAmount, 10);
       }
     } catch {
       // No body or invalid JSON - proceed without payment info
     }
 
-    let success;
-    if (paymentTier && paymentAmount !== null) {
-      // Check in with payment
-      success = await db.checkInWithPayment(env.DB, memberId, paymentTier, paymentAmount);
-    } else {
-      // Legacy check-in without payment
-      success = await db.checkInMember(env.DB, memberId);
-    }
+    // Check in with or without payment
+    const success = paymentTier && paymentAmount !== null
+      ? await db.checkInWithPayment(env.DB, memberId, paymentTier, paymentAmount)
+      : await db.checkInMember(env.DB, memberId);
 
     if (!success) {
       return error('Failed to check in member', 500);
@@ -116,7 +112,7 @@ export async function checkOutMember(request, env, ctx, params) {
   }
 
   try {
-    const memberId = parseInt(params.id, 10);
+    const memberId = Number.parseInt(params.id, 10);
 
     const member = await db.getMemberById(env.DB, memberId);
     if (!member) {
@@ -160,7 +156,7 @@ export async function checkInMembersBatch(request, env) {
       return error('memberIds array is required', 400);
     }
 
-    const count = await db.checkInMembers(env.DB, memberIds.map(id => parseInt(id, 10)));
+    const count = await db.checkInMembers(env.DB, memberIds.map(id => Number.parseInt(id, 10)));
 
     return json({ success: true, checked_in: count });
   } catch (err) {
@@ -184,7 +180,7 @@ export async function checkOutMembersBatch(request, env) {
       return error('memberIds array is required', 400);
     }
 
-    const count = await db.checkOutMembers(env.DB, memberIds.map(id => parseInt(id, 10)));
+    const count = await db.checkOutMembers(env.DB, memberIds.map(id => Number.parseInt(id, 10)));
 
     return json({ success: true, checked_out: count });
   } catch (err) {

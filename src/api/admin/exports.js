@@ -72,7 +72,7 @@ export async function exportTeamCSV(request, env, ctx, params) {
     }));
 
     const csv = generateCSV(members);
-    const safeTeamName = team.name.replace(/[^a-z0-9]/gi, '_');
+    const safeTeamName = team.name.replaceAll(/[^a-z0-9]/gi, '_');
 
     return new Response(csv, {
       headers: {
@@ -162,7 +162,7 @@ export async function exportTeamOfficialCSV(request, env, ctx, params) {
     }
 
     const csv = generateOfficialCSV(members, schoolName);
-    const safeTeamName = team.name.replace(/[^a-z0-9]/gi, '_');
+    const safeTeamName = team.name.replaceAll(/[^a-z0-9]/gi, '_');
 
     return new Response(csv, {
       headers: {
@@ -267,7 +267,7 @@ function escapeCSV(field) {
 
   // Quote fields containing delimiter, quotes, or newlines
   if (str.includes(';') || str.includes('"') || str.includes('\n') || str.includes("'")) {
-    return `"${str.replace(/"/g, '""')}"`;
+    return `"${str.replaceAll('"', '""')}"`;
   }
   return str;
 }
@@ -292,7 +292,7 @@ function generateOfficialCSV(members, schoolName) {
     m.first_name,
     (m.last_name || '').toUpperCase(),
     m.email,
-    parseInt(m.bac_level, 10) || 0,
+    Number.parseInt(m.bac_level, 10) || 0,
     m.team_name,
     m.is_leader ? 1 : 0,
     schoolName

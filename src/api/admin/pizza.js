@@ -43,7 +43,7 @@ export async function givePizzaMember(request, env, ctx, params) {
   }
 
   try {
-    const memberId = parseInt(params.id, 10);
+    const memberId = Number.parseInt(params.id, 10);
 
     const member = await db.getMemberById(env.DB, memberId);
     if (!member) {
@@ -80,7 +80,7 @@ export async function revokePizzaMember(request, env, ctx, params) {
   }
 
   try {
-    const memberId = parseInt(params.id, 10);
+    const memberId = Number.parseInt(params.id, 10);
 
     const member = await db.getMemberById(env.DB, memberId);
     if (!member) {
@@ -121,7 +121,7 @@ export async function givePizzaMembersBatch(request, env) {
       return error('memberIds array is required', 400);
     }
 
-    const count = await db.givePizzaBatch(env.DB, memberIds.map(id => parseInt(id, 10)));
+    const count = await db.givePizzaBatch(env.DB, memberIds.map(id => Number.parseInt(id, 10)));
 
     return json({ success: true, given: count });
   } catch (err) {
@@ -145,7 +145,7 @@ export async function revokePizzaMembersBatch(request, env) {
       return error('memberIds array is required', 400);
     }
 
-    const count = await db.revokePizzaBatch(env.DB, memberIds.map(id => parseInt(id, 10)));
+    const count = await db.revokePizzaBatch(env.DB, memberIds.map(id => Number.parseInt(id, 10)));
 
     return json({ success: true, revoked: count });
   } catch (err) {
