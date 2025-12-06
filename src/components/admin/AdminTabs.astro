@@ -1,0 +1,39 @@
+---
+/**
+ * AdminTabs - Tab navigation for admin dashboard
+ */
+
+interface Tab {
+  id: string;
+  label: string;
+  icon: string;
+  badge?: boolean;
+}
+
+interface Props {
+  tabs: Tab[];
+  activeTab?: string;
+}
+
+const { tabs, activeTab = 'registrations' } = Astro.props;
+---
+
+<nav class="tab-nav" role="tablist">
+  {tabs.map((tab) => (
+    <button
+      type="button"
+      role="tab"
+      id={`tab-${tab.id}`}
+      aria-controls={`panel-${tab.id}`}
+      aria-selected={tab.id === activeTab}
+      class:list={['tab-item', { active: tab.id === activeTab }]}
+      data-tab={tab.id}
+    >
+      <span class="tab-icon sf-symbol">@sfs:{tab.icon}@</span>
+      <span class="tab-label">{tab.label}</span>
+      {tab.badge && (
+        <span id={`${tab.id}-badge`} class="tab-badge">0</span>
+      )}
+    </button>
+  ))}
+</nav>

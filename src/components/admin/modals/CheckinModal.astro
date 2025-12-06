@@ -1,0 +1,52 @@
+---
+/**
+ * CheckinModal - Check-in with payment tier selection modal
+ */
+---
+
+<div id="checkin-modal" class="modal hidden">
+  <div class="modal-content">
+    <h3>Valider la présence</h3>
+    <p id="checkin-member-name" class="modal-subtitle"></p>
+    <input type="hidden" id="checkin-member-id">
+
+    <div class="payment-options">
+      <label class="payment-option" id="option-org">
+        <input type="radio" name="payment-tier" value="organisation">
+        <span class="payment-option-content">
+          <span class="payment-option-title">Organisation</span>
+          <span class="payment-option-price">Gratuit</span>
+        </span>
+      </label>
+
+      <label class="payment-option" id="option-asso">
+        <input type="radio" name="payment-tier" value="asso_member" checked>
+        <span class="payment-option-content">
+          <span class="payment-option-title">Membre Asso</span>
+          <span class="payment-option-price" id="price-asso">5,00 €</span>
+        </span>
+      </label>
+
+      <label class="payment-option" id="option-non-member">
+        <input type="radio" name="payment-tier" value="non_member">
+        <span class="payment-option-content">
+          <span class="payment-option-title">Non-membre</span>
+          <span class="payment-option-price" id="price-non-member">8,00 €</span>
+        </span>
+      </label>
+
+      <label class="payment-option hidden" id="option-late">
+        <input type="radio" name="payment-tier" value="late">
+        <span class="payment-option-content">
+          <span class="payment-option-title">Retardataire</span>
+          <span class="payment-option-price" id="price-late">10,00 €</span>
+        </span>
+      </label>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" onclick="closeModal('checkin-modal')">􀁑 Annuler</button>
+      <button type="button" class="btn btn-primary" onclick="confirmCheckIn()">􀁣 Valider le paiement</button>
+    </div>
+  </div>
+</div>

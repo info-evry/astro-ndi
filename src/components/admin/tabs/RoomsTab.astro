@@ -1,0 +1,70 @@
+---
+/**
+ * RoomsTab - Room assignment management
+ */
+---
+
+<div id="panel-rooms" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-rooms">
+  <!-- Room Stats -->
+  <div class="disclosure-group open" data-disclosure="room-stats">
+    <div class="disclosure-header" onclick="toggleDisclosure('room-stats')">
+      <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Attribution des salles</h2>
+      <div class="header-actions" onclick="event.stopPropagation()">
+        <button type="button" id="refresh-rooms-btn" class="btn btn-secondary btn-sm">Rafraîchir</button>
+      </div>
+    </div>
+    <div class="disclosure-body">
+      <div id="room-stats-grid" class="stats-grid"></div>
+      <div id="room-by-room-grid" class="stats-grid" style="margin-top: var(--space-4);"></div>
+    </div>
+  </div>
+
+  <!-- Pizza per Room -->
+  <div class="disclosure-group open" data-disclosure="room-pizza">
+    <div class="disclosure-header" onclick="toggleDisclosure('room-pizza')">
+      <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Pizzas par salle</h2>
+    </div>
+    <div class="disclosure-body">
+      <div id="room-pizza-container"></div>
+    </div>
+  </div>
+
+  <!-- Room Assignment List -->
+  <div class="disclosure-group open" data-disclosure="room-list">
+    <div class="disclosure-header" onclick="toggleDisclosure('room-list')">
+      <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Liste des équipes</h2>
+      <div class="header-actions" onclick="event.stopPropagation()">
+        <div class="search-input-wrapper">
+          <span class="search-icon sf-symbol" aria-hidden="true">@sfs:magnifyingglass@</span>
+          <input type="search" id="rooms-search" class="search-input" placeholder="Rechercher une équipe...">
+        </div>
+      </div>
+    </div>
+    <div class="disclosure-body">
+      <div class="attendance-filters">
+        <label class="filter-pill" id="rooms-filter-all-pill">
+          <input type="radio" name="rooms-filter" value="all" checked> <span class="sf-symbol">@sfs:circle.circle.fill@</span> Toutes
+        </label>
+        <label class="filter-pill" id="rooms-filter-assigned-pill">
+          <input type="radio" name="rooms-filter" value="assigned"> <span class="sf-symbol">@sfs:checkmark@</span> Assignées
+        </label>
+        <label class="filter-pill" id="rooms-filter-unassigned-pill">
+          <input type="radio" name="rooms-filter" value="unassigned"> <span class="sf-symbol">@sfs:circle@</span> Non assignées
+        </label>
+      </div>
+      <div class="table-container">
+        <table id="rooms-table" class="members-table">
+          <thead>
+            <tr>
+              <th class="sortable-header" data-sort="name">Équipe <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="sortable-header" data-sort="members">Membres <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="sortable-header" data-sort="room">Salle <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="actions-col">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="rooms-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div><!-- End Rooms Panel -->

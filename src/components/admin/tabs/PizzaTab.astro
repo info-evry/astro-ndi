@@ -1,0 +1,75 @@
+---
+/**
+ * PizzaTab - Pizza distribution management
+ */
+---
+
+<div id="panel-pizza" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-pizza">
+  <!-- Pizza Stats -->
+  <div class="disclosure-group open" data-disclosure="pizza-stats">
+    <div class="disclosure-header" onclick="toggleDisclosure('pizza-stats')">
+      <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Distribution des pizzas</h2>
+      <div class="header-actions" onclick="event.stopPropagation()">
+        <button type="button" id="refresh-pizza-btn" class="btn btn-secondary btn-sm">Rafraîchir</button>
+      </div>
+    </div>
+    <div class="disclosure-body">
+      <h3 style="margin-bottom: var(--space-3); font-size: var(--text-sm); color: var(--text-muted);"><span class="sf-symbol">@sfs:list.bullet@</span> Tous les inscrits</h3>
+      <div id="pizza-stats-grid" class="stats-grid"></div>
+      <div id="pizza-by-type-grid" class="stats-grid" style="margin-top: var(--space-4);"></div>
+      <h3 style="margin-top: var(--space-6); margin-bottom: var(--space-3); font-size: var(--text-sm); color: var(--text-muted);"><span class="sf-symbol">@sfs:checkmark.circle@</span> Présents uniquement (pizzas réellement nécessaires)</h3>
+      <div id="pizza-present-stats-grid" class="stats-grid"></div>
+      <div id="pizza-present-by-type-grid" class="stats-grid" style="margin-top: var(--space-4);"></div>
+    </div>
+  </div>
+
+  <!-- Pizza List -->
+  <div class="disclosure-group open" data-disclosure="pizza-list">
+    <div class="disclosure-header" onclick="toggleDisclosure('pizza-list')">
+      <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Liste des participants</h2>
+      <div class="header-actions" onclick="event.stopPropagation()">
+        <div class="search-input-wrapper">
+          <span class="search-icon sf-symbol" aria-hidden="true">@sfs:magnifyingglass@</span>
+          <input type="search" id="pizza-search" class="search-input" placeholder="Rechercher un participant...">
+        </div>
+      </div>
+    </div>
+    <div class="disclosure-body">
+      <div class="attendance-filters">
+        <label class="filter-pill" id="pizza-filter-all-pill">
+          <input type="radio" name="pizza-filter" value="all" checked> 􀋲 Tous
+        </label>
+        <label class="filter-pill" id="pizza-filter-pending-pill">
+          <input type="radio" name="pizza-filter" value="pending"> 􀁡 En attente
+        </label>
+        <label class="filter-pill" id="pizza-filter-received-pill">
+          <input type="radio" name="pizza-filter" value="received"> 􀁣 Servis
+        </label>
+        <label class="filter-pill" id="pizza-filter-checkedin-pill">
+          <input type="radio" name="pizza-filter" value="checkedin"> 􀆅 Présents uniquement
+        </label>
+      </div>
+      <div class="filter-row" style="margin-top: var(--space-3); margin-bottom: var(--space-3);">
+        <select id="pizza-type-filter" class="filter-select">
+          <option value="">Toutes les pizzas</option>
+        </select>
+      </div>
+      <div class="table-container">
+        <table id="pizza-table" class="members-table attendance-table">
+          <thead>
+            <tr>
+              <th class="sortable-header" data-sort="name">Nom <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="sortable-header team-col" data-sort="team">Équipe <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="sortable-header" data-sort="pizza">Pizza <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="sortable-header status-col" data-sort="checkin">Présent <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="sortable-header status-col" data-sort="status">Statut <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="sortable-header time-col" data-sort="time">Heure <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="actions-col">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="pizza-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div><!-- End Pizza Panel -->

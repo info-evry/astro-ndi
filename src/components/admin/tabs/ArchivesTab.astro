@@ -1,0 +1,83 @@
+---
+/**
+ * ArchivesTab - Archive management for past NDI editions
+ */
+---
+
+<div id="panel-archives" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-archives">
+  <div class="settings-header">
+    <h2>Archives</h2>
+    <div class="header-actions">
+      <button type="button" id="refresh-archives-btn" class="btn btn-secondary btn-sm">Rafraîchir</button>
+    </div>
+  </div>
+
+  <!-- Archives List -->
+  <div class="disclosure-group open" data-disclosure="archives-list">
+    <div class="disclosure-header" onclick="toggleDisclosure('archives-list')">
+      <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Éditions archivées</h2>
+    </div>
+    <div class="disclosure-body">
+      <div id="archives-container" class="archives-container">
+        <div class="loading-placeholder">Chargement des archives...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Archive Detail View (initially hidden) -->
+  <div id="archive-detail" class="disclosure-group hidden" data-disclosure="archive-detail">
+    <div class="disclosure-header" onclick="toggleDisclosure('archive-detail')">
+      <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> <span id="archive-detail-title">Détails de l'archive</span></h2>
+      <div class="header-actions" onclick="event.stopPropagation()">
+        <button type="button" id="export-archive-json-btn" class="btn btn-secondary btn-sm">Export JSON</button>
+        <button type="button" id="export-archive-zip-btn" class="btn btn-primary btn-sm">Export ZIP</button>
+        <button type="button" id="close-archive-detail-btn" class="btn btn-secondary btn-sm">Fermer</button>
+      </div>
+    </div>
+    <div class="disclosure-body">
+      <!-- Archive Stats -->
+      <div class="archive-stats-grid" id="archive-stats-grid"></div>
+      
+      <!-- Archive Teams -->
+      <div class="archive-section">
+        <h3>Équipes</h3>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Membres</th>
+                <th>Salle</th>
+              </tr>
+            </thead>
+            <tbody id="archive-teams-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Archive Members -->
+      <div class="archive-section">
+        <h3>Participants</h3>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>Équipe</th>
+                <th>Niveau BAC</th>
+              </tr>
+            </thead>
+            <tbody id="archive-members-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- GDPR Notice -->
+      <div id="archive-gdpr-notice" class="archive-gdpr-notice hidden">
+        <p><strong><span class="sf-symbol">@sfs:exclamationmark.triangle@</span> Données anonymisées</strong></p>
+        <p>Cette archive a dépassé sa date de rétention GDPR. Les données personnelles (noms, emails) ont été supprimées conformément au RGPD.</p>
+      </div>
+    </div>
+  </div>
+</div><!-- End Archives Panel -->

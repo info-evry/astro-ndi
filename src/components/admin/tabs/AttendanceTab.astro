@@ -1,0 +1,62 @@
+---
+/**
+ * AttendanceTab - Check-in/out management for participants
+ */
+---
+
+<div id="panel-attendance" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-attendance">
+  <!-- Attendance Stats -->
+  <div class="disclosure-group open" data-disclosure="attendance-stats">
+    <div class="disclosure-header" onclick="toggleDisclosure('attendance-stats')">
+      <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Statistiques de présence</h2>
+      <div class="header-actions" onclick="event.stopPropagation()">
+        <button type="button" id="refresh-attendance-btn" class="btn btn-secondary btn-sm">Rafraîchir</button>
+      </div>
+    </div>
+    <div class="disclosure-body">
+      <div id="attendance-stats-grid" class="stats-grid"></div>
+    </div>
+  </div>
+
+  <!-- Attendance List -->
+  <div class="disclosure-group open" data-disclosure="attendance-list">
+    <div class="disclosure-header" onclick="toggleDisclosure('attendance-list')">
+      <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Liste des participants</h2>
+      <div class="header-actions" onclick="event.stopPropagation()">
+        <div class="search-input-wrapper">
+          <span class="search-icon sf-symbol" aria-hidden="true">@sfs:magnifyingglass@</span>
+          <input type="search" id="attendance-search" class="search-input" placeholder="Rechercher un participant...">
+        </div>
+      </div>
+    </div>
+    <div class="disclosure-body">
+      <div class="attendance-filters">
+        <label class="filter-pill" id="filter-all-pill">
+          <input type="radio" name="attendance-filter" value="all" checked> 􀋲 Tous
+        </label>
+        <label class="filter-pill" id="filter-present-pill">
+          <input type="radio" name="attendance-filter" value="present"> 􀁣 Présents
+        </label>
+        <label class="filter-pill" id="filter-absent-pill">
+          <input type="radio" name="attendance-filter" value="absent"> 􀁡 Absents
+        </label>
+      </div>
+      <div class="table-container">
+        <table id="attendance-table" class="members-table attendance-table">
+          <thead>
+            <tr>
+              <th class="sortable-header" data-sort="name">Nom <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="sortable-header" data-sort="email">Email <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="sortable-header team-col" data-sort="team">Équipe <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="sortable-header status-col" data-sort="status">Statut <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="sortable-header time-col" data-sort="time">Heure <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="sortable-header" data-sort="payment">Paiement <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="actions-col">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="attendance-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div><!-- End Attendance Panel -->

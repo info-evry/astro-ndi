@@ -1,0 +1,30 @@
+---
+/**
+ * TeamModal - Add/Edit team modal
+ */
+---
+
+<div id="team-modal" class="modal hidden">
+  <div class="modal-content">
+    <h3 id="team-modal-title">Nouvelle équipe</h3>
+    <form id="team-form">
+      <input type="hidden" id="team-form-id">
+      <div class="form-group">
+        <label for="team-form-name">Nom de l'équipe *</label>
+        <input type="text" id="team-form-name" required>
+      </div>
+      <div class="form-group">
+        <label for="team-form-desc">Description</label>
+        <textarea id="team-form-desc" rows="2"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="team-form-password">Mot de passe (laisser vide pour ne pas changer)</label>
+        <input type="text" id="team-form-password" placeholder="Nouveau mot de passe">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('team-modal')">􀁑 Annuler</button>
+        <button type="submit" class="btn btn-primary">􀁣 Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>

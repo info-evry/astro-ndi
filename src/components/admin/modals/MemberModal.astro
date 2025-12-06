@@ -1,0 +1,64 @@
+---
+/**
+ * MemberModal - Add/Edit member modal
+ */
+---
+
+<div id="member-modal" class="modal hidden">
+  <div class="modal-content">
+    <h3 id="member-modal-title">Nouveau membre</h3>
+    <form id="member-form">
+      <input type="hidden" id="member-form-id">
+      <div class="form-group">
+        <label for="member-form-team">Équipe *</label>
+        <select id="member-form-team" required></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="member-form-firstname">Prénom *</label>
+          <input type="text" id="member-form-firstname" required>
+        </div>
+        <div class="form-group">
+          <label for="member-form-lastname">Nom *</label>
+          <input type="text" id="member-form-lastname" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="member-form-email">Email *</label>
+        <input type="email" id="member-form-email" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="member-form-bac">Niveau BAC</label>
+          <select id="member-form-bac">
+            <option value="0">Non bachelier</option>
+            <option value="1">BAC+1</option>
+            <option value="2">BAC+2</option>
+            <option value="3">BAC+3 (Licence)</option>
+            <option value="4">BAC+4</option>
+            <option value="5">BAC+5 (Master)</option>
+            <option value="6">BAC+6</option>
+            <option value="7">BAC+7</option>
+            <option value="8">BAC+8 (Doctorat)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="member-form-food">Pizza</label>
+          <select id="member-form-food">
+            <option value="">Aucune</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="member-form-leader">
+          Chef d'équipe
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('member-modal')">􀁑 Annuler</button>
+        <button type="submit" class="btn btn-primary">􀁣 Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>

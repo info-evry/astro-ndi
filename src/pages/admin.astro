@@ -1,828 +1,93 @@
 ---
+/**
+ * NDI Admin Dashboard
+ * Refactored with modular components
+ */
 import AdminLayout from '../layouts/AdminLayout.astro';
+import AdminHeader from '../components/admin/AdminHeader.astro';
+import AdminAuth from '../components/admin/AdminAuth.astro';
+import RegistrationsTab from '../components/admin/tabs/RegistrationsTab.astro';
+import AttendanceTab from '../components/admin/tabs/AttendanceTab.astro';
+import PizzaTab from '../components/admin/tabs/PizzaTab.astro';
+import RoomsTab from '../components/admin/tabs/RoomsTab.astro';
+import ArchivesTab from '../components/admin/tabs/ArchivesTab.astro';
+import SettingsTab from '../components/admin/tabs/SettingsTab.astro';
+import TeamModal from '../components/admin/modals/TeamModal.astro';
+import MemberModal from '../components/admin/modals/MemberModal.astro';
+import ConfirmModal from '../components/admin/modals/ConfirmModal.astro';
+import CheckinModal from '../components/admin/modals/CheckinModal.astro';
 ---
 
 <AdminLayout title="NDI Admin - Gestion des équipes - Asso Info Evry">
-  <!-- Admin Hero Header -->
-  <section class="page-hero">
-    <div class="page-hero-bg">
-      <div class="orb orb-blue"></div>
-      <div class="orb orb-indigo"></div>
-    </div>
-    <div class="page-hero-content container">
-      <h1 class="page-hero-title">
-        <span>Administration</span>
-        <span class="gradient-text">NDI</span>
-      </h1>
-      <p class="page-hero-subtitle">Gestion des équipes et participants</p>
-    </div>
-  </section>
+  <AdminHeader />
 
   <main class="container-wide admin">
-    <section id="auth-section" class="section glass-card">
-      <h2>Authentification</h2>
-      <div class="form-group">
-        <label for="admin-token">Token d'administration</label>
-        <input type="password" id="admin-token" placeholder="Entrez votre token...">
-      </div>
-      <button type="button" id="auth-btn" class="btn btn-primary">Connexion</button>
-      <p id="auth-error" class="error-text hidden"></p>
-    </section>
+    <AdminAuth />
 
-    <div id="admin-content" class="hidden">
-      <!-- Tab Navigation -->
-      <nav class="tab-nav" role="tablist">
-        <button type="button" role="tab" id="tab-registrations" aria-controls="panel-registrations" aria-selected="true" class="tab-item active" data-tab="registrations">
-          <span class="tab-icon sf-symbol">@sfs:list.bullet@</span>
-          <span class="tab-label">Inscriptions</span>
-        </button>
-        <button type="button" role="tab" id="tab-attendance" aria-controls="panel-attendance" aria-selected="false" class="tab-item" data-tab="attendance">
-          <span class="tab-icon sf-symbol">@sfs:person.badge.clock@</span>
-          <span class="tab-label">Présences</span>
-          <span id="attendance-badge" class="tab-badge">0</span>
-        </button>
-        <button type="button" role="tab" id="tab-pizza" aria-controls="panel-pizza" aria-selected="false" class="tab-item" data-tab="pizza">
-          <span class="tab-icon sf-symbol">@sfs:fork.knife@</span>
-          <span class="tab-label">Pizzas</span>
-          <span id="pizza-badge" class="tab-badge">0</span>
-        </button>
-        <button type="button" role="tab" id="tab-rooms" aria-controls="panel-rooms" aria-selected="false" class="tab-item" data-tab="rooms">
-          <span class="tab-icon sf-symbol">@sfs:building.2@</span>
-          <span class="tab-label">Salles</span>
-          <span id="rooms-badge" class="tab-badge">0</span>
-        </button>
-        <button type="button" role="tab" id="tab-archives" aria-controls="panel-archives" aria-selected="false" class="tab-item" data-tab="archives">
-          <span class="tab-icon sf-symbol">@sfs:archivebox@</span>
-          <span class="tab-label">Archives</span>
-          <span id="archives-badge" class="tab-badge hidden">0</span>
-        </button>
-        <button type="button" role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false" class="tab-item" data-tab="settings">
-          <span class="tab-icon sf-symbol">@sfs:gear@</span>
-          <span class="tab-label">Paramètres</span>
-        </button>
+    <div id="admin-content" class="hidden admin-layout">
+      <!-- Sidebar Navigation -->
+      <nav class="admin-sidebar" id="admin-sidebar">
+        <ul class="admin-sidebar-nav">
+          <li>
+            <button type="button" class="admin-sidebar-item active" data-tab="registrations">
+              <span class="admin-sidebar-icon sf-symbol">@sfs:list.bullet@</span>
+              <span class="admin-sidebar-label">Inscriptions</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="admin-sidebar-item" data-tab="attendance">
+              <span class="admin-sidebar-icon sf-symbol">@sfs:person.badge.clock@</span>
+              <span class="admin-sidebar-label">Présences</span>
+              <span id="attendance-badge" class="admin-sidebar-badge">0</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="admin-sidebar-item" data-tab="pizza">
+              <span class="admin-sidebar-icon sf-symbol">@sfs:fork.knife@</span>
+              <span class="admin-sidebar-label">Pizzas</span>
+              <span id="pizza-badge" class="admin-sidebar-badge">0</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="admin-sidebar-item" data-tab="rooms">
+              <span class="admin-sidebar-icon sf-symbol">@sfs:building.2@</span>
+              <span class="admin-sidebar-label">Salles</span>
+              <span id="rooms-badge" class="admin-sidebar-badge">0</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="admin-sidebar-item" data-tab="archives">
+              <span class="admin-sidebar-icon sf-symbol">@sfs:archivebox@</span>
+              <span class="admin-sidebar-label">Archives</span>
+              <span id="archives-badge" class="admin-sidebar-badge hidden">0</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="admin-sidebar-item" data-tab="settings">
+              <span class="admin-sidebar-icon sf-symbol">@sfs:gear@</span>
+              <span class="admin-sidebar-label">Paramètres</span>
+            </button>
+          </li>
+        </ul>
       </nav>
 
-      <!-- Registrations Panel -->
-      <div id="panel-registrations" class="tab-panel" role="tabpanel" aria-labelledby="tab-registrations">
-
-      <!-- Stats Section -->
-      <div class="disclosure-group open" data-disclosure="stats">
-        <div class="disclosure-header" onclick="toggleDisclosure('stats')">
-          <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Vue d'ensemble</h2>
-          <div class="header-actions" onclick="event.stopPropagation()">
-            <button type="button" id="export-official-btn" class="btn btn-primary btn-sm">Export Officiel</button>
-            <button type="button" id="export-all-btn" class="btn btn-secondary btn-sm">Exporter CSV</button>
-            <button type="button" id="refresh-btn" class="btn btn-secondary btn-sm">Rafraîchir</button>
-          </div>
-        </div>
-        <div class="disclosure-body">
-          <div id="stats-grid" class="stats-grid"></div>
-        </div>
-      </div>
-
-      <!-- Food Stats -->
-      <div class="disclosure-group open" data-disclosure="food">
-        <div class="disclosure-header" onclick="toggleDisclosure('food')">
-          <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Préférences alimentaires</h2>
-        </div>
-        <div class="disclosure-body">
-          <div id="food-stats" class="food-stats"></div>
-        </div>
-      </div>
-
-      <!-- Import Section -->
-      <div class="disclosure-group" data-disclosure="import">
-        <div class="disclosure-header" onclick="toggleDisclosure('import')">
-          <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Importer des données</h2>
-        </div>
-        <div class="disclosure-body">
-          <div class="settings-card">
-            <h3>Import CSV</h3>
-            <p class="import-description">
-              Importez des membres depuis un fichier CSV. Les équipes seront créées automatiquement avec le nom de l'équipe comme mot de passe.
-            </p>
-            <div class="import-format">
-              <strong>Format attendu :</strong>
-              <code>id,firstname,lastname,email,fooddiet,baclevel,ismanager,teamName,date</code>
-            </div>
-            <div class="form-group">
-              <label for="import-file">Fichier CSV</label>
-              <input type="file" id="import-file" accept=".csv,text/csv">
-            </div>
-            <div id="import-preview" class="import-preview hidden">
-              <h4>Aperçu</h4>
-              <div id="import-preview-content"></div>
-            </div>
-            <div class="import-actions">
-              <button type="button" id="import-btn" class="btn btn-primary" disabled>Importer</button>
-              <span id="import-status" class="import-status"></span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Quick Actions -->
-      <div class="disclosure-group open" data-disclosure="actions">
-        <div class="disclosure-header" onclick="toggleDisclosure('actions')">
-          <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Actions rapides</h2>
-        </div>
-        <div class="disclosure-body">
-          <div class="quick-actions">
-            <button type="button" id="add-team-btn" class="btn btn-primary">􀁍 Nouvelle équipe</button>
-            <button type="button" id="add-member-btn" class="btn btn-primary">􀁍 Nouveau membre</button>
-            <button type="button" id="select-all-btn" class="btn btn-secondary">Tout sélectionner</button>
-            <button type="button" id="delete-selected-btn" class="btn btn-danger" disabled>􀈑 Supprimer sélection</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Teams Section -->
-      <div class="disclosure-group open" data-disclosure="teams">
-        <div class="disclosure-header" onclick="toggleDisclosure('teams')">
-          <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Équipes et membres</h2>
-          <div class="header-actions" onclick="event.stopPropagation()">
-            <div class="search-input-wrapper">
-              <span class="search-icon sf-symbol" aria-hidden="true">@sfs:magnifyingglass@</span>
-              <input type="search" id="teams-search" class="search-input" placeholder="Rechercher...">
-            </div>
-          </div>
-        </div>
-        <div class="disclosure-body">
-          <div id="teams-container"></div>
-        </div>
-      </div>
-
-      <!-- All Participants List Section -->
-      <div class="disclosure-group" data-disclosure="all-participants">
-        <div class="disclosure-header" onclick="toggleDisclosure('all-participants')">
-          <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Tous les participants</h2>
-          <div class="header-actions" onclick="event.stopPropagation()">
-            <div class="search-input-wrapper">
-              <span class="search-icon sf-symbol" aria-hidden="true">@sfs:magnifyingglass@</span>
-              <input type="search" id="all-participants-search" class="search-input" placeholder="Rechercher un participant...">
-            </div>
-          </div>
-        </div>
-        <div class="disclosure-body">
-          <div class="table-container">
-            <table id="all-participants-table" class="members-table">
-              <thead>
-                <tr>
-                  <th class="sortable-header" data-sort="name" onclick="sortAllParticipants('name')">Nom <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                  <th class="sortable-header" data-sort="email" onclick="sortAllParticipants('email')">Email <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                  <th class="sortable-header team-col" data-sort="team" onclick="sortAllParticipants('team')">Équipe <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                  <th class="sortable-header" data-sort="pizza" onclick="sortAllParticipants('pizza')">Pizza <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                  <th class="sortable-header" data-sort="bac" onclick="sortAllParticipants('bac')">BAC <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                  <th class="sortable-header" data-sort="manager" onclick="sortAllParticipants('manager')">Rôle <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                </tr>
-              </thead>
-              <tbody id="all-participants-tbody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      </div><!-- End Registrations Panel -->
-
-      <!-- Attendance Panel -->
-      <div id="panel-attendance" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-attendance">
-        <!-- Attendance Stats -->
-        <div class="disclosure-group open" data-disclosure="attendance-stats">
-          <div class="disclosure-header" onclick="toggleDisclosure('attendance-stats')">
-            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Statistiques de présence</h2>
-            <div class="header-actions" onclick="event.stopPropagation()">
-              <button type="button" id="refresh-attendance-btn" class="btn btn-secondary btn-sm">Rafraîchir</button>
-            </div>
-          </div>
-          <div class="disclosure-body">
-            <div id="attendance-stats-grid" class="stats-grid"></div>
-          </div>
-        </div>
-
-        <!-- Attendance List -->
-        <div class="disclosure-group open" data-disclosure="attendance-list">
-          <div class="disclosure-header" onclick="toggleDisclosure('attendance-list')">
-            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Liste des participants</h2>
-            <div class="header-actions" onclick="event.stopPropagation()">
-              <div class="search-input-wrapper">
-                <span class="search-icon sf-symbol" aria-hidden="true">@sfs:magnifyingglass@</span>
-                <input type="search" id="attendance-search" class="search-input" placeholder="Rechercher un participant...">
-              </div>
-            </div>
-          </div>
-          <div class="disclosure-body">
-            <div class="attendance-filters">
-              <label class="filter-pill" id="filter-all-pill">
-                <input type="radio" name="attendance-filter" value="all" checked> 􀋲 Tous
-              </label>
-              <label class="filter-pill" id="filter-present-pill">
-                <input type="radio" name="attendance-filter" value="present"> 􀁣 Présents
-              </label>
-              <label class="filter-pill" id="filter-absent-pill">
-                <input type="radio" name="attendance-filter" value="absent"> 􀁡 Absents
-              </label>
-            </div>
-            <div class="table-container">
-              <table id="attendance-table" class="members-table attendance-table">
-                <thead>
-                  <tr>
-                    <th class="sortable-header" data-sort="name">Nom <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                    <th class="sortable-header" data-sort="email">Email <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                    <th class="sortable-header team-col" data-sort="team">Équipe <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                    <th class="sortable-header status-col" data-sort="status">Statut <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                    <th class="sortable-header time-col" data-sort="time">Heure <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                    <th class="sortable-header" data-sort="payment">Paiement <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                    <th class="actions-col">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="attendance-tbody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div><!-- End Attendance Panel -->
-
-      <!-- Pizza Distribution Panel -->
-      <div id="panel-pizza" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-pizza">
-        <!-- Pizza Stats -->
-        <div class="disclosure-group open" data-disclosure="pizza-stats">
-          <div class="disclosure-header" onclick="toggleDisclosure('pizza-stats')">
-            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Distribution des pizzas</h2>
-            <div class="header-actions" onclick="event.stopPropagation()">
-              <button type="button" id="refresh-pizza-btn" class="btn btn-secondary btn-sm">Rafraîchir</button>
-            </div>
-          </div>
-          <div class="disclosure-body">
-            <h3 style="margin-bottom: var(--space-3); font-size: var(--text-sm); color: var(--text-muted);"><span class="sf-symbol">@sfs:list.bullet@</span> Tous les inscrits</h3>
-            <div id="pizza-stats-grid" class="stats-grid"></div>
-            <div id="pizza-by-type-grid" class="stats-grid" style="margin-top: var(--space-4);"></div>
-            <h3 style="margin-top: var(--space-6); margin-bottom: var(--space-3); font-size: var(--text-sm); color: var(--text-muted);"><span class="sf-symbol">@sfs:checkmark.circle@</span> Présents uniquement (pizzas réellement nécessaires)</h3>
-            <div id="pizza-present-stats-grid" class="stats-grid"></div>
-            <div id="pizza-present-by-type-grid" class="stats-grid" style="margin-top: var(--space-4);"></div>
-          </div>
-        </div>
-
-        <!-- Pizza List -->
-        <div class="disclosure-group open" data-disclosure="pizza-list">
-          <div class="disclosure-header" onclick="toggleDisclosure('pizza-list')">
-            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Liste des participants</h2>
-            <div class="header-actions" onclick="event.stopPropagation()">
-              <div class="search-input-wrapper">
-                <span class="search-icon sf-symbol" aria-hidden="true">@sfs:magnifyingglass@</span>
-                <input type="search" id="pizza-search" class="search-input" placeholder="Rechercher un participant...">
-              </div>
-            </div>
-          </div>
-          <div class="disclosure-body">
-            <div class="attendance-filters">
-              <label class="filter-pill" id="pizza-filter-all-pill">
-                <input type="radio" name="pizza-filter" value="all" checked> 􀋲 Tous
-              </label>
-              <label class="filter-pill" id="pizza-filter-pending-pill">
-                <input type="radio" name="pizza-filter" value="pending"> 􀁡 En attente
-              </label>
-              <label class="filter-pill" id="pizza-filter-received-pill">
-                <input type="radio" name="pizza-filter" value="received"> 􀁣 Servis
-              </label>
-              <label class="filter-pill" id="pizza-filter-checkedin-pill">
-                <input type="radio" name="pizza-filter" value="checkedin"> 􀆅 Présents uniquement
-              </label>
-            </div>
-            <div class="filter-row" style="margin-top: var(--space-3); margin-bottom: var(--space-3);">
-              <select id="pizza-type-filter" class="filter-select">
-                <option value="">Toutes les pizzas</option>
-              </select>
-            </div>
-            <div class="table-container">
-              <table id="pizza-table" class="members-table attendance-table">
-                <thead>
-                  <tr>
-                    <th class="sortable-header" data-sort="name">Nom <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                    <th class="sortable-header team-col" data-sort="team">Équipe <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                    <th class="sortable-header" data-sort="pizza">Pizza <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                    <th class="sortable-header status-col" data-sort="checkin">Présent <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                    <th class="sortable-header status-col" data-sort="status">Statut <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                    <th class="sortable-header time-col" data-sort="time">Heure <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                    <th class="actions-col">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="pizza-tbody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div><!-- End Pizza Panel -->
-
-      <!-- Rooms Panel -->
-      <div id="panel-rooms" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-rooms">
-        <!-- Room Stats -->
-        <div class="disclosure-group open" data-disclosure="room-stats">
-          <div class="disclosure-header" onclick="toggleDisclosure('room-stats')">
-            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Attribution des salles</h2>
-            <div class="header-actions" onclick="event.stopPropagation()">
-              <button type="button" id="refresh-rooms-btn" class="btn btn-secondary btn-sm">Rafraîchir</button>
-            </div>
-          </div>
-          <div class="disclosure-body">
-            <div id="room-stats-grid" class="stats-grid"></div>
-            <div id="room-by-room-grid" class="stats-grid" style="margin-top: var(--space-4);"></div>
-          </div>
-        </div>
-
-        <!-- Pizza per Room -->
-        <div class="disclosure-group open" data-disclosure="room-pizza">
-          <div class="disclosure-header" onclick="toggleDisclosure('room-pizza')">
-            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Pizzas par salle</h2>
-          </div>
-          <div class="disclosure-body">
-            <div id="room-pizza-container"></div>
-          </div>
-        </div>
-
-        <!-- Room Assignment List -->
-        <div class="disclosure-group open" data-disclosure="room-list">
-          <div class="disclosure-header" onclick="toggleDisclosure('room-list')">
-            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Liste des équipes</h2>
-            <div class="header-actions" onclick="event.stopPropagation()">
-              <div class="search-input-wrapper">
-                <span class="search-icon sf-symbol" aria-hidden="true">@sfs:magnifyingglass@</span>
-                <input type="search" id="rooms-search" class="search-input" placeholder="Rechercher une équipe...">
-              </div>
-            </div>
-          </div>
-          <div class="disclosure-body">
-            <div class="attendance-filters">
-              <label class="filter-pill" id="rooms-filter-all-pill">
-                <input type="radio" name="rooms-filter" value="all" checked> <span class="sf-symbol">@sfs:circle.circle.fill@</span> Toutes
-              </label>
-              <label class="filter-pill" id="rooms-filter-assigned-pill">
-                <input type="radio" name="rooms-filter" value="assigned"> <span class="sf-symbol">@sfs:checkmark@</span> Assignées
-              </label>
-              <label class="filter-pill" id="rooms-filter-unassigned-pill">
-                <input type="radio" name="rooms-filter" value="unassigned"> <span class="sf-symbol">@sfs:circle@</span> Non assignées
-              </label>
-            </div>
-            <div class="table-container">
-              <table id="rooms-table" class="members-table">
-                <thead>
-                  <tr>
-                    <th class="sortable-header" data-sort="name">Équipe <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                    <th class="sortable-header" data-sort="members">Membres <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                    <th class="sortable-header" data-sort="room">Salle <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-                    <th class="actions-col">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="rooms-tbody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div><!-- End Rooms Panel -->
-
-      <!-- Archives Panel -->
-      <div id="panel-archives" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-archives">
-        <div class="settings-header">
-          <h2>Archives</h2>
-          <div class="header-actions">
-            <button type="button" id="refresh-archives-btn" class="btn btn-secondary btn-sm">Rafraîchir</button>
-          </div>
-        </div>
-
-        <!-- Archives List -->
-        <div class="disclosure-group open" data-disclosure="archives-list">
-          <div class="disclosure-header" onclick="toggleDisclosure('archives-list')">
-            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Éditions archivées</h2>
-          </div>
-          <div class="disclosure-body">
-            <div id="archives-container" class="archives-container">
-              <div class="loading-placeholder">Chargement des archives...</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Archive Detail View (initially hidden) -->
-        <div id="archive-detail" class="disclosure-group hidden" data-disclosure="archive-detail">
-          <div class="disclosure-header" onclick="toggleDisclosure('archive-detail')">
-            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> <span id="archive-detail-title">Détails de l'archive</span></h2>
-            <div class="header-actions" onclick="event.stopPropagation()">
-              <button type="button" id="export-archive-json-btn" class="btn btn-secondary btn-sm">Export JSON</button>
-              <button type="button" id="export-archive-zip-btn" class="btn btn-primary btn-sm">Export ZIP</button>
-              <button type="button" id="close-archive-detail-btn" class="btn btn-secondary btn-sm">Fermer</button>
-            </div>
-          </div>
-          <div class="disclosure-body">
-            <!-- Archive Stats -->
-            <div class="archive-stats-grid" id="archive-stats-grid"></div>
-            
-            <!-- Archive Teams -->
-            <div class="archive-section">
-              <h3>Équipes</h3>
-              <div class="table-container">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Nom</th>
-                      <th>Membres</th>
-                      <th>Salle</th>
-                    </tr>
-                  </thead>
-                  <tbody id="archive-teams-tbody"></tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Archive Members -->
-            <div class="archive-section">
-              <h3>Participants</h3>
-              <div class="table-container">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Nom</th>
-                      <th>Email</th>
-                      <th>Équipe</th>
-                      <th>Niveau BAC</th>
-                    </tr>
-                  </thead>
-                  <tbody id="archive-members-tbody"></tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- GDPR Notice -->
-            <div id="archive-gdpr-notice" class="archive-gdpr-notice hidden">
-              <p><strong><span class="sf-symbol">@sfs:exclamationmark.triangle@</span> Données anonymisées</strong></p>
-              <p>Cette archive a dépassé sa date de rétention GDPR. Les données personnelles (noms, emails) ont été supprimées conformément au RGPD.</p>
-            </div>
-          </div>
-        </div>
-      </div><!-- End Archives Panel -->
-
-      <!-- Settings Panel -->
-      <div id="panel-settings" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-settings">
-        <div class="settings-header">
-          <h2>Paramètres</h2>
-          <button type="button" id="save-settings-btn" class="btn btn-primary" disabled>
-            Enregistrer les modifications
-          </button>
-        </div>
-
-        <!-- General Settings -->
-        <div class="disclosure-group open" data-disclosure="settings-general">
-          <div class="disclosure-header" onclick="toggleDisclosure('settings-general')">
-            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Général</h2>
-          </div>
-          <div class="disclosure-body">
-            <div class="settings-card">
-              <h3>Export Officiel NDI</h3>
-              <div class="form-group">
-                <label for="setting-school-name">Nom de l'école (exact comme saisi sur le site NDI)</label>
-                <input type="text" id="setting-school-name" value="Université d'Evry" maxlength="256" placeholder="Université d'Evry">
-              </div>
-            </div>
-
-            <div class="settings-card">
-              <h3>Limites de capacité</h3>
-              <div class="settings-grid">
-                <div class="form-group">
-                  <label for="setting-max-team">Taille max d'équipe</label>
-                  <input type="number" id="setting-max-team" min="1" max="100" value="15">
-                </div>
-                <div class="form-group">
-                  <label for="setting-max-participants">Participants max</label>
-                  <input type="number" id="setting-max-participants" min="1" max="10000" value="200">
-                </div>
-                <div class="form-group">
-                  <label for="setting-min-team">Taille min d'équipe</label>
-                  <input type="number" id="setting-min-team" min="1" max="50" value="1">
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Pizza Management -->
-        <div class="disclosure-group open" data-disclosure="settings-pizzas">
-          <div class="disclosure-header" onclick="toggleDisclosure('settings-pizzas')">
-            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Pizzas</h2>
-          </div>
-          <div class="disclosure-body">
-            <div class="settings-card">
-              <h3>Gestion des pizzas</h3>
-              <div id="pizzas-list" class="pizzas-list"></div>
-
-              <div id="pizza-add-form" class="pizza-add-form">
-                <h4>Ajouter une pizza</h4>
-                <form id="add-pizza-form-element">
-                  <div class="settings-grid">
-                    <div class="form-group">
-                      <label for="new-pizza-id">ID (unique)</label>
-                      <input type="text" id="new-pizza-id" placeholder="ex: hawaienne" required>
-                    </div>
-                    <div class="form-group">
-                      <label for="new-pizza-name">Nom</label>
-                      <input type="text" id="new-pizza-name" placeholder="ex: Hawaïenne" required>
-                    </div>
-                    <div class="form-group">
-                      <label for="new-pizza-desc">Description</label>
-                      <input type="text" id="new-pizza-desc" placeholder="ex: Tomate, jambon, ananas">
-                    </div>
-                  </div>
-                  <button type="submit" class="btn btn-secondary btn-sm"><span class="sf-symbol">@sfs:plus@</span> Ajouter</button>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Online Payment Settings -->
-        <div class="disclosure-group open" data-disclosure="settings-payment">
-          <div class="disclosure-header" onclick="toggleDisclosure('settings-payment')">
-            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Paiement en ligne</h2>
-          </div>
-          <div class="disclosure-body">
-            <div class="settings-card">
-              <h3>Activation</h3>
-              <p class="settings-description">Activer ou désactiver le paiement en ligne lors de l'inscription.</p>
-              <div class="form-group">
-                <label class="toggle-label">
-                  <input type="checkbox" id="setting-payment-enabled">
-                  <span class="toggle-switch"></span>
-                  <span>Paiement en ligne activé</span>
-                </label>
-              </div>
-            </div>
-
-            <div class="settings-card">
-              <h3>Tarifs d'inscription</h3>
-              <p class="settings-description">Prix de l'inscription en ligne selon la période.</p>
-              <div class="settings-grid">
-                <div class="form-group">
-                  <label for="setting-price-tier1">Prix anticipé (€)</label>
-                  <input type="number" id="setting-price-tier1" min="0" max="100" step="0.01" value="5.00">
-                  <span class="form-hint">Inscription avant la date limite</span>
-                </div>
-                <div class="form-group">
-                  <label for="setting-price-tier2">Prix dernière semaine (€)</label>
-                  <input type="number" id="setting-price-tier2" min="0" max="100" step="0.01" value="7.00">
-                  <span class="form-hint">Inscription dans les derniers jours</span>
-                </div>
-                <div class="form-group">
-                  <label for="setting-tier1-cutoff-days">Jours avant deadline pour tarif anticipé</label>
-                  <input type="number" id="setting-tier1-cutoff-days" min="1" max="30" value="7">
-                  <span class="form-hint">Nombre de jours avant la deadline</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="settings-card">
-              <h3>Date limite d'inscription</h3>
-              <p class="settings-description">Date et heure de clôture des inscriptions en ligne.</p>
-              <div class="form-group">
-                <label for="setting-registration-deadline">Date et heure limite</label>
-                <input type="datetime-local" id="setting-registration-deadline" value="">
-                <span class="form-hint">Les inscriptions seront fermées à cette date</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- On-site Pricing Settings -->
-        <div class="disclosure-group open" data-disclosure="settings-onsite">
-          <div class="disclosure-header" onclick="toggleDisclosure('settings-onsite')">
-            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Tarification sur place</h2>
-          </div>
-          <div class="disclosure-body">
-            <div class="settings-card">
-              <h3>Tarification à l'entrée</h3>
-              <p class="settings-description">Prix de participation pour ceux qui paient sur place.</p>
-              <div class="settings-grid">
-                <div class="form-group">
-                  <label for="setting-price-asso-member">Prix membre asso (€)</label>
-                  <input type="number" id="setting-price-asso-member" min="0" max="100" step="0.01" value="5.00">
-                </div>
-                <div class="form-group">
-                  <label for="setting-price-non-member">Prix non-membre (€)</label>
-                  <input type="number" id="setting-price-non-member" min="0" max="100" step="0.01" value="8.00">
-                </div>
-                <div class="form-group">
-                  <label for="setting-late-cutoff">Heure limite (arrivée tardive)</label>
-                  <input type="time" id="setting-late-cutoff" value="19:00">
-                </div>
-                <div class="form-group">
-                  <label for="setting-price-late">Prix retardataire (€)</label>
-                  <input type="number" id="setting-price-late" min="0" max="100" step="0.01" value="10.00">
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Archive & Data Management -->
-        <div class="disclosure-group" data-disclosure="settings-archive">
-          <div class="disclosure-header" onclick="toggleDisclosure('settings-archive')">
-            <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Archivage & Données</h2>
-          </div>
-          <div class="disclosure-body">
-            <div class="settings-card">
-              <h3>Créer une archive</h3>
-              <p class="settings-description">
-                Archivez les données de l'édition actuelle avant de réinitialiser pour la prochaine année.
-                L'archive conserve une copie complète des équipes, participants et statistiques.
-              </p>
-              <div class="archive-info" id="current-event-info">
-                <p>Année de l'événement : <strong id="current-event-year">-</strong></p>
-                <p>Équipes : <strong id="current-teams-count">-</strong></p>
-                <p>Participants : <strong id="current-participants-count">-</strong></p>
-              </div>
-              <button type="button" id="create-archive-btn" class="btn btn-primary">
-                📁 Créer l'archive
-              </button>
-            </div>
-
-            <div class="settings-card">
-              <h3>Rétention GDPR</h3>
-              <p class="settings-description">
-                Durée de conservation des données personnelles dans les archives.
-                Après expiration, les données sont automatiquement anonymisées (noms, emails supprimés).
-              </p>
-              <div class="form-group">
-                <label for="setting-gdpr-retention">Durée de rétention (années)</label>
-                <input type="number" id="setting-gdpr-retention" min="1" max="10" value="3">
-                <span class="form-hint">Les archives plus anciennes seront anonymisées</span>
-              </div>
-              <button type="button" id="check-expiration-btn" class="btn btn-secondary">
-                🔍 Vérifier les expirations
-              </button>
-              <p id="expiration-result" class="result-text hidden"></p>
-            </div>
-
-            <div class="settings-card danger-zone">
-              <h3><span class="sf-symbol">@sfs:exclamationmark.triangle@</span> Zone dangereuse</h3>
-              <p class="settings-description warning-text">
-                Réinitialisez toutes les données pour préparer une nouvelle édition.
-                <strong>Cette action est irréversible.</strong>
-              </p>
-              <div id="reset-safety-check" class="reset-safety-check">
-                <p class="checking">Vérification en cours...</p>
-              </div>
-              <button type="button" id="reset-data-btn" class="btn btn-danger" disabled>
-                🗑️ Réinitialiser toutes les données
-              </button>
-            </div>
-          </div>
-        </div>
-      </div><!-- End Settings Panel -->
-
-    </div>
-
-    <!-- Add/Edit Team Modal -->
-    <div id="team-modal" class="modal hidden">
-      <div class="modal-content">
-        <h3 id="team-modal-title">Nouvelle équipe</h3>
-        <form id="team-form">
-          <input type="hidden" id="team-form-id">
-          <div class="form-group">
-            <label for="team-form-name">Nom de l'équipe *</label>
-            <input type="text" id="team-form-name" required>
-          </div>
-          <div class="form-group">
-            <label for="team-form-desc">Description</label>
-            <textarea id="team-form-desc" rows="2"></textarea>
-          </div>
-          <div class="form-group">
-            <label for="team-form-password">Mot de passe (laisser vide pour ne pas changer)</label>
-            <input type="text" id="team-form-password" placeholder="Nouveau mot de passe">
-          </div>
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('team-modal')">􀁑 Annuler</button>
-            <button type="submit" class="btn btn-primary">􀁣 Enregistrer</button>
-          </div>
-        </form>
+      <!-- Main Content Area -->
+      <div class="admin-main">
+        <RegistrationsTab />
+        <AttendanceTab />
+        <PizzaTab />
+        <RoomsTab />
+        <ArchivesTab />
+        <SettingsTab />
       </div>
     </div>
 
-    <!-- Add/Edit Member Modal -->
-    <div id="member-modal" class="modal hidden">
-      <div class="modal-content">
-        <h3 id="member-modal-title">Nouveau membre</h3>
-        <form id="member-form">
-          <input type="hidden" id="member-form-id">
-          <div class="form-group">
-            <label for="member-form-team">Équipe *</label>
-            <select id="member-form-team" required></select>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="member-form-firstname">Prénom *</label>
-              <input type="text" id="member-form-firstname" required>
-            </div>
-            <div class="form-group">
-              <label for="member-form-lastname">Nom *</label>
-              <input type="text" id="member-form-lastname" required>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="member-form-email">Email *</label>
-            <input type="email" id="member-form-email" required>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="member-form-bac">Niveau BAC</label>
-              <select id="member-form-bac">
-                <option value="0">Non bachelier</option>
-                <option value="1">BAC+1</option>
-                <option value="2">BAC+2</option>
-                <option value="3">BAC+3 (Licence)</option>
-                <option value="4">BAC+4</option>
-                <option value="5">BAC+5 (Master)</option>
-                <option value="6">BAC+6</option>
-                <option value="7">BAC+7</option>
-                <option value="8">BAC+8 (Doctorat)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="member-form-food">Pizza</label>
-              <select id="member-form-food">
-                <option value="">Aucune</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="checkbox-label">
-              <input type="checkbox" id="member-form-leader">
-              Chef d'équipe
-            </label>
-          </div>
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('member-modal')">􀁑 Annuler</button>
-            <button type="submit" class="btn btn-primary">􀁣 Enregistrer</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Confirm Delete Modal -->
-    <div id="confirm-modal" class="modal hidden">
-      <div class="modal-content">
-        <h3>Confirmer la suppression</h3>
-        <p id="confirm-message"></p>
-        <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('confirm-modal')">􀁑 Annuler</button>
-          <button type="button" id="confirm-delete-btn" class="btn btn-danger">􀈑 Supprimer</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Check-in with Payment Modal -->
-    <div id="checkin-modal" class="modal hidden">
-      <div class="modal-content">
-        <h3>Valider la présence</h3>
-        <p id="checkin-member-name" class="modal-subtitle"></p>
-        <input type="hidden" id="checkin-member-id">
-
-        <div class="payment-options">
-          <label class="payment-option" id="option-org">
-            <input type="radio" name="payment-tier" value="organisation">
-            <span class="payment-option-content">
-              <span class="payment-option-title">Organisation</span>
-              <span class="payment-option-price">Gratuit</span>
-            </span>
-          </label>
-
-          <label class="payment-option" id="option-asso">
-            <input type="radio" name="payment-tier" value="asso_member" checked>
-            <span class="payment-option-content">
-              <span class="payment-option-title">Membre Asso</span>
-              <span class="payment-option-price" id="price-asso">5,00 €</span>
-            </span>
-          </label>
-
-          <label class="payment-option" id="option-non-member">
-            <input type="radio" name="payment-tier" value="non_member">
-            <span class="payment-option-content">
-              <span class="payment-option-title">Non-membre</span>
-              <span class="payment-option-price" id="price-non-member">8,00 €</span>
-            </span>
-          </label>
-
-          <label class="payment-option hidden" id="option-late">
-            <input type="radio" name="payment-tier" value="late">
-            <span class="payment-option-content">
-              <span class="payment-option-title">Retardataire</span>
-              <span class="payment-option-price" id="price-late">10,00 €</span>
-            </span>
-          </label>
-        </div>
-
-        <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('checkin-modal')">􀁑 Annuler</button>
-          <button type="button" class="btn btn-primary" onclick="confirmCheckIn()">􀁣 Valider le paiement</button>
-        </div>
-      </div>
-    </div>
+    <!-- Modals -->
+    <TeamModal />
+    <MemberModal />
+    <ConfirmModal />
+    <CheckinModal />
   </main>
-</AdminLayout>
 
 <script define:vars={{ baseUrl: import.meta.env.BASE_URL }}>
 /**
@@ -2712,6 +1977,12 @@ window.viewArchive = viewArchive;
 let activeTab = 'registrations';
 
 function initTabs() {
+  // Sidebar navigation
+  document.querySelectorAll('.admin-sidebar-item').forEach(item => {
+    item.addEventListener('click', () => switchTab(item.dataset.tab));
+  });
+  
+  // Fallback for horizontal tab nav (if present)
   document.querySelectorAll('.tab-item').forEach(tab => {
     tab.addEventListener('click', () => switchTab(tab.dataset.tab));
   });
@@ -2720,7 +1991,13 @@ function initTabs() {
 function switchTab(tabId) {
   activeTab = tabId;
 
-  // Update tab buttons
+  // Update sidebar items
+  document.querySelectorAll('.admin-sidebar-item').forEach(item => {
+    const isActive = item.dataset.tab === tabId;
+    item.classList.toggle('active', isActive);
+  });
+
+  // Update horizontal tab buttons (fallback)
   document.querySelectorAll('.tab-item').forEach(tab => {
     const isActive = tab.dataset.tab === tabId;
     tab.classList.toggle('active', isActive);
