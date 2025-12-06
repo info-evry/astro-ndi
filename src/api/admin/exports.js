@@ -3,12 +3,11 @@
  */
 
 import { json, error } from '../../lib/router.js';
+import { generateCSV, createCSVResponse } from '../../lib/csv.js';
 import * as db from '../../lib/db.js';
 import { getCapacitySettings } from '../../database/db.settings.js';
 import { verifyAdmin } from '../../shared/auth.js';
 
-// Constants for repeated strings
-const CSV_CONTENT_TYPE = 'text/csv; charset=utf-8';
 const EXPORT_FAILED_MSG = 'Export failed';
 
 /**
@@ -38,14 +37,9 @@ export async function exportAllCSV(request, env) {
 
   try {
     const members = await db.getAllMembers(env.DB);
-    const csv = generateCSV(members);
+    const csv = generateMembersCSV(members);
 
-    return new Response(csv, {
-      headers: {
-        'Content-Type': CSV_CONTENT_TYPE,
-        'Content-Disposition': 'attachment; filename="participants.csv"'
-      }
-    });
+    return createCSVResponse(csv, 'participants.csv');
   } catch (error_) {
     console.error('Error exporting:', error_);
     return error(EXPORT_FAILED_MSG, 500);
@@ -71,15 +65,10 @@ export async function exportTeamCSV(request, env, ctx, params) {
       team_name: team.name
     }));
 
-    const csv = generateCSV(members);
+    const csv = generateMembersCSV(members);
     const safeTeamName = team.name.replaceAll(/[^a-z0-9]/gi, '_');
 
-    return new Response(csv, {
-      headers: {
-        'Content-Type': CSV_CONTENT_TYPE,
-        'Content-Disposition': `attachment; filename="participants_${safeTeamName}.csv"`
-      }
-    });
+    return createCSVResponse(csv, `participants_${safeTeamName}.csv`);
   } catch (error_) {
     console.error('Error exporting team:', error_);
     return error(EXPORT_FAILED_MSG, 500);
@@ -113,14 +102,9 @@ export async function exportOfficialCSV(request, env) {
       if (env.SCHOOL_NAME) schoolName = env.SCHOOL_NAME;
     }
 
-    const csv = generateOfficialCSV(members, schoolName);
+    const csv = generateOfficialMembersCSV(members, schoolName);
 
-    return new Response(csv, {
-      headers: {
-        'Content-Type': CSV_CONTENT_TYPE,
-        'Content-Disposition': 'attachment; filename="participants_officiel.csv"'
-      }
-    });
+    return createCSVResponse(csv, 'participants_officiel.csv');
   } catch (error_) {
     console.error('Error exporting official:', error_);
     return error(EXPORT_FAILED_MSG, 500);
@@ -161,15 +145,10 @@ export async function exportTeamOfficialCSV(request, env, ctx, params) {
       if (env.SCHOOL_NAME) schoolName = env.SCHOOL_NAME;
     }
 
-    const csv = generateOfficialCSV(members, schoolName);
+    const csv = generateOfficialMembersCSV(members, schoolName);
     const safeTeamName = team.name.replaceAll(/[^a-z0-9]/gi, '_');
 
-    return new Response(csv, {
-      headers: {
-        'Content-Type': CSV_CONTENT_TYPE,
-        'Content-Disposition': `attachment; filename="participants_officiel_${safeTeamName}.csv"`
-      }
-    });
+    return createCSVResponse(csv, `participants_officiel_${safeTeamName}.csv`);
   } catch (error_) {
     console.error('Error exporting team official:', error_);
     return error(EXPORT_FAILED_MSG, 500);
@@ -217,8 +196,7 @@ export async function adminStats(request, env) {
  * Generate CSV from member data
  * Uses semicolon delimiter for European Excel compatibility
  */
-function generateCSV(members) {
-  const BOM = '\ufeff'; // UTF-8 BOM for Excel
+function generateMembersCSV(members) {
   const headers = [
     'ID',
     'Prénom',
@@ -243,41 +221,14 @@ function generateCSV(members) {
     m.created_at
   ]);
 
-  const csvContent = [
-    headers.join(';'),
-    ...rows.map(row => row.map(escapeCSV).join(';'))
-  ].join('\n');
-
-  return BOM + csvContent;
-}
-
-/**
- * Escape CSV field with formula injection protection
- * Prevents CSV injection attacks by prefixing dangerous characters
- */
-function escapeCSV(field) {
-  if (field === null || field === undefined) return '';
-  let str = String(field);
-
-  // Protect against formula injection
-  // These characters can trigger formula execution in spreadsheets
-  if (/^[=+\-@\t\r|;]/.test(str)) {
-    str = "'" + str;
-  }
-
-  // Quote fields containing delimiter, quotes, or newlines
-  if (str.includes(';') || str.includes('"') || str.includes('\n') || str.includes("'")) {
-    return `"${str.replaceAll('"', '""')}"`;
-  }
-  return str;
+  return generateCSV(headers, rows);
 }
 
 /**
  * Generate official NDI format CSV
  * Format: prenom;nom;mail;niveauBac;equipe;estLeader (0\1);ecole
  */
-function generateOfficialCSV(members, schoolName) {
-  const BOM = '\ufeff'; // UTF-8 BOM for Excel
+function generateOfficialMembersCSV(members, schoolName) {
   const headers = [
     'prenom',
     'nom',
@@ -298,12 +249,7 @@ function generateOfficialCSV(members, schoolName) {
     schoolName
   ]);
 
-  const csvContent = [
-    headers.join(';'),
-    ...rows.map(row => row.map(escapeCSV).join(';'))
-  ].join('\n');
-
-  return BOM + csvContent;
+  return generateCSV(headers, rows);
 }
 
 /**

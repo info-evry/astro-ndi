@@ -199,14 +199,15 @@ describe('Archive API - GET /api/admin/archives/:year/export', () => {
 });
 
 describe('Archive API - POST /api/admin/expiration-check', () => {
-  it.skip('should check all archives for expiration', async () => {
-    // TODO: Debug why this route returns 403 in tests
-    // The route is registered and works in production
+  it('should check all archives for expiration', async () => {
+    // Note: Must send empty body to set Content-Type: application/json
+    // Otherwise Astro CSRF protection blocks the request
     const response = await adminFetch('/api/admin/expiration-check', {
-      method: 'POST'
+      method: 'POST',
+      body: {}
     });
     expect(response.status).toBe(200);
-    
+
     const data = await response.json();
     expect(data.checked).toBeDefined();
     expect(data.expired).toBeDefined();

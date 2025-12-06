@@ -3,7 +3,7 @@
  * Handles CSV import of teams and members
  */
 
-import { json, error } from '../../shared/response.js';
+import { json, error } from '../../lib/router.js';
 import { verifyAdmin } from '../../shared/auth.js';
 import { hashPassword } from '../../shared/crypto.js';
 import * as db from '../../lib/db.js';

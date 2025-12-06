@@ -4,6 +4,7 @@
  */
 
 import { json, error } from '../../lib/router.js';
+import { generateCSV } from '../../lib/csv.js';
 import { verifyAdmin } from '../../shared/auth.js';
 import * as archivesDb from '../../database/db.archives.js';
 
@@ -303,7 +304,7 @@ function generateExportFiles(archive) {
 
   // Participants
   files['participants.json'] = JSON.stringify(archive.members, null, 2);
-  files['participants.csv'] = generateMembersCSV(archive.members, archive.is_expired);
+  files['participants.csv'] = generateArchiveMembersCSV(archive.members, archive.is_expired);
 
   // Payment events (if available)
   if (archive.payment_events && archive.payment_events.length > 0) {
@@ -321,30 +322,28 @@ function generateExportFiles(archive) {
  * Generate teams CSV
  */
 function generateTeamsCSV(teams) {
-  const BOM = '\ufeff';
   const headers = ['ID', 'Nom', 'Description', 'Membres', 'Salle', 'Date création'];
-  
+
   const rows = teams.map(t => [
     t.id,
-    escapeCSV(t.name),
-    escapeCSV(t.description || ''),
+    t.name,
+    t.description || '',
     t.member_count,
     t.room_id || '',
     t.created_at
   ]);
 
-  return BOM + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+  return generateCSV(headers, rows);
 }
 
 /**
  * Generate members CSV
  */
-function generateMembersCSV(members, isExpired) {
-  const BOM = '\ufeff';
+function generateArchiveMembersCSV(members, isExpired) {
   const headers = isExpired
     ? ['ID', 'Équipe ID', 'Niveau BAC', 'Chef équipe', 'Pizza', 'Présent', 'Statut paiement', 'Montant']
     : ['ID', 'Prénom', 'Nom', 'Email', 'Équipe ID', 'Niveau BAC', 'Chef équipe', 'Pizza', 'Présent', 'Statut paiement', 'Montant'];
-  
+
   const rows = members.map(m => {
     if (isExpired) {
       return [
@@ -352,7 +351,7 @@ function generateMembersCSV(members, isExpired) {
         m.team_id,
         m.bac_level,
         m.is_leader ? 'Oui' : 'Non',
-        escapeCSV(m.food_diet || ''),
+        m.food_diet || '',
         m.checked_in ? 'Oui' : 'Non',
         m.payment_status || '',
         m.payment_amount || ''
@@ -360,29 +359,28 @@ function generateMembersCSV(members, isExpired) {
     }
     return [
       m.id,
-      escapeCSV(m.first_name),
-      escapeCSV(m.last_name),
-      escapeCSV(m.email || ''),
+      m.first_name,
+      m.last_name,
+      m.email || '',
       m.team_id,
       m.bac_level,
       m.is_leader ? 'Oui' : 'Non',
-      escapeCSV(m.food_diet || ''),
+      m.food_diet || '',
       m.checked_in ? 'Oui' : 'Non',
       m.payment_status || '',
       m.payment_amount || ''
     ];
   });
 
-  return BOM + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+  return generateCSV(headers, rows);
 }
 
 /**
  * Generate payment events CSV
  */
 function generatePaymentEventsCSV(events) {
-  const BOM = '\ufeff';
   const headers = ['ID', 'Membre ID', 'Type', 'Montant (cents)', 'Tier', 'Date'];
-  
+
   const rows = events.map(e => [
     e.id,
     e.member_id,
@@ -392,7 +390,7 @@ function generatePaymentEventsCSV(events) {
     e.created_at
   ]);
 
-  return BOM + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+  return generateCSV(headers, rows);
 }
 
 /**
@@ -430,19 +428,4 @@ Hash: ${archive.data_hash}
 ---
 Généré par astro-ndi
 `.trim();
-}
-
-/**
- * Escape CSV field
- */
-function escapeCSV(field) {
-  if (field === null || field === undefined) return '';
-  let str = String(field);
-  if (/^[=+\-@\t\r|;]/.test(str)) {
-    str = "'" + str;
-  }
-  if (str.includes(';') || str.includes('"') || str.includes('\n') || str.includes("'")) {
-    return `"${str.replaceAll('"', '""')}"`;
-  }
-  return str;
 }

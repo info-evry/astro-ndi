@@ -3,7 +3,7 @@
  * Handles SumUp checkout creation and payment verification
  */
 
-import { json, error } from '../../shared/response.js';
+import { json, error } from '../../lib/router.js';
 import * as paymentsDb from '../../database/db.payments.js';
 import * as membersDb from '../../database/db.members.js';
 import * as settingsDb from '../../database/db.settings.js';

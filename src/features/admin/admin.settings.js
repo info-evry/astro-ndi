@@ -2,7 +2,7 @@
  * Admin settings API handlers
  */
 
-import { json, error } from '../../shared/response.js';
+import { json, error } from '../../lib/router.js';
 import { verifyAdmin } from '../../shared/auth.js';
 import * as settingsDb from '../../database/db.settings.js';
 
