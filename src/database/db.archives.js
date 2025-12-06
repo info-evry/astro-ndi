@@ -186,13 +186,20 @@ export async function createArchive(db, year) {
  * @returns {Promise<Array>}
  */
 async function fetchTeamsForArchive(db) {
+  // Check if room_id column exists
+  let hasRoomId = true;
+  try {
+    await db.prepare('SELECT room_id FROM teams LIMIT 1').first();
+  } catch {
+    hasRoomId = false;
+  }
+
+  const selectCols = hasRoomId
+    ? 'id, name, description, created_at, room_id'
+    : 'id, name, description, created_at';
+
   const result = await db.prepare(`
-    SELECT 
-      id,
-      name,
-      description,
-      created_at,
-      room_id
+    SELECT ${selectCols}
     FROM teams
     ORDER BY name
   `).all();
@@ -204,6 +211,10 @@ async function fetchTeamsForArchive(db) {
       'SELECT COUNT(*) as count FROM members WHERE team_id = ?'
     ).bind(team.id).first();
     team.member_count = countResult?.count || 0;
+    // Ensure room_id field exists
+    if (!hasRoomId) {
+      team.room_id = null;
+    }
   }
 
   return teams;

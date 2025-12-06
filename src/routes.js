@@ -44,6 +44,16 @@ import {
   getPricing,
   paymentCallback
 } from './features/payment/payment.api.js';
+import {
+  listArchives,
+  getArchive,
+  createArchive,
+  exportArchive,
+  checkExpiration,
+  getEventYear,
+  resetData,
+  checkResetSafety
+} from './api/admin/archives.js';
 
 export function createRouter() {
   // Pass base path to handle subpath deployments
@@ -106,6 +116,16 @@ export function createRouter() {
   router.post('/api/payment/verify', verifyPayment);
   router.post('/api/payment/delayed', markPaymentDelayed);
   router.post('/api/payment/callback', paymentCallback);
+
+  // Admin API routes - Archives
+  router.get('/api/admin/archives', listArchives);
+  router.post('/api/admin/archives', createArchive);
+  router.post('/api/admin/expiration-check', checkExpiration);
+  router.get('/api/admin/archives/:year/export', exportArchive);
+  router.get('/api/admin/archives/:year', getArchive);
+  router.get('/api/admin/event-year', getEventYear);
+  router.post('/api/admin/reset', resetData);
+  router.get('/api/admin/reset/check', checkResetSafety);
 
   return router;
 }
