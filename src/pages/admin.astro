@@ -51,6 +51,11 @@ import AdminLayout from '../layouts/AdminLayout.astro';
           <span class="tab-label">Salles</span>
           <span id="rooms-badge" class="tab-badge">0</span>
         </button>
+        <button type="button" role="tab" id="tab-archives" aria-controls="panel-archives" aria-selected="false" class="tab-item" data-tab="archives">
+          <span class="tab-icon">&#x1F4C1;</span>
+          <span class="tab-label">Archives</span>
+          <span id="archives-badge" class="tab-badge hidden">0</span>
+        </button>
         <button type="button" role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false" class="tab-item" data-tab="settings">
           <span class="tab-icon">&#x2699;</span>
           <span class="tab-label">Paramètres</span>
@@ -374,6 +379,85 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         </div>
       </div><!-- End Rooms Panel -->
 
+      <!-- Archives Panel -->
+      <div id="panel-archives" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-archives">
+        <div class="settings-header">
+          <h2>Archives</h2>
+          <div class="header-actions">
+            <button type="button" id="refresh-archives-btn" class="btn btn-secondary btn-sm">Rafraîchir</button>
+          </div>
+        </div>
+
+        <!-- Archives List -->
+        <div class="disclosure-group open" data-disclosure="archives-list">
+          <div class="disclosure-header" onclick="toggleDisclosure('archives-list')">
+            <h2><span class="disclosure-chevron">&#x276F;</span> Éditions archivées</h2>
+          </div>
+          <div class="disclosure-body">
+            <div id="archives-container" class="archives-container">
+              <div class="loading-placeholder">Chargement des archives...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Archive Detail View (initially hidden) -->
+        <div id="archive-detail" class="disclosure-group hidden" data-disclosure="archive-detail">
+          <div class="disclosure-header" onclick="toggleDisclosure('archive-detail')">
+            <h2><span class="disclosure-chevron">&#x276F;</span> <span id="archive-detail-title">Détails de l'archive</span></h2>
+            <div class="header-actions" onclick="event.stopPropagation()">
+              <button type="button" id="export-archive-json-btn" class="btn btn-secondary btn-sm">Export JSON</button>
+              <button type="button" id="export-archive-zip-btn" class="btn btn-primary btn-sm">Export ZIP</button>
+              <button type="button" id="close-archive-detail-btn" class="btn btn-secondary btn-sm">Fermer</button>
+            </div>
+          </div>
+          <div class="disclosure-body">
+            <!-- Archive Stats -->
+            <div class="archive-stats-grid" id="archive-stats-grid"></div>
+            
+            <!-- Archive Teams -->
+            <div class="archive-section">
+              <h3>Équipes</h3>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Nom</th>
+                      <th>Membres</th>
+                      <th>Salle</th>
+                    </tr>
+                  </thead>
+                  <tbody id="archive-teams-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Archive Members -->
+            <div class="archive-section">
+              <h3>Participants</h3>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Nom</th>
+                      <th>Email</th>
+                      <th>Équipe</th>
+                      <th>Niveau BAC</th>
+                    </tr>
+                  </thead>
+                  <tbody id="archive-members-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- GDPR Notice -->
+            <div id="archive-gdpr-notice" class="archive-gdpr-notice hidden">
+              <p><strong>⚠️ Données anonymisées</strong></p>
+              <p>Cette archive a dépassé sa date de rétention GDPR. Les données personnelles (noms, emails) ont été supprimées conformément au RGPD.</p>
+            </div>
+          </div>
+        </div>
+      </div><!-- End Archives Panel -->
+
       <!-- Settings Panel -->
       <div id="panel-settings" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-settings">
         <div class="settings-header">
@@ -530,6 +614,61 @@ import AdminLayout from '../layouts/AdminLayout.astro';
                   <input type="number" id="setting-price-late" min="0" max="100" step="0.01" value="10.00">
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Archive & Data Management -->
+        <div class="disclosure-group" data-disclosure="settings-archive">
+          <div class="disclosure-header" onclick="toggleDisclosure('settings-archive')">
+            <h2><span class="disclosure-chevron">&#x276F;</span> Archivage & Données</h2>
+          </div>
+          <div class="disclosure-body">
+            <div class="settings-card">
+              <h3>Créer une archive</h3>
+              <p class="settings-description">
+                Archivez les données de l'édition actuelle avant de réinitialiser pour la prochaine année.
+                L'archive conserve une copie complète des équipes, participants et statistiques.
+              </p>
+              <div class="archive-info" id="current-event-info">
+                <p>Année de l'événement : <strong id="current-event-year">-</strong></p>
+                <p>Équipes : <strong id="current-teams-count">-</strong></p>
+                <p>Participants : <strong id="current-participants-count">-</strong></p>
+              </div>
+              <button type="button" id="create-archive-btn" class="btn btn-primary">
+                📁 Créer l'archive
+              </button>
+            </div>
+
+            <div class="settings-card">
+              <h3>Rétention GDPR</h3>
+              <p class="settings-description">
+                Durée de conservation des données personnelles dans les archives.
+                Après expiration, les données sont automatiquement anonymisées (noms, emails supprimés).
+              </p>
+              <div class="form-group">
+                <label for="setting-gdpr-retention">Durée de rétention (années)</label>
+                <input type="number" id="setting-gdpr-retention" min="1" max="10" value="3">
+                <span class="form-hint">Les archives plus anciennes seront anonymisées</span>
+              </div>
+              <button type="button" id="check-expiration-btn" class="btn btn-secondary">
+                🔍 Vérifier les expirations
+              </button>
+              <p id="expiration-result" class="result-text hidden"></p>
+            </div>
+
+            <div class="settings-card danger-zone">
+              <h3>⚠️ Zone dangereuse</h3>
+              <p class="settings-description warning-text">
+                Réinitialisez toutes les données pour préparer une nouvelle édition.
+                <strong>Cette action est irréversible.</strong>
+              </p>
+              <div id="reset-safety-check" class="reset-safety-check">
+                <p class="checking">Vérification en cours...</p>
+              </div>
+              <button type="button" id="reset-data-btn" class="btn btn-danger" disabled>
+                🗑️ Réinitialiser toutes les données
+              </button>
             </div>
           </div>
         </div>
@@ -1402,6 +1541,7 @@ async function handleAuth() {
     initSettings();
     initImport();
     initAllParticipants();
+    initArchives();
   } catch (err) {
     if (err.message === 'Unauthorized') {
       showAuthError('Token invalide');
@@ -1646,6 +1786,9 @@ async function loadSettings() {
     pricingSettings.tier1CutoffDays = parseInt(data.settings.tier1_cutoff_days, 10) || 7;
     pricingSettings.registrationDeadline = data.settings.registration_deadline || '';
 
+    // Load GDPR settings
+    settingsState.gdprRetentionYears = parseInt(data.settings.gdpr_retention_years, 10) || 3;
+
     renderSettings();
   } catch (err) {
     console.error('Error loading settings:', err);
@@ -1694,6 +1837,10 @@ function renderSettings() {
       registrationDeadlineInput.value = localDatetime;
     }
   }
+
+  // Render GDPR settings
+  const gdprRetentionInput = $('setting-gdpr-retention');
+  if (gdprRetentionInput) gdprRetentionInput.value = settingsState.gdprRetentionYears || 3;
 
   renderPizzasList();
   updateSaveButton();
@@ -1861,6 +2008,9 @@ async function saveSettings() {
     // Convert datetime-local value to ISO string
     const registrationDeadline = registrationDeadlineValue ? new Date(registrationDeadlineValue).toISOString() : '';
 
+    // GDPR settings
+    const gdprRetentionYears = parseInt($('setting-gdpr-retention')?.value, 10) || 3;
+
     if (isNaN(maxTeamSize) || maxTeamSize < 1 || maxTeamSize > 100) {
       toastError('Taille max d\'équipe invalide (1-100)');
       return;
@@ -1919,7 +2069,9 @@ async function saveSettings() {
       price_tier1: priceTier1,
       price_tier2: priceTier2,
       tier1_cutoff_days: tier1CutoffDays,
-      registration_deadline: registrationDeadline
+      registration_deadline: registrationDeadline,
+      // GDPR settings
+      gdpr_retention_years: gdprRetentionYears
     });
 
     settingsState.isDirty = false;
@@ -2152,6 +2304,398 @@ function resetImport() {
     status.className = 'import-status';
   }
 }
+
+// ============================================================
+// ARCHIVES MODULE
+// ============================================================
+
+let archivesData = [];
+let selectedArchive = null;
+
+async function loadArchives() {
+  try {
+    const response = await api('/admin/archives');
+    archivesData = response.archives || [];
+    renderArchivesList();
+    updateArchivesBadge();
+  } catch (err) {
+    console.error('Failed to load archives:', err);
+    const container = $('archives-container');
+    if (container) {
+      container.innerHTML = '<div class="no-archives"><p>Erreur lors du chargement des archives</p></div>';
+    }
+  }
+}
+
+function updateArchivesBadge() {
+  const badge = $('archives-badge');
+  if (badge) {
+    badge.textContent = archivesData.length;
+    badge.classList.toggle('hidden', archivesData.length === 0);
+  }
+}
+
+function renderArchivesList() {
+  const container = $('archives-container');
+  if (!container) return;
+
+  if (archivesData.length === 0) {
+    container.innerHTML = `
+      <div class="no-archives">
+        <p>📁 Aucune archive</p>
+        <p>Créez une archive depuis l'onglet Paramètres pour sauvegarder les données d'une édition.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = archivesData.map(archive => `
+    <div class="archive-card ${archive.is_expired ? 'expired' : ''}" data-year="${archive.event_year}">
+      <div class="archive-card-info">
+        <h3 class="archive-card-year">Édition ${archive.event_year}</h3>
+        <div class="archive-card-stats">
+          <span>👥 ${archive.total_teams} équipes</span>
+          <span>🎓 ${archive.total_participants} participants</span>
+          ${archive.total_revenue ? `<span>💰 ${(archive.total_revenue / 100).toFixed(2)}€</span>` : ''}
+        </div>
+        <p class="archive-card-date">Archivé le ${new Date(archive.archived_at).toLocaleDateString('fr-FR')}</p>
+      </div>
+      <div class="archive-card-actions">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="viewArchive(${archive.event_year})">
+          👁️ Consulter
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function viewArchive(year) {
+  try {
+    const response = await api(`/admin/archives/${year}`);
+    selectedArchive = response.archive;
+    renderArchiveDetail();
+    
+    // Show the detail section
+    const detailSection = $('archive-detail');
+    if (detailSection) {
+      detailSection.classList.remove('hidden');
+      detailSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  } catch (err) {
+    toastError('Erreur lors du chargement de l\'archive');
+  }
+}
+
+function renderArchiveDetail() {
+  if (!selectedArchive) return;
+
+  // Update title
+  const title = $('archive-detail-title');
+  if (title) {
+    title.textContent = `Édition ${selectedArchive.event_year}`;
+  }
+
+  // Parse JSON data
+  const teams = JSON.parse(selectedArchive.teams_json || '[]');
+  const members = JSON.parse(selectedArchive.members_json || '[]');
+  const stats = JSON.parse(selectedArchive.stats_json || '{}');
+
+  // Render stats grid
+  const statsGrid = $('archive-stats-grid');
+  if (statsGrid) {
+    statsGrid.innerHTML = `
+      <div class="archive-stat-card">
+        <div class="archive-stat-value">${selectedArchive.total_teams}</div>
+        <div class="archive-stat-label">Équipes</div>
+      </div>
+      <div class="archive-stat-card">
+        <div class="archive-stat-value">${selectedArchive.total_participants}</div>
+        <div class="archive-stat-label">Participants</div>
+      </div>
+      <div class="archive-stat-card">
+        <div class="archive-stat-value">${(selectedArchive.total_revenue / 100).toFixed(2)}€</div>
+        <div class="archive-stat-label">Revenus</div>
+      </div>
+      <div class="archive-stat-card">
+        <div class="archive-stat-value">${new Date(selectedArchive.archived_at).toLocaleDateString('fr-FR')}</div>
+        <div class="archive-stat-label">Date d'archivage</div>
+      </div>
+    `;
+  }
+
+  // Render teams table
+  const teamsBody = $('archive-teams-tbody');
+  if (teamsBody) {
+    teamsBody.innerHTML = teams.map(team => `
+      <tr>
+        <td>${escapeHtml(team.name)}</td>
+        <td>${team.member_count || '-'}</td>
+        <td>${escapeHtml(team.room_name) || '-'}</td>
+      </tr>
+    `).join('');
+  }
+
+  // Render members table
+  const membersBody = $('archive-members-tbody');
+  if (membersBody) {
+    membersBody.innerHTML = members.map(member => {
+      const team = teams.find(t => t.id === member.team_id);
+      return `
+        <tr>
+          <td>${escapeHtml(member.first_name)} ${escapeHtml(member.last_name)}</td>
+          <td>${escapeHtml(member.email) || '<em>anonymisé</em>'}</td>
+          <td>${escapeHtml(team?.name) || '-'}</td>
+          <td>BAC+${member.bac_level || 0}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // Show GDPR notice if expired
+  const gdprNotice = $('archive-gdpr-notice');
+  if (gdprNotice) {
+    gdprNotice.classList.toggle('hidden', !selectedArchive.is_expired);
+  }
+}
+
+function closeArchiveDetail() {
+  const detailSection = $('archive-detail');
+  if (detailSection) {
+    detailSection.classList.add('hidden');
+  }
+  selectedArchive = null;
+}
+
+async function exportArchiveJson() {
+  if (!selectedArchive) return;
+  try {
+    const response = await fetch(`${API_BASE}/api/admin/archives/${selectedArchive.event_year}/export?format=json`, {
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    const data = await response.json();
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ndi-${selectedArchive.event_year}-archive.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toastSuccess('Export JSON téléchargé');
+  } catch (err) {
+    toastError('Erreur lors de l\'export');
+  }
+}
+
+async function exportArchiveZip() {
+  if (!selectedArchive) return;
+  try {
+    const response = await fetch(`${API_BASE}/api/admin/archives/${selectedArchive.event_year}/export?format=zip`, {
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    const blob = await response.blob();
+    
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ndi-${selectedArchive.event_year}-archive.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toastSuccess('Export ZIP téléchargé');
+  } catch (err) {
+    toastError('Erreur lors de l\'export');
+  }
+}
+
+async function createArchive() {
+  const yearEl = $('current-event-year');
+  const year = yearEl ? yearEl.textContent : new Date().getFullYear();
+  
+  if (!confirm(`Créer une archive pour l'édition ${year} ?\n\nCette action sauvegardera toutes les données actuelles (équipes, participants, statistiques).`)) {
+    return;
+  }
+
+  try {
+    const response = await api('/admin/archives', {
+      method: 'POST',
+      body: JSON.stringify({ year: parseInt(year) })
+    });
+    
+    toastSuccess(`Archive ${year} créée avec succès`);
+    await loadArchives();
+    await loadResetSafetyCheck();
+  } catch (err) {
+    if (err.message.includes('already exists')) {
+      toastError(`Une archive pour ${year} existe déjà`);
+    } else if (err.message.includes('No data')) {
+      toastError('Aucune donnée à archiver');
+    } else {
+      toastError('Erreur lors de la création de l\'archive');
+    }
+  }
+}
+
+async function checkExpiration() {
+  const resultEl = $('expiration-result');
+  try {
+    const response = await api('/admin/expiration-check', { method: 'POST' });
+    
+    if (resultEl) {
+      resultEl.classList.remove('hidden');
+      if (response.updated > 0) {
+        resultEl.className = 'result-text warning';
+        resultEl.textContent = `${response.updated} archive(s) ont été anonymisées.`;
+        await loadArchives();
+      } else {
+        resultEl.className = 'result-text success';
+        resultEl.textContent = `${response.checked} archive(s) vérifiées. Aucune expiration.`;
+      }
+    }
+  } catch (err) {
+    if (resultEl) {
+      resultEl.classList.remove('hidden');
+      resultEl.className = 'result-text warning';
+      resultEl.textContent = 'Erreur lors de la vérification';
+    }
+  }
+}
+
+async function loadResetSafetyCheck() {
+  const container = $('reset-safety-check');
+  const resetBtn = $('reset-data-btn');
+  
+  if (!container) return;
+
+  try {
+    const response = await api('/admin/reset/check');
+    
+    if (response.needsArchive) {
+      container.className = 'reset-safety-check warning';
+      container.innerHTML = `
+        <p><strong>⚠️ Données non archivées</strong></p>
+        <p>Il y a actuellement ${response.teamsCount} équipes et ${response.membersCount} participants.</p>
+        <p>Créez une archive avant de réinitialiser pour ne pas perdre ces données.</p>
+      `;
+      if (resetBtn) resetBtn.disabled = true;
+    } else if (response.hasData) {
+      container.className = 'reset-safety-check safe';
+      container.innerHTML = `
+        <p><strong>✅ Prêt à réinitialiser</strong></p>
+        <p>Les données ont été archivées. Vous pouvez réinitialiser en toute sécurité.</p>
+        <p>Dernière archive : ${response.latestArchiveYear || 'N/A'}</p>
+      `;
+      if (resetBtn) resetBtn.disabled = false;
+    } else {
+      container.className = 'reset-safety-check safe';
+      container.innerHTML = `
+        <p><strong>ℹ️ Aucune donnée</strong></p>
+        <p>La base de données est vide. Rien à réinitialiser.</p>
+      `;
+      if (resetBtn) resetBtn.disabled = true;
+    }
+  } catch (err) {
+    container.innerHTML = '<p>Erreur lors de la vérification</p>';
+  }
+}
+
+async function loadEventInfo() {
+  try {
+    const response = await api('/admin/event-year');
+    const yearEl = $('current-event-year');
+    if (yearEl) {
+      yearEl.textContent = response.year;
+    }
+    
+    // Also update counts from current data
+    const teamsEl = $('current-teams-count');
+    const participantsEl = $('current-participants-count');
+    if (teamsEl && teamsData) {
+      teamsEl.textContent = teamsData.length;
+    }
+    if (participantsEl && membersData) {
+      participantsEl.textContent = membersData.length;
+    }
+  } catch (err) {
+    console.error('Failed to load event info:', err);
+  }
+}
+
+async function resetData() {
+  if (!confirm('⚠️ ATTENTION ⚠️\n\nVous êtes sur le point de SUPPRIMER DÉFINITIVEMENT toutes les données :\n- Toutes les équipes\n- Tous les participants\n- Tous les paiements\n\nCette action est IRRÉVERSIBLE.\n\nÊtes-vous absolument sûr ?')) {
+    return;
+  }
+
+  // Double confirmation
+  const confirmText = prompt('Pour confirmer, tapez "SUPPRIMER" :');
+  if (confirmText !== 'SUPPRIMER') {
+    toastError('Réinitialisation annulée');
+    return;
+  }
+
+  try {
+    await api('/admin/reset', { method: 'POST' });
+    toastSuccess('Données réinitialisées avec succès');
+    await loadData();
+    await loadResetSafetyCheck();
+  } catch (err) {
+    if (err.message.includes('archive')) {
+      toastError('Créez d\'abord une archive avant de réinitialiser');
+    } else {
+      toastError('Erreur lors de la réinitialisation');
+    }
+  }
+}
+
+function initArchives() {
+  // Refresh button
+  const refreshBtn = $('refresh-archives-btn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', loadArchives);
+  }
+
+  // Close detail button
+  const closeBtn = $('close-archive-detail-btn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeArchiveDetail);
+  }
+
+  // Export buttons
+  const exportJsonBtn = $('export-archive-json-btn');
+  if (exportJsonBtn) {
+    exportJsonBtn.addEventListener('click', exportArchiveJson);
+  }
+
+  const exportZipBtn = $('export-archive-zip-btn');
+  if (exportZipBtn) {
+    exportZipBtn.addEventListener('click', exportArchiveZip);
+  }
+
+  // Create archive button
+  const createBtn = $('create-archive-btn');
+  if (createBtn) {
+    createBtn.addEventListener('click', createArchive);
+  }
+
+  // Check expiration button
+  const expirationBtn = $('check-expiration-btn');
+  if (expirationBtn) {
+    expirationBtn.addEventListener('click', checkExpiration);
+  }
+
+  // Reset button
+  const resetBtn = $('reset-data-btn');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', resetData);
+  }
+
+  // Load initial data
+  loadArchives();
+  loadResetSafetyCheck();
+  loadEventInfo();
+}
+
+// Make viewArchive available globally for onclick
+window.viewArchive = viewArchive;
 
 // ============================================================
 // TAB NAVIGATION
@@ -3303,6 +3847,7 @@ async function init() {
       initSettings();
       initImport();
       initAllParticipants();
+      initArchives();
     } catch (err) {
       showAuth();
       if (err.message === 'Unauthorized') {

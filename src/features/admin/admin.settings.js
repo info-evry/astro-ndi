@@ -23,7 +23,9 @@ const VALID_KEYS = new Set([
   'price_tier2',
   'tier1_cutoff_days',
   'payment_enabled',
-  'registration_deadline'
+  'registration_deadline',
+  // GDPR settings
+  'gdpr_retention_years'
 ]);
 
 /**
@@ -202,7 +204,8 @@ const VALIDATORS = {
       return { valid: false, error: 'Must be a valid ISO date string' };
     }
     return { valid: true };
-  }
+  },
+  gdpr_retention_years: (v) => validateNumber(v, 1, 10)
 };
 
 /**
