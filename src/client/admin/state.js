@@ -1,81 +1,13 @@
 /**
- * Admin state management
- * Global state for the admin dashboard
+ * Admin global state management
  */
 
-import { $ } from './utils.js';
-
-// ============================================================
-// DATA STATE
-// ============================================================
-
+// Teams and members data
 export let teamsData = [];
 export let selectedMembers = new Set();
 export let pizzasConfig = [];
 
-/**
- * Set teams data
- * @param {Array} data
- */
-export function setTeamsData(data) {
-  teamsData = data;
-}
-
-/**
- * Get teams data
- * @returns {Array}
- */
-export function getTeamsData() {
-  return teamsData;
-}
-
-/**
- * Clear selected members
- */
-export function clearSelectedMembers() {
-  selectedMembers.clear();
-}
-
-/**
- * Toggle member selection
- * @param {string} memberId
- */
-export function toggleMemberSelection(memberId) {
-  if (selectedMembers.has(memberId)) {
-    selectedMembers.delete(memberId);
-  } else {
-    selectedMembers.add(memberId);
-  }
-}
-
-/**
- * Get selected members
- * @returns {Set}
- */
-export function getSelectedMembers() {
-  return selectedMembers;
-}
-
-/**
- * Set pizzas config
- * @param {Array} config
- */
-export function setPizzasConfig(config) {
-  pizzasConfig = config;
-}
-
-/**
- * Get pizzas config
- * @returns {Array}
- */
-export function getPizzasConfig() {
-  return pizzasConfig;
-}
-
-// ============================================================
-// SETTINGS STATE
-// ============================================================
-
+// Settings state
 export const settingsState = {
   maxTeamSize: 15,
   maxTotalParticipants: 200,
@@ -83,113 +15,137 @@ export const settingsState = {
   schoolName: "Université d'Evry",
   pizzas: [],
   bacLevels: [],
-  isDirty: false
+  isDirty: false,
+  gdprRetentionYears: 3
 };
 
-/**
- * Update settings state
- * @param {Object} updates
- */
-export function updateSettings(updates) {
-  Object.assign(settingsState, updates);
-}
+// Pricing settings
+export const pricingSettings = {
+  priceAssoMember: 500,
+  priceNonMember: 800,
+  priceLate: 1000,
+  lateCutoffTime: '19:00',
+  paymentEnabled: false,
+  priceTier1: 500,
+  priceTier2: 700,
+  tier1CutoffDays: 7,
+  registrationDeadline: ''
+};
 
-/**
- * Mark settings as dirty
- */
-export function markSettingsDirty() {
-  settingsState.isDirty = true;
-}
-
-/**
- * Mark settings as clean
- */
-export function markSettingsClean() {
-  settingsState.isDirty = false;
-}
-
-// ============================================================
-// IMPORT STATE
-// ============================================================
-
+// Import state
 export let csvData = null;
 export let parsedRows = [];
 
+// Archives state
+export let archivesData = [];
+export let selectedArchive = null;
+
+// All participants list state
+export let allParticipantsData = [];
+export let allParticipantsSearchTerm = '';
+export let allParticipantsSortKey = 'name';
+export let allParticipantsSortDir = 'asc';
+
+// Attendance state
+export let attendanceData = [];
+export let attendanceFilter = 'all';
+export let attendanceSearchTerm = '';
+export let attendanceSortKey = 'name';
+export let attendanceSortDir = 'asc';
+
+// Pizza state
+export let pizzaData = [];
+export let pizzaFilter = 'all';
+export let pizzaSearchTerm = '';
+
+// Rooms state
+export let roomsData = [];
+export let roomFilter = 'all';
+
 /**
- * Set CSV data
- * @param {any} data
+ * State setters (for modules that need to update state)
  */
+export function setTeamsData(data) {
+  teamsData = data;
+}
+
 export function setCsvData(data) {
   csvData = data;
 }
 
-/**
- * Get CSV data
- * @returns {any}
- */
-export function getCsvData() {
-  return csvData;
-}
-
-/**
- * Set parsed rows
- * @param {Array} rows
- */
 export function setParsedRows(rows) {
   parsedRows = rows;
 }
 
-/**
- * Get parsed rows
- * @returns {Array}
- */
-export function getParsedRows() {
-  return parsedRows;
+export function setArchivesData(data) {
+  archivesData = data;
 }
 
-// ============================================================
-// DOM ELEMENTS CACHE
-// ============================================================
+export function setSelectedArchive(archive) {
+  selectedArchive = archive;
+}
 
-let elementsCache = null;
+export function setAllParticipantsData(data) {
+  allParticipantsData = data;
+}
 
-/**
- * Get cached DOM elements
- * @returns {Object}
- */
-export function getElements() {
-  if (elementsCache) return elementsCache;
-  
-  elementsCache = {
-    authSection: $('auth-section'),
-    adminContent: $('admin-content'),
-    tokenInput: $('admin-token'),
-    authBtn: $('auth-btn'),
-    authError: $('auth-error'),
-    statsGrid: $('stats-grid'),
-    foodStats: $('food-stats'),
-    teamsContainer: $('teams-container'),
-    exportOfficialBtn: $('export-official-btn'),
-    exportAllBtn: $('export-all-btn'),
-    refreshBtn: $('refresh-btn'),
-    addTeamBtn: $('add-team-btn'),
-    addMemberBtn: $('add-member-btn'),
-    selectAllBtn: $('select-all-btn'),
-    deleteSelectedBtn: $('delete-selected-btn'),
-    teamModal: $('team-modal'),
-    memberModal: $('member-modal'),
-    confirmModal: $('confirm-modal'),
-    teamForm: $('team-form'),
-    memberForm: $('member-form'),
-    confirmDeleteBtn: $('confirm-delete-btn')
-  };
-  
-  return elementsCache;
+export function setAllParticipantsSearchTerm(term) {
+  allParticipantsSearchTerm = term;
+}
+
+export function setAllParticipantsSortKey(key) {
+  allParticipantsSortKey = key;
+}
+
+export function setAllParticipantsSortDir(dir) {
+  allParticipantsSortDir = dir;
+}
+
+export function setAttendanceData(data) {
+  attendanceData = data;
+}
+
+export function setAttendanceFilter(filter) {
+  attendanceFilter = filter;
+}
+
+export function setAttendanceSearchTerm(term) {
+  attendanceSearchTerm = term;
+}
+
+export function setPizzaData(data) {
+  pizzaData = data;
+}
+
+export function setPizzaFilter(filter) {
+  pizzaFilter = filter;
+}
+
+export function setRoomsData(data) {
+  roomsData = data;
+}
+
+export function setRoomFilter(filter) {
+  roomFilter = filter;
+}
+
+export function setPizzasConfig(config) {
+  pizzasConfig = config;
 }
 
 /**
- * Clear elements cache (for testing or re-initialization)
+ * Clear all state (for logout)
  */
-export function clearElementsCache() {
-  elementsCache = null;
+export function clearState() {
+  teamsData = [];
+  selectedMembers.clear();
+  pizzasConfig = [];
+  csvData = null;
+  parsedRows = [];
+  archivesData = [];
+  selectedArchive = null;
+  allParticipantsData = [];
+  attendanceData = [];
+  pizzaData = [];
+  roomsData = [];
 }
