@@ -4,3 +4,6 @@
 [submodule "knowledge"]
 	path = knowledge
 	url = https://github.com/info-evry/astro-knowledge.git
+[submodule "core"]
+	path = core
+	url = https://github.com/info-evry/astro-core.git
