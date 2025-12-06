@@ -361,7 +361,7 @@ describe('Pricing Settings', () => {
         'Origin': 'http://localhost'
       },
       body: JSON.stringify({
-        price_non_member: 200000
+        price_non_member: 200_000
       })
     });
 

@@ -31,8 +31,8 @@ export async function getRooms(request, env) {
       rooms,
       pizza_by_room: pizzaByRoom
     });
-  } catch (err) {
-    console.error('Error fetching rooms:', err);
+  } catch (error_) {
+    console.error('Error fetching rooms:', error_);
     return error('Failed to fetch rooms', 500);
   }
 }
@@ -75,8 +75,8 @@ export async function setRoom(request, env, ctx, params) {
         room: room || null
       }
     });
-  } catch (err) {
-    console.error('Error setting room:', err);
+  } catch (error_) {
+    console.error('Error setting room:', error_);
     return error('Failed to set room', 500);
   }
 }
@@ -115,8 +115,8 @@ export async function setRoomsBatch(request, env) {
     const count = await db.setTeamRoomsBatch(env.DB, parsedAssignments);
 
     return json({ success: true, updated: count });
-  } catch (err) {
-    console.error('Error batch setting rooms:', err);
+  } catch (error_) {
+    console.error('Error batch setting rooms:', error_);
     return error('Failed to set rooms', 500);
   }
 }

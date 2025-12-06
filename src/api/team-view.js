@@ -36,9 +36,9 @@ export async function viewTeamMembers(request, env, ctx, params) {
       try {
         const newHash = await hashPassword(password);
         await db.updateTeam(env.DB, teamId, { passwordHash: newHash });
-      } catch (upgradeErr) {
+      } catch (error_) {
         // Log but don't fail the request if upgrade fails
-        console.error('Failed to upgrade password hash:', upgradeErr);
+        console.error('Failed to upgrade password hash:', error_);
       }
     }
 
@@ -60,8 +60,8 @@ export async function viewTeamMembers(request, env, ctx, params) {
         }))
       }
     });
-  } catch (err) {
-    console.error('Error viewing team:', err);
+  } catch (error_) {
+    console.error('Error viewing team:', error_);
     return error('Failed to load team', 500);
   }
 }

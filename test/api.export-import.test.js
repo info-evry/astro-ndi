@@ -73,7 +73,7 @@ describe('CSV Export Format', () => {
 
     const text = await response.text();
     // UTF-8 BOM is \ufeff
-    expect(text.charCodeAt(0)).toBe(0xFEFF);
+    expect(text.charCodeAt(0)).toBe(0xFE_FF);
   });
 
   it('should set proper Content-Disposition header', async () => {
@@ -204,7 +204,7 @@ describe('CSV Export - Official NDI Format', () => {
     expect(firstLine).toContain('mail');
     expect(firstLine).toContain('niveauBac');
     expect(firstLine).toContain('equipe');
-    expect(firstLine).toContain('estLeader (0\\1)');
+    expect(firstLine).toContain(String.raw`estLeader (0\1)`);
     expect(firstLine).toContain('ecole');
   });
 
@@ -228,7 +228,7 @@ describe('CSV Export - Official NDI Format', () => {
     });
 
     const text = await response.text();
-    expect(text.charCodeAt(0)).toBe(0xFEFF);
+    expect(text.charCodeAt(0)).toBe(0xFE_FF);
   });
 
   it('should set proper filename', async () => {

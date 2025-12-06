@@ -72,8 +72,8 @@ const DEFAULT_CONFIG = {
 async function isD1Available(env) {
   try {
     return await settingsDb.settingsTableExists(env.DB);
-  } catch (err) {
-    console.error('D1 check error:', err);
+  } catch (error_) {
+    console.error('D1 check error:', error_);
     return false;
   }
 }
@@ -94,8 +94,8 @@ async function loadD1Settings(config, env) {
     config.maxTotalParticipants = capacity.maxTotalParticipants;
     config.minTeamSize = capacity.minTeamSize;
     return true;
-  } catch (err) {
-    console.error('D1 settings read error:', err);
+  } catch (error_) {
+    console.error('D1 settings read error:', error_);
     return false;
   }
 }
@@ -113,8 +113,8 @@ async function loadKVSettings(config, env) {
 
     const kvBacLevels = await env.CONFIG.get('bacLevels', { type: 'json' });
     if (kvBacLevels) config.bacLevels = kvBacLevels;
-  } catch (err) {
-    console.error('KV read error:', err);
+  } catch (error_) {
+    console.error('KV read error:', error_);
   }
 }
 
@@ -144,8 +144,8 @@ export async function getConfig(request, env) {
 
     applyDefaultCapacity(config, env);
     return json({ config });
-  } catch (err) {
-    console.error('Error fetching config:', err);
+  } catch (error_) {
+    console.error('Error fetching config:', error_);
     return error('Failed to fetch configuration', 500);
   }
 }

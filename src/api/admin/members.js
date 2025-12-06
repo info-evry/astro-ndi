@@ -33,9 +33,9 @@ export async function addMemberManually(request, env) {
     });
 
     return json({ success: true, member });
-  } catch (err) {
-    console.error('Error adding member:', err);
-    if (err.message?.includes('UNIQUE constraint')) {
+  } catch (error_) {
+    console.error('Error adding member:', error_);
+    if (error_.message?.includes('UNIQUE constraint')) {
       return error('Member with this name already exists', 400);
     }
     return error('Failed to add member', 500);
@@ -66,8 +66,8 @@ export async function updateMemberAdmin(request, env, ctx, params) {
     const updated = await db.getMemberById(env.DB, memberId);
 
     return json({ success: true, member: updated });
-  } catch (err) {
-    console.error('Error updating member:', err);
+  } catch (error_) {
+    console.error('Error updating member:', error_);
     return error('Failed to update member', 500);
   }
 }
@@ -92,8 +92,8 @@ export async function deleteMemberAdmin(request, env, ctx, params) {
     }
 
     return json({ success: true, message: 'Member deleted' });
-  } catch (err) {
-    console.error('Error deleting member:', err);
+  } catch (error_) {
+    console.error('Error deleting member:', error_);
     return error('Failed to delete member', 500);
   }
 }
@@ -122,8 +122,8 @@ export async function deleteMembersBatch(request, env) {
     const deleted = await db.deleteMembers(env.DB, parsedIds);
 
     return json({ success: true, deleted });
-  } catch (err) {
-    console.error('Error deleting members:', err);
+  } catch (error_) {
+    console.error('Error deleting members:', error_);
     return error('Failed to delete members', 500);
   }
 }

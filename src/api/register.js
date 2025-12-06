@@ -56,8 +56,8 @@ async function joinExistingTeam(database, data, password, memberCount, maxTeamSi
     try {
       const newHash = await hashPassword(password);
       await db.updateTeam(database, teamId, { passwordHash: newHash });
-    } catch (upgradeErr) {
-      console.error('Failed to upgrade password hash:', upgradeErr);
+    } catch (error_) {
+      console.error('Failed to upgrade password hash:', error_);
     }
   }
 
@@ -146,23 +146,23 @@ export async function register(request, env) {
     let addedMembers;
     try {
       addedMembers = await insertMembers(env.DB, teamId, validation.members);
-    } catch (err) {
-      const errMsg = err.message?.toLowerCase() || '';
+    } catch (error_) {
+      const errMsg = error_.message?.toLowerCase() || '';
       const isConstraintError = errMsg.includes('unique constraint') ||
           errMsg.includes('duplicate') ||
           errMsg.includes('already exists') ||
-          (err.code && String(err.code).includes('CONSTRAINT'));
+          (error_.code && String(error_.code).includes('CONSTRAINT'));
       if (isConstraintError) {
         return error('One or more members are already registered', 400);
       }
-      throw err;
+      throw error_;
     }
 
     // Send confirmation email (non-blocking)
     try {
       await sendConfirmationEmail(env, { teamName, isNewTeam, members: validation.members });
-    } catch (emailErr) {
-      console.error('Failed to send confirmation email:', emailErr);
+    } catch (error_) {
+      console.error('Failed to send confirmation email:', error_);
     }
 
     return json({
@@ -172,8 +172,8 @@ export async function register(request, env) {
       members: addedMembers.map(m => ({ id: m.id, firstName: m.firstName, lastName: m.lastName }))
     });
 
-  } catch (err) {
-    console.error('Registration error:', err);
+  } catch (error_) {
+    console.error('Registration error:', error_);
     return error('An error occurred during registration. Please try again.', 500);
   }
 }
@@ -235,8 +235,8 @@ L'équipe d'organisation
         content: [{ type: 'text/plain', value: body }]
       })
     });
-  } catch (err) {
-    console.error('Error sending admin notification email:', err);
+  } catch (error_) {
+    console.error('Error sending admin notification email:', error_);
     // Optionally, handle the error, e.g. add fallback or response status
   }
 
@@ -268,8 +268,8 @@ L'équipe d'organisation
           content: [{ type: 'text/plain', value: participantBody }]
         })
       });
-    } catch (err) {
-      console.error('Error sending participant confirmation email:', err);
+    } catch (error_) {
+      console.error('Error sending participant confirmation email:', error_);
       // Optionally, handle the error as needed
     }
   }

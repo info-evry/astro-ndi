@@ -52,8 +52,8 @@ export async function getSettings(request, env) {
     }
 
     return json({ settings: parsed, raw: settings });
-  } catch (err) {
-    console.error('Error fetching settings:', err);
+  } catch (error_) {
+    console.error('Error fetching settings:', error_);
     return error('Failed to fetch settings', 500);
   }
 }
@@ -89,8 +89,8 @@ export async function updateSettings(request, env) {
     }
 
     return json({ success: true, updated: Object.keys(updates) });
-  } catch (err) {
-    console.error('Error updating settings:', err);
+  } catch (error_) {
+    console.error('Error updating settings:', error_);
     return error('Failed to update settings', 500);
   }
 }

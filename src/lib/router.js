@@ -39,7 +39,7 @@ export class Router {
     // Escape backslashes first, then forward slashes, then convert :params
     return path
       .replaceAll('\\', '\\\\')
-      .replaceAll('/', '\\/')
+      .replaceAll('/', String.raw`\/`)
       .replaceAll(/:(\w+)/g, '(?<$1>[^/]+)');
   }
 

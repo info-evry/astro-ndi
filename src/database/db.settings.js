@@ -108,8 +108,8 @@ export async function getCapacitySettings(db, env) {
 
     const dbMinTeam = await getSetting(db, 'min_team_size');
     if (dbMinTeam) minTeamSize = Number.parseInt(dbMinTeam, 10);
-  } catch (err) {
-    console.error('Error reading capacity settings from DB:', err);
+  } catch (error) {
+    console.error('Error reading capacity settings from DB:', error);
     // Fall back to env values
   }
 

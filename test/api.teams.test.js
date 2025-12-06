@@ -310,7 +310,7 @@ describe('Team Capacity and Full Teams', () => {
         createNewTeam: true,
         teamName: 'Capacity Test Team',
         teamPassword: 'capacity123',
-        members: Array(15).fill(null).map((_, i) => ({
+        members: Array.from({length: 15}).fill(null).map((_, i) => ({
           firstName: `Capacity${i}`,
           lastName: `Member${i}`,
           email: `capacity${i}@example.com`,

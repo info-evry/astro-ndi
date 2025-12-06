@@ -27,8 +27,8 @@ export async function listTeams(request, env) {
     });
 
     return json({ teams: teamsWithSlots });
-  } catch (err) {
-    console.error('Error listing teams:', err);
+  } catch (error_) {
+    console.error('Error listing teams:', error_);
     return error('Failed to fetch teams', 500);
   }
 }
@@ -43,8 +43,8 @@ export async function getTeam(request, env, ctx, params) {
       return error('Team not found', 404);
     }
     return json({ team });
-  } catch (err) {
-    console.error('Error fetching team:', err);
+  } catch (error_) {
+    console.error('Error fetching team:', error_);
     return error('Failed to fetch team', 500);
   }
 }
@@ -69,8 +69,8 @@ export async function getStats(request, env) {
         food_preferences: foodStats
       }
     });
-  } catch (err) {
-    console.error('Error fetching stats:', err);
+  } catch (error_) {
+    console.error('Error fetching stats:', error_);
     return error('Failed to fetch statistics', 500);
   }
 }

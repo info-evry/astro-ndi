@@ -28,8 +28,8 @@ export async function getPizza(request, env) {
         present: stats?.present || { total: 0, received: 0, pending: 0, by_type: [] }
       }
     });
-  } catch (err) {
-    console.error('Error fetching pizza status:', err);
+  } catch (error_) {
+    console.error('Error fetching pizza status:', error_);
     return error('Failed to fetch pizza status', 500);
   }
 }
@@ -65,8 +65,8 @@ export async function givePizzaMember(request, env, ctx, params) {
         pizza_received_at: updated.pizza_received_at
       }
     });
-  } catch (err) {
-    console.error('Error giving pizza:', err);
+  } catch (error_) {
+    console.error('Error giving pizza:', error_);
     return error('Failed to give pizza', 500);
   }
 }
@@ -100,8 +100,8 @@ export async function revokePizzaMember(request, env, ctx, params) {
         pizza_received_at: null
       }
     });
-  } catch (err) {
-    console.error('Error revoking pizza:', err);
+  } catch (error_) {
+    console.error('Error revoking pizza:', error_);
     return error('Failed to revoke pizza', 500);
   }
 }
@@ -124,8 +124,8 @@ export async function givePizzaMembersBatch(request, env) {
     const count = await db.givePizzaBatch(env.DB, memberIds.map(id => Number.parseInt(id, 10)));
 
     return json({ success: true, given: count });
-  } catch (err) {
-    console.error('Error batch giving pizza:', err);
+  } catch (error_) {
+    console.error('Error batch giving pizza:', error_);
     return error('Failed to give pizza', 500);
   }
 }
@@ -148,8 +148,8 @@ export async function revokePizzaMembersBatch(request, env) {
     const count = await db.revokePizzaBatch(env.DB, memberIds.map(id => Number.parseInt(id, 10)));
 
     return json({ success: true, revoked: count });
-  } catch (err) {
-    console.error('Error batch revoking pizza:', err);
+  } catch (error_) {
+    console.error('Error batch revoking pizza:', error_);
     return error('Failed to revoke pizza', 500);
   }
 }

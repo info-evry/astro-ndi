@@ -24,7 +24,7 @@ describe('sanitizeString', () => {
 
   it('should return empty string for non-string input', () => {
     expect(sanitizeString(null)).toBe('');
-    expect(sanitizeString(undefined)).toBe('');
+    expect(sanitizeString()).toBe('');
     expect(sanitizeString(123)).toBe('');
   });
 });
@@ -51,7 +51,7 @@ describe('isValidEmail', () => {
 
   it('should handle null/undefined', () => {
     expect(isValidEmail(null)).toBe(false);
-    expect(isValidEmail(undefined)).toBe(false);
+    expect(isValidEmail()).toBe(false);
   });
 });
 

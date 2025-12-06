@@ -36,8 +36,8 @@ export async function updateTeamAdmin(request, env, ctx, params) {
     const updated = await db.getTeamById(env.DB, teamId);
 
     return json({ success: true, team: { id: updated.id, name: updated.name, description: updated.description } });
-  } catch (err) {
-    console.error('Error updating team:', err);
+  } catch (error_) {
+    console.error('Error updating team:', error_);
     return error('Failed to update team', 500);
   }
 }
@@ -70,8 +70,8 @@ export async function deleteTeamAdmin(request, env, ctx, params) {
       success: true,
       message: `Team "${team.name}" and ${memberCount} member(s) deleted`
     });
-  } catch (err) {
-    console.error('Error deleting team:', err);
+  } catch (error_) {
+    console.error('Error deleting team:', error_);
     return error('Failed to delete team', 500);
   }
 }
@@ -100,8 +100,8 @@ export async function createTeamAdmin(request, env) {
     const team = await db.createTeam(env.DB, name.trim(), description, passwordHash);
 
     return json({ success: true, team });
-  } catch (err) {
-    console.error('Error creating team:', err);
+  } catch (error_) {
+    console.error('Error creating team:', error_);
     return error('Failed to create team', 500);
   }
 }

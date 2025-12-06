@@ -93,8 +93,8 @@ async function getOrCreateTeam(database, teamName, teamMap, stats) {
     teamMap.set(teamName.toLowerCase(), team);
     stats.teamsCreated++;
     return team;
-  } catch (err) {
-    stats.errors.push(`Failed to create team "${teamName}": ${err.message}`);
+  } catch (error_) {
+    stats.errors.push(`Failed to create team "${teamName}": ${error_.message}`);
     return null;
   }
 }
@@ -171,9 +171,9 @@ export async function importCSV(request, env) {
       for (const row of members) {
         try {
           await importMember(env.DB, team.id, row, stats);
-        } catch (err) {
+        } catch (error_) {
           stats.membersSkipped++;
-          stats.errors.push(`Failed to import ${row.firstname} ${row.lastname}: ${err.message}`);
+          stats.errors.push(`Failed to import ${row.firstname} ${row.lastname}: ${error_.message}`);
         }
       }
     }
@@ -189,8 +189,8 @@ export async function importCSV(request, env) {
       }
     });
 
-  } catch (err) {
-    console.error('Import error:', err);
-    return error(err.message || 'Failed to import CSV', 500);
+  } catch (error_) {
+    console.error('Import error:', error_);
+    return error(error_.message || 'Failed to import CSV', 500);
   }
 }

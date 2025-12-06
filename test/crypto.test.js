@@ -45,7 +45,7 @@ describe('hashPassword', () => {
   });
 
   it('should handle very long passwords', async () => {
-    const longPassword = 'a'.repeat(10000);
+    const longPassword = 'a'.repeat(10_000);
     const hash = await hashPassword(longPassword);
     expect(hash).toContain(':');
   });
@@ -76,7 +76,7 @@ describe('verifyPassword', () => {
   });
 
   it('should handle undefined stored value', async () => {
-    const result = await verifyPassword('anypassword', undefined);
+    const result = await verifyPassword('anypassword');
     expect(result).toBe(false);
   });
 
@@ -120,7 +120,7 @@ describe('needsHashUpgrade', () => {
   it('should return false for empty value', () => {
     expect(needsHashUpgrade('')).toBe(false);
     expect(needsHashUpgrade(null)).toBe(false);
-    expect(needsHashUpgrade(undefined)).toBe(false);
+    expect(needsHashUpgrade()).toBe(false);
   });
 
   it('should return false for PBKDF2 format (has colon)', () => {

@@ -22,8 +22,8 @@ export async function listAllMembers(request, env) {
   try {
     const members = await db.getAllMembers(env.DB);
     return json({ members });
-  } catch (err) {
-    console.error('Error listing members:', err);
+  } catch (error_) {
+    console.error('Error listing members:', error_);
     return error('Failed to fetch members', 500);
   }
 }
@@ -46,8 +46,8 @@ export async function exportAllCSV(request, env) {
         'Content-Disposition': 'attachment; filename="participants.csv"'
       }
     });
-  } catch (err) {
-    console.error('Error exporting:', err);
+  } catch (error_) {
+    console.error('Error exporting:', error_);
     return error(EXPORT_FAILED_MSG, 500);
   }
 }
@@ -80,8 +80,8 @@ export async function exportTeamCSV(request, env, ctx, params) {
         'Content-Disposition': `attachment; filename="participants_${safeTeamName}.csv"`
       }
     });
-  } catch (err) {
-    console.error('Error exporting team:', err);
+  } catch (error_) {
+    console.error('Error exporting team:', error_);
     return error(EXPORT_FAILED_MSG, 500);
   }
 }
@@ -121,8 +121,8 @@ export async function exportOfficialCSV(request, env) {
         'Content-Disposition': 'attachment; filename="participants_officiel.csv"'
       }
     });
-  } catch (err) {
-    console.error('Error exporting official:', err);
+  } catch (error_) {
+    console.error('Error exporting official:', error_);
     return error(EXPORT_FAILED_MSG, 500);
   }
 }
@@ -170,8 +170,8 @@ export async function exportTeamOfficialCSV(request, env, ctx, params) {
         'Content-Disposition': `attachment; filename="participants_officiel_${safeTeamName}.csv"`
       }
     });
-  } catch (err) {
-    console.error('Error exporting team official:', err);
+  } catch (error_) {
+    console.error('Error exporting team official:', error_);
     return error(EXPORT_FAILED_MSG, 500);
   }
 }
@@ -207,8 +207,8 @@ export async function adminStats(request, env) {
       },
       teams: teamsWithMembers
     });
-  } catch (err) {
-    console.error('Error fetching admin stats:', err);
+  } catch (error_) {
+    console.error('Error fetching admin stats:', error_);
     return error('Failed to fetch statistics', 500);
   }
 }
@@ -284,7 +284,7 @@ function generateOfficialCSV(members, schoolName) {
     'mail',
     'niveauBac',
     'equipe',
-    'estLeader (0\\1)',
+    String.raw`estLeader (0\1)`,
     'ecole (nom exact saisi sur le site)'
   ];
 

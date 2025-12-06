@@ -38,8 +38,8 @@ export async function getAttendance(request, env) {
         }
       }
     });
-  } catch (err) {
-    console.error('Error fetching attendance:', err);
+  } catch (error_) {
+    console.error('Error fetching attendance:', error_);
     return error('Failed to fetch attendance', 500);
   }
 }
@@ -97,8 +97,8 @@ export async function checkInMember(request, env, ctx, params) {
         payment_confirmed_at: updated.payment_confirmed_at
       }
     });
-  } catch (err) {
-    console.error('Error checking in member:', err);
+  } catch (error_) {
+    console.error('Error checking in member:', error_);
     return error('Failed to check in member', 500);
   }
 }
@@ -135,8 +135,8 @@ export async function checkOutMember(request, env, ctx, params) {
         payment_confirmed_at: null
       }
     });
-  } catch (err) {
-    console.error('Error checking out member:', err);
+  } catch (error_) {
+    console.error('Error checking out member:', error_);
     return error('Failed to check out member', 500);
   }
 }
@@ -159,8 +159,8 @@ export async function checkInMembersBatch(request, env) {
     const count = await db.checkInMembers(env.DB, memberIds.map(id => Number.parseInt(id, 10)));
 
     return json({ success: true, checked_in: count });
-  } catch (err) {
-    console.error('Error batch checking in:', err);
+  } catch (error_) {
+    console.error('Error batch checking in:', error_);
     return error('Failed to check in members', 500);
   }
 }
@@ -183,8 +183,8 @@ export async function checkOutMembersBatch(request, env) {
     const count = await db.checkOutMembers(env.DB, memberIds.map(id => Number.parseInt(id, 10)));
 
     return json({ success: true, checked_out: count });
-  } catch (err) {
-    console.error('Error batch checking out:', err);
+  } catch (error_) {
+    console.error('Error batch checking out:', error_);
     return error('Failed to check out members', 500);
   }
 }
