@@ -110,12 +110,12 @@ export function renderTeams(teams, onTeamClick) {
   }).join('');
 
   // Add click event listeners to team cards
-  elements.teamsList.querySelectorAll('.team-card').forEach(card => {
+  for (const card of elements.teamsList.querySelectorAll('.team-card')) {
     card.addEventListener('click', () => {
-      const teamId = parseInt(card.dataset.teamId, 10);
+      const teamId = Number.parseInt(card.dataset.teamId, 10);
       onTeamClick(teamId);
     });
-  });
+  }
 }
 
 /**
@@ -157,12 +157,12 @@ export function initMemberForm() {
   `).join('');
 
   // Add pizza selection highlighting
-  elements.pizzaOptions.querySelectorAll('.pizza-option input').forEach(input => {
+  for (const input of elements.pizzaOptions.querySelectorAll('.pizza-option input')) {
     input.addEventListener('change', (e) => {
-      elements.pizzaOptions.querySelectorAll('.pizza-option').forEach(opt => opt.classList.remove('selected'));
+      for (const opt of elements.pizzaOptions.querySelectorAll('.pizza-option')) opt.classList.remove('selected');
       e.target.closest('.pizza-option').classList.add('selected');
     });
-  });
+  }
 }
 
 /**
@@ -192,12 +192,12 @@ export function renderPricing(pricing) {
   }
 
   // Show/hide payment options based on enabled state
-  if (!pricing.enabled) {
-    elements.paymentDisabled.classList.remove('hidden');
-    document.querySelectorAll('.payment-method').forEach(el => el.classList.add('hidden'));
-  } else {
+  if (pricing.enabled) {
     elements.paymentDisabled.classList.add('hidden');
-    document.querySelectorAll('.payment-method').forEach(el => el.classList.remove('hidden'));
+    for (const el of document.querySelectorAll('.payment-method')) el.classList.remove('hidden');
+  } else {
+    elements.paymentDisabled.classList.remove('hidden');
+    for (const el of document.querySelectorAll('.payment-method')) el.classList.add('hidden');
   }
 }
 

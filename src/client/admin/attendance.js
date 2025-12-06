@@ -49,8 +49,8 @@ export async function loadAttendanceData(api) {
     renderAttendanceStats(data.stats);
     renderAttendance();
     updateAttendanceBadge(data.stats.checked_in);
-  } catch (err) {
-    console.error('Error loading attendance:', err);
+  } catch (error) {
+    console.error('Error loading attendance:', error);
     toastError('Erreur lors du chargement des présences');
   }
 }
@@ -146,33 +146,40 @@ export function renderAttendance() {
   filtered.sort((a, b) => {
     let valA, valB;
     switch (attendanceSortKey) {
-      case 'name':
+      case 'name': {
         valA = `${a.first_name} ${a.last_name}`.toLowerCase();
         valB = `${b.first_name} ${b.last_name}`.toLowerCase();
         break;
-      case 'email':
+      }
+      case 'email': {
         valA = a.email.toLowerCase();
         valB = b.email.toLowerCase();
         break;
-      case 'team':
+      }
+      case 'team': {
         valA = a.team_name.toLowerCase();
         valB = b.team_name.toLowerCase();
         break;
-      case 'status':
+      }
+      case 'status': {
         valA = a.checked_in || 0;
         valB = b.checked_in || 0;
         break;
-      case 'time':
+      }
+      case 'time': {
         valA = a.checked_in_at || '';
         valB = b.checked_in_at || '';
         break;
-      case 'payment':
+      }
+      case 'payment': {
         valA = a.payment_tier || '';
         valB = b.payment_tier || '';
         break;
-      default:
+      }
+      default: {
         valA = a.first_name.toLowerCase();
         valB = b.first_name.toLowerCase();
+      }
     }
 
     if (valA < valB) return attendanceSortDir === 'asc' ? -1 : 1;
@@ -185,6 +192,7 @@ export function renderAttendance() {
     return;
   }
 
+  // eslint-disable-next-line sonarjs/cognitive-complexity -- Render logic with multiple badge variants
   tbody.innerHTML = filtered.map(m => {
     const isCheckedIn = m.checked_in === 1;
     const checkedInTime = m.checked_in_at ? new Date(m.checked_in_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '-';
@@ -275,9 +283,9 @@ export async function handleCheckIn(memberId, api, loadData) {
       });
       await loadData();
       toastSuccess(`${member.first_name} ${member.last_name} enregistré(e) (déjà payé en ligne)`);
-    } catch (err) {
-      console.error('Error checking in:', err);
-      toastError(err.message || 'Erreur lors de l\'enregistrement');
+    } catch (error) {
+      console.error('Error checking in:', error);
+      toastError(error.message || 'Erreur lors de l\'enregistrement');
     }
     return;
   }
@@ -327,18 +335,22 @@ export async function confirmCheckIn(api, loadData) {
   let amount;
 
   switch (tier) {
-    case 'asso_member':
+    case 'asso_member': {
       amount = pricingSettings.priceAssoMember;
       break;
-    case 'non_member':
+    }
+    case 'non_member': {
       amount = pricingSettings.priceNonMember;
       break;
-    case 'late':
+    }
+    case 'late': {
       amount = pricingSettings.priceLate;
       break;
-    case 'organisation':
+    }
+    case 'organisation': {
       amount = 0;
       break;
+    }
   }
 
   try {
@@ -352,8 +364,8 @@ export async function confirmCheckIn(api, loadData) {
     closeModal('checkin-modal');
     await loadData();
     toastSuccess(`Présence validée - ${formatCurrency(amount)}`);
-  } catch (err) {
-    console.error('Error checking in:', err);
+  } catch (error) {
+    console.error('Error checking in:', error);
     toastError('Erreur lors de la validation');
   }
 }
@@ -369,8 +381,8 @@ export async function handleCheckOut(memberId, api, loadData) {
     await api(`/admin/attendance/check-out/${memberId}`, { method: 'POST' });
     await loadData();
     toastSuccess('Présence annulée');
-  } catch (err) {
-    console.error('Error checking out:', err);
+  } catch (error) {
+    console.error('Error checking out:', error);
     toastError('Erreur lors de l\'annulation');
   }
 }
@@ -390,17 +402,17 @@ export function initAttendance(api) {
 
   // Filter pills
   const filterRadios = document.querySelectorAll('input[name="attendance-filter"]');
-  filterRadios.forEach(radio => {
+  for (const radio of filterRadios) {
     radio.addEventListener('change', (e) => {
       setAttendanceFilter(e.target.value);
       updateFilterPills();
       renderAttendance();
     });
-  });
+  }
 
   // Sortable headers
   const sortableHeaders = document.querySelectorAll('#attendance-table .sortable-header');
-  sortableHeaders.forEach(header => {
+  for (const header of sortableHeaders) {
     header.addEventListener('click', () => {
       const sortKey = header.dataset.sort;
       if (attendanceSortKey === sortKey) {
@@ -412,7 +424,7 @@ export function initAttendance(api) {
       updateSortIndicators();
       renderAttendance();
     });
-  });
+  }
 
   const refreshBtn = $('refresh-attendance-btn');
   if (refreshBtn) {
@@ -427,14 +439,14 @@ export function initAttendance(api) {
  */
 function updateFilterPills() {
   const pills = document.querySelectorAll('.filter-pill');
-  pills.forEach(pill => {
+  for (const pill of pills) {
     const radio = pill.querySelector('input[type="radio"]');
     if (radio?.checked) {
       pill.classList.add('active');
     } else {
       pill.classList.remove('active');
     }
-  });
+  }
 }
 
 /**
@@ -442,7 +454,7 @@ function updateFilterPills() {
  */
 function updateSortIndicators() {
   const headers = document.querySelectorAll('#attendance-table .sortable-header');
-  headers.forEach(header => {
+  for (const header of headers) {
     const sortKey = header.dataset.sort;
     if (sortKey === attendanceSortKey) {
       header.setAttribute('data-sort-dir', attendanceSortDir);
@@ -451,5 +463,5 @@ function updateSortIndicators() {
       header.removeAttribute('data-sort-dir');
       header.querySelector('.sort-indicator').textContent = '@sfs:arrow.up.arrow.down@';
     }
-  });
+  }
 }

@@ -27,7 +27,7 @@ export function collectFormData() {
     data.teamDescription = formData.get('teamDescription');
     data.teamPassword = formData.get('teamPassword');
   } else {
-    data.teamId = parseInt(formData.get('teamId'), 10);
+    data.teamId = Number.parseInt(formData.get('teamId'), 10);
     data.teamPassword = formData.get('joinPassword');
   }
 
@@ -36,7 +36,7 @@ export function collectFormData() {
     firstName: formData.get('firstName'),
     lastName: formData.get('lastName'),
     email: formData.get('email'),
-    bacLevel: parseInt(formData.get('bacLevel'), 10),
+    bacLevel: Number.parseInt(formData.get('bacLevel'), 10),
     isLeader: state.isNewTeam ? true : formData.get('isLeader') === 'on',
     foodDiet: formData.get('foodDiet') || 'none'
   });
@@ -108,8 +108,8 @@ export async function handleSubmit(e) {
     elements.successMessage.textContent = result.message;
     elements.successModal.classList.remove('hidden');
 
-  } catch (err) {
-    showErrors([err.message]);
+  } catch (error) {
+    showErrors([error.message]);
   } finally {
     setLoading(false);
   }
@@ -120,7 +120,8 @@ export async function handleSubmit(e) {
  * @param {string[]} errors - Array of error messages
  */
 export function showErrors(errors) {
-  elements.errorsDiv.innerHTML = `<ul>${errors.map(e => `<li>${escapeHtml(e)}</li>`).join('')}</ul>`;
+  const listItems = errors.map(e => `<li>${escapeHtml(e)}</li>`).join('');
+  elements.errorsDiv.innerHTML = `<ul>${listItems}</ul>`;
   elements.errorsDiv.classList.remove('hidden');
   elements.errorsDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }

@@ -5,7 +5,11 @@
 
 import { $, escapeHtml } from './utils.js';
 import { toastSuccess, toastError } from './toast.js';
-import { csvData, setCsvData, parsedRows, setParsedRows } from './state.js';
+import { csvData, setCsvData, setParsedRows } from './state.js';
+
+// Element ID constants
+const EL_IMPORT_BTN = 'import-btn';
+const EL_IMPORT_STATUS = EL_IMPORT_STATUS;
 
 /**
  * Handle file selection
@@ -48,9 +52,9 @@ export function parseAndPreview(csv) {
       const values = parseCSVLine(lines[i]);
       if (values.length === headers.length) {
         const row = {};
-        headers.forEach((header, idx) => {
+        for (const [idx, header] of headers.entries()) {
           row[header] = values[idx].trim();
-        });
+        }
         rows.push(row);
       }
     }
@@ -61,8 +65,8 @@ export function parseAndPreview(csv) {
 
     const preview = $('import-preview');
     const previewContent = $('import-preview-content');
-    const importBtn = $('import-btn');
-    const status = $('import-status');
+    const importBtn = $(EL_IMPORT_BTN);
+    const status = $(EL_IMPORT_STATUS);
 
     if (preview && previewContent) {
       previewContent.innerHTML = `
@@ -98,11 +102,11 @@ export function parseAndPreview(csv) {
 
     if (status) {
       status.textContent = '';
-      status.className = 'import-status';
+      status.className = EL_IMPORT_STATUS;
     }
 
-  } catch (err) {
-    toastError(err.message);
+  } catch (error) {
+    toastError(error.message);
     resetImport();
   }
 }
@@ -117,8 +121,7 @@ export function parseCSVLine(line) {
   let current = '';
   let inQuotes = false;
 
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
+  for (const char of line) {
 
     if (char === '"') {
       inQuotes = !inQuotes;
@@ -145,8 +148,8 @@ export async function handleImport(api, loadData) {
     return;
   }
 
-  const importBtn = $('import-btn');
-  const status = $('import-status');
+  const importBtn = $(EL_IMPORT_BTN);
+  const status = $(EL_IMPORT_STATUS);
 
   if (importBtn) {
     importBtn.disabled = true;
@@ -155,7 +158,7 @@ export async function handleImport(api, loadData) {
 
   if (status) {
     status.textContent = 'Import en cours...';
-    status.className = 'import-status';
+    status.className = EL_IMPORT_STATUS;
   }
 
   try {
@@ -178,12 +181,12 @@ export async function handleImport(api, loadData) {
       throw new Error(result.error || 'Erreur lors de l\'import');
     }
 
-  } catch (err) {
-    console.error('Import error:', err);
-    toastError(err.message || 'Erreur lors de l\'import');
+  } catch (error) {
+    console.error('Import error:', error);
+    toastError(error.message || 'Erreur lors de l\'import');
 
     if (status) {
-      status.innerHTML = `<span class="sf-symbol">@sfs:xmark@</span> Erreur: ${err.message}`;
+      status.innerHTML = `<span class="sf-symbol">@sfs:xmark@</span> Erreur: ${error.message}`;
       status.className = 'import-status error';
     }
   } finally {
@@ -202,8 +205,8 @@ export function resetImport() {
   setParsedRows([]);
 
   const preview = $('import-preview');
-  const importBtn = $('import-btn');
-  const status = $('import-status');
+  const importBtn = $(EL_IMPORT_BTN);
+  const status = $(EL_IMPORT_STATUS);
 
   if (preview) {
     preview.classList.add('hidden');
@@ -215,7 +218,7 @@ export function resetImport() {
 
   if (status) {
     status.textContent = '';
-    status.className = 'import-status';
+    status.className = EL_IMPORT_STATUS;
   }
 }
 
@@ -226,7 +229,7 @@ export function resetImport() {
  */
 export function initImport(api, loadData) {
   const fileInput = $('import-file');
-  const importBtn = $('import-btn');
+  const importBtn = $(EL_IMPORT_BTN);
 
   if (fileInput) {
     fileInput.addEventListener('change', handleFileSelect);

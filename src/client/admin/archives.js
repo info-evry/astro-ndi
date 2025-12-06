@@ -23,8 +23,8 @@ export async function loadArchives(api) {
     setArchivesData(response.archives || []);
     renderArchivesList();
     updateArchivesBadge();
-  } catch (err) {
-    console.error('Failed to load archives:', err);
+  } catch (error) {
+    console.error('Failed to load archives:', error);
     const container = $('archives-container');
     if (container) {
       container.innerHTML = '<div class="no-archives"><p>Erreur lors du chargement des archives</p></div>';
@@ -99,7 +99,7 @@ export async function viewArchive(year, api) {
       detailSection.classList.remove('hidden');
       detailSection.scrollIntoView({ behavior: 'smooth' });
     }
-  } catch (err) {
+  } catch {
     toastError('Erreur lors du chargement de l\'archive');
   }
 }
@@ -204,7 +204,7 @@ export async function exportArchiveJson(apiBase, adminToken) {
     a.click();
     URL.revokeObjectURL(url);
     toastSuccess('Export JSON téléchargé');
-  } catch (err) {
+  } catch {
     toastError('Erreur lors de l\'export');
   }
 }
@@ -229,7 +229,7 @@ export async function exportArchiveZip(apiBase, adminToken) {
     a.click();
     URL.revokeObjectURL(url);
     toastSuccess('Export ZIP téléchargé');
-  } catch (err) {
+  } catch {
     toastError('Erreur lors de l\'export');
   }
 }
@@ -250,16 +250,16 @@ export async function createArchive(api, loadResetSafetyCheck) {
   try {
     await api('/admin/archives', {
       method: 'POST',
-      body: JSON.stringify({ year: parseInt(year) })
+      body: JSON.stringify({ year: Number.parseInt(year) })
     });
 
     toastSuccess(`Archive ${year} créée avec succès`);
     await loadArchives(api);
     await loadResetSafetyCheck();
-  } catch (err) {
-    if (err.message.includes('already exists')) {
+  } catch (error) {
+    if (error.message.includes('already exists')) {
       toastError(`Une archive pour ${year} existe déjà`);
-    } else if (err.message.includes('No data')) {
+    } else if (error.message.includes('No data')) {
       toastError('Aucune donnée à archiver');
     } else {
       toastError('Erreur lors de la création de l\'archive');
@@ -283,10 +283,10 @@ export async function deleteArchive(year, api, loadResetSafetyCheck) {
     toastSuccess(`Archive ${year} supprimée`);
     await loadArchives(api);
     await loadResetSafetyCheck();
-  } catch (err) {
-    if (err.message.includes('development')) {
+  } catch (error) {
+    if (error.message.includes('development')) {
       toastError('La suppression n\'est autorisée qu\'en environnement de développement');
-    } else if (err.message.includes('not found')) {
+    } else if (error.message.includes('not found')) {
       toastError('Archive introuvable');
     } else {
       toastError('Erreur lors de la suppression de l\'archive');
@@ -314,7 +314,7 @@ export async function checkExpiration(api) {
         resultEl.textContent = `${response.checked} archive(s) vérifiées. Aucune expiration.`;
       }
     }
-  } catch (err) {
+  } catch {
     if (resultEl) {
       resultEl.classList.remove('hidden');
       resultEl.className = 'result-text warning';
@@ -360,7 +360,7 @@ export async function loadResetSafetyCheck(api) {
       `;
       if (resetBtn) resetBtn.disabled = true;
     }
-  } catch (err) {
+  } catch {
     container.innerHTML = '<p>Erreur lors de la vérification</p>';
   }
 }
@@ -378,12 +378,16 @@ export async function loadEventInfo(api) {
     }
 
     const teamsEl = $('current-teams-count');
-    const participantsEl = $('current-participants-count');
+    const participantsCountEl = $('current-participants-count');
     if (teamsEl && teamsData) {
       teamsEl.textContent = teamsData.length;
     }
-  } catch (err) {
-    console.error('Failed to load event info:', err);
+    if (participantsCountEl && teamsData) {
+      const participantCount = teamsData.reduce((sum, team) => sum + (team.members?.length || 0), 0);
+      participantsCountEl.textContent = participantCount;
+    }
+  } catch (error) {
+    console.error('Failed to load event info:', error);
   }
 }
 
@@ -409,8 +413,8 @@ export async function resetData(api, loadData, loadSafetyCheck) {
     toastSuccess('Données réinitialisées avec succès');
     await loadData();
     await loadSafetyCheck();
-  } catch (err) {
-    if (err.message.includes('archive')) {
+  } catch (error) {
+    if (error.message.includes('archive')) {
       toastError('Créez d\'abord une archive avant de réinitialiser');
     } else {
       toastError('Erreur lors de la réinitialisation');

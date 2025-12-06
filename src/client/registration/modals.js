@@ -54,8 +54,8 @@ export async function handleTeamViewSubmit() {
   try {
     const result = await viewTeamMembers(state.selectedTeamId, password);
     showTeamMembers(result.team);
-  } catch (err) {
-    elements.teamViewError.textContent = err.message;
+  } catch (error) {
+    elements.teamViewError.textContent = error.message;
     elements.teamViewError.classList.remove('hidden');
   } finally {
     elements.teamViewSubmit.disabled = false;

@@ -32,8 +32,8 @@ export async function loadPizzaData(api) {
     renderPizzaStats(data.stats);
     renderPizza();
     updatePizzaBadge(data.stats.pending);
-  } catch (err) {
-    console.error('Error loading pizza data:', err);
+  } catch (error) {
+    console.error('Error loading pizza data:', error);
     toastError('Erreur lors du chargement des pizzas');
   }
 }
@@ -162,33 +162,40 @@ export function renderPizza() {
   filtered.sort((a, b) => {
     let valA, valB;
     switch (pizzaSortKey) {
-      case 'name':
+      case 'name': {
         valA = `${a.first_name} ${a.last_name}`.toLowerCase();
         valB = `${b.first_name} ${b.last_name}`.toLowerCase();
         break;
-      case 'team':
+      }
+      case 'team': {
         valA = (a.team_name || '').toLowerCase();
         valB = (b.team_name || '').toLowerCase();
         break;
-      case 'pizza':
+      }
+      case 'pizza': {
         valA = a.food_diet || '';
         valB = b.food_diet || '';
         break;
-      case 'checkin':
+      }
+      case 'checkin': {
         valA = a.checked_in || 0;
         valB = b.checked_in || 0;
         break;
-      case 'status':
+      }
+      case 'status': {
         valA = a.pizza_received || 0;
         valB = b.pizza_received || 0;
         break;
-      case 'time':
+      }
+      case 'time': {
         valA = a.pizza_received_at || '';
         valB = b.pizza_received_at || '';
         break;
-      default:
+      }
+      default: {
         valA = a.first_name.toLowerCase();
         valB = b.first_name.toLowerCase();
+      }
     }
 
     if (valA < valB) return pizzaSortDir === 'asc' ? -1 : 1;
@@ -255,8 +262,8 @@ export async function handleGivePizza(memberId, api, loadData) {
     await api(`/admin/pizza/give/${memberId}`, { method: 'POST' });
     await loadData();
     toastSuccess('Pizza distribuée');
-  } catch (err) {
-    console.error('Error giving pizza:', err);
+  } catch (error) {
+    console.error('Error giving pizza:', error);
     toastError('Erreur lors de la distribution');
   }
 }
@@ -272,8 +279,8 @@ export async function handleRevokePizza(memberId, api, loadData) {
     await api(`/admin/pizza/revoke/${memberId}`, { method: 'POST' });
     await loadData();
     toastSuccess('Distribution annulée');
-  } catch (err) {
-    console.error('Error revoking pizza:', err);
+  } catch (error) {
+    console.error('Error revoking pizza:', error);
     toastError('Erreur lors de l\'annulation');
   }
 }
@@ -285,11 +292,11 @@ export async function handleRevokePizza(memberId, api, loadData) {
 export function initPizza(api) {
   // Load pizza types from settings
   if (settingsState.pizzas) {
-    settingsState.pizzas.forEach(p => { pizzaTypes[p.id] = p.name; });
+    for (const p of settingsState.pizzas) { pizzaTypes[p.id] = p.name; }
   }
 
   if (pizzasConfig && pizzasConfig.length > 0) {
-    pizzasConfig.forEach(p => { pizzaTypes[p.id] = p.name; });
+    for (const p of pizzasConfig) { pizzaTypes[p.id] = p.name; }
   }
 
   // Populate type filter
@@ -311,13 +318,13 @@ export function initPizza(api) {
 
   // Filter pills
   const filterRadios = document.querySelectorAll('input[name="pizza-filter"]');
-  filterRadios.forEach(radio => {
+  for (const radio of filterRadios) {
     radio.addEventListener('change', (e) => {
       setPizzaFilter(e.target.value);
       updatePizzaFilterPills();
       renderPizza();
     });
-  });
+  }
 
   // Type filter
   const typeFilterSelect = $('pizza-type-filter');
@@ -330,7 +337,7 @@ export function initPizza(api) {
 
   // Sortable headers
   const sortableHeaders = document.querySelectorAll('#pizza-table .sortable-header');
-  sortableHeaders.forEach(header => {
+  for (const header of sortableHeaders) {
     header.addEventListener('click', () => {
       const sortKey = header.dataset.sort;
       if (pizzaSortKey === sortKey) {
@@ -342,7 +349,7 @@ export function initPizza(api) {
       updatePizzaSortIndicators();
       renderPizza();
     });
-  });
+  }
 
   // Refresh button
   const refreshBtn = $('refresh-pizza-btn');
@@ -357,14 +364,14 @@ export function initPizza(api) {
  * Update filter pills
  */
 function updatePizzaFilterPills() {
-  document.querySelectorAll('[id^="pizza-filter-"]').forEach(pill => {
+  for (const pill of document.querySelectorAll('[id^="pizza-filter-"]')) {
     const radio = pill.querySelector('input[type="radio"]');
     if (radio?.checked) {
       pill.classList.add('active');
     } else {
       pill.classList.remove('active');
     }
-  });
+  }
 }
 
 /**
@@ -372,7 +379,7 @@ function updatePizzaFilterPills() {
  */
 function updatePizzaSortIndicators() {
   const headers = document.querySelectorAll('#pizza-table .sortable-header');
-  headers.forEach(header => {
+  for (const header of headers) {
     const sortKey = header.dataset.sort;
     if (sortKey === pizzaSortKey) {
       header.setAttribute('data-sort-dir', pizzaSortDir);
@@ -381,5 +388,5 @@ function updatePizzaSortIndicators() {
       header.removeAttribute('data-sort-dir');
       header.querySelector('.sort-indicator').textContent = '@sfs:arrow.up.arrow.down@';
     }
-  });
+  }
 }

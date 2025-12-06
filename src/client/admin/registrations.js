@@ -3,7 +3,7 @@
  */
 /* eslint-env browser */
 
-import { $, escapeHtml, truncateText, formatTeamWithRoom } from './utils.js';
+import { $, escapeHtml, formatTeamWithRoom } from './utils.js';
 import { toastSuccess, toastError } from './toast.js';
 import { openModal, closeModal } from './modals.js';
 import {
@@ -20,6 +20,12 @@ import {
   allParticipantsSortDir,
   setAllParticipantsSortDir
 } from './state.js';
+
+// Element ID constants
+const EL_MEMBER_FORM_TEAM = 'member-form-team';
+const EL_MEMBER_FORM_FOOD = 'member-form-food';
+const EL_CONFIRM_MODAL = 'confirm-modal';
+const MSG_EXPORT_ERROR = 'Erreur export: ';
 
 // Team sort state per team
 const teamSortState = {};
@@ -53,17 +59,13 @@ export function renderStats(stats, statsGrid, foodStats) {
   }
 
   if (foodStats) {
-    if (!stats.food_preferences || stats.food_preferences.length === 0) {
-      foodStats.innerHTML = '<p>Aucune préférence enregistrée</p>';
-    } else {
-      foodStats.innerHTML = stats.food_preferences
+    foodStats.innerHTML = !stats.food_preferences || stats.food_preferences.length === 0 ? '<p>Aucune préférence enregistrée</p>' : stats.food_preferences
         .map(item => `
           <div class="food-item">
             <span class="count">${item.count}</span> ${escapeHtml(item.food_diet)}
           </div>
         `)
         .join('');
-    }
   }
 }
 
@@ -95,7 +97,7 @@ export function renderTeams(teams, container) {
           <button type="button" class="icon-btn" onclick="editTeam(${team.id})" title="Modifier" aria-label="Modifier l'équipe">􀈊</button>
           <button type="button" class="action-btn" onclick="exportTeam(${team.id}, '${escapeHtml(team.name)}')">Exporter CSV</button>
           <button type="button" class="action-btn primary" onclick="exportTeamOfficial(${team.id}, '${escapeHtml(team.name)}')">Export Officiel</button>
-          ${team.name !== 'Organisation' ? `<button type="button" class="icon-btn danger" onclick="confirmDeleteTeam(${team.id}, '${escapeHtml(team.name)}')" title="Supprimer" aria-label="Supprimer l'équipe">􀈑</button>` : ''}
+          ${team.name === 'Organisation' ? '' : `<button type="button" class="icon-btn danger" onclick="confirmDeleteTeam(${team.id}, '${escapeHtml(team.name)}')" title="Supprimer" aria-label="Supprimer l'équipe">􀈑</button>`}
         </div>
         ${renderMembersTable(team.members, team.id)}
       </div>
@@ -167,7 +169,7 @@ export function renderMembersTable(members, teamId) {
  * Update team select dropdown
  */
 export function updateTeamSelect() {
-  const select = $('member-form-team');
+  const select = $(EL_MEMBER_FORM_TEAM);
   if (select) {
     select.innerHTML = teamsData.map(t =>
       `<option value="${t.id}">${escapeHtml(t.name)}</option>`
@@ -179,7 +181,7 @@ export function updateTeamSelect() {
  * Update pizza select dropdown
  */
 export function updatePizzaSelect() {
-  const select = $('member-form-food');
+  const select = $(EL_MEMBER_FORM_FOOD);
   if (!select) return;
 
   select.innerHTML = '<option value="">Aucune</option>' +
@@ -203,15 +205,15 @@ export function toggleTeam(teamId) {
  */
 export function toggleSelectAll(teamId, checked, updateDeleteButton) {
   const block = document.querySelector(`[data-team-id="${teamId}"]`);
-  block.querySelectorAll('.member-row input[type="checkbox"]').forEach(cb => {
+  for (const cb of block.querySelectorAll('.member-row input[type="checkbox"]')) {
     cb.checked = checked;
-    const memberId = parseInt(cb.closest('.member-row').dataset.memberId);
+    const memberId = Number.parseInt(cb.closest('.member-row').dataset.memberId);
     if (checked) {
       selectedMembers.add(memberId);
     } else {
       selectedMembers.delete(memberId);
     }
-  });
+  }
   updateDeleteButton();
 }
 
@@ -253,21 +255,25 @@ export function sortTeamMembers(teamId, sortKey, headerElement) {
   team.members.sort((a, b) => {
     let valA, valB;
     switch (key) {
-      case 'name':
+      case 'name': {
         valA = `${a.first_name} ${a.last_name}`.toLowerCase();
         valB = `${b.first_name} ${b.last_name}`.toLowerCase();
         break;
-      case 'email':
+      }
+      case 'email': {
         valA = a.email.toLowerCase();
         valB = b.email.toLowerCase();
         break;
-      case 'bac':
+      }
+      case 'bac': {
         valA = a.bac_level || 0;
         valB = b.bac_level || 0;
         break;
-      default:
+      }
+      default: {
         valA = a.first_name.toLowerCase();
         valB = b.first_name.toLowerCase();
+      }
     }
 
     if (valA < valB) return dir === 'asc' ? -1 : 1;
@@ -277,7 +283,7 @@ export function sortTeamMembers(teamId, sortKey, headerElement) {
 
   // Update sort indicators
   const table = headerElement.closest('table');
-  table.querySelectorAll('.sortable-header').forEach(h => {
+  for (const h of table.querySelectorAll('.sortable-header')) {
     if (h.dataset.sort === key) {
       h.setAttribute('data-sort-dir', dir);
       h.querySelector('.sort-indicator').textContent = dir === 'asc' ? '@sfs:chevron.up@' : '@sfs:chevron.down@';
@@ -285,7 +291,7 @@ export function sortTeamMembers(teamId, sortKey, headerElement) {
       h.removeAttribute('data-sort-dir');
       h.querySelector('.sort-indicator').textContent = '@sfs:arrow.up.arrow.down@';
     }
-  });
+  }
 
   // Re-render the table body
   const tbody = table.querySelector('tbody');
@@ -349,12 +355,12 @@ export function editMember(memberId, teamId) {
 
   $('member-modal-title').textContent = 'Modifier le membre';
   $('member-form-id').value = memberId;
-  $('member-form-team').value = teamId;
+  $(EL_MEMBER_FORM_TEAM).value = teamId;
   $('member-form-firstname').value = member.first_name;
   $('member-form-lastname').value = member.last_name;
   $('member-form-email').value = member.email;
   $('member-form-bac').value = member.bac_level;
-  $('member-form-food').value = member.food_diet || '';
+  $(EL_MEMBER_FORM_FOOD).value = member.food_diet || '';
   $('member-form-leader').checked = !!member.is_leader;
   openModal('member-modal');
 }
@@ -365,12 +371,12 @@ export function editMember(memberId, teamId) {
 export function openAddMemberModal() {
   $('member-modal-title').textContent = 'Nouveau membre';
   $('member-form-id').value = '';
-  $('member-form-team').value = teamsData[0]?.id || '';
+  $(EL_MEMBER_FORM_TEAM).value = teamsData[0]?.id || '';
   $('member-form-firstname').value = '';
   $('member-form-lastname').value = '';
   $('member-form-email').value = '';
   $('member-form-bac').value = '0';
-  $('member-form-food').value = '';
+  $(EL_MEMBER_FORM_FOOD).value = '';
   $('member-form-leader').checked = false;
   openModal('member-modal');
 }
@@ -385,7 +391,7 @@ export function confirmDeleteTeam(teamId, teamName, onConfirm) {
   $('confirm-message').textContent =
     `Êtes-vous sûr de vouloir supprimer l'équipe "${teamName}" et tous ses membres ?`;
   $('confirm-delete-btn').onclick = () => onConfirm(teamId);
-  openModal('confirm-modal');
+  openModal(EL_CONFIRM_MODAL);
 }
 
 /**
@@ -398,7 +404,7 @@ export function confirmDeleteMember(memberId, memberName, onConfirm) {
   $('confirm-message').textContent =
     `Êtes-vous sûr de vouloir supprimer ${memberName} ?`;
   $('confirm-delete-btn').onclick = () => onConfirm(memberId);
-  openModal('confirm-modal');
+  openModal(EL_CONFIRM_MODAL);
 }
 
 /**
@@ -430,8 +436,8 @@ export async function handleTeamSubmit(e, api, loadData) {
     }
     closeModal('team-modal');
     loadData();
-  } catch (err) {
-    toastError('Erreur: ' + err.message);
+  } catch (error) {
+    toastError('Erreur: ' + error.message);
   }
 }
 
@@ -444,12 +450,12 @@ export async function handleTeamSubmit(e, api, loadData) {
 export async function handleMemberSubmit(e, api, loadData) {
   e.preventDefault();
   const id = $('member-form-id').value;
-  const teamId = parseInt($('member-form-team').value);
+  const teamId = Number.parseInt($(EL_MEMBER_FORM_TEAM).value);
   const firstName = $('member-form-firstname').value;
   const lastName = $('member-form-lastname').value;
   const email = $('member-form-email').value;
-  const bacLevel = parseInt($('member-form-bac').value);
-  const foodDiet = $('member-form-food').value;
+  const bacLevel = Number.parseInt($('member-form-bac').value);
+  const foodDiet = $(EL_MEMBER_FORM_FOOD).value;
   const isLeader = $('member-form-leader').checked;
 
   try {
@@ -468,8 +474,8 @@ export async function handleMemberSubmit(e, api, loadData) {
     }
     closeModal('member-modal');
     loadData();
-  } catch (err) {
-    toastError('Erreur: ' + err.message);
+  } catch (error) {
+    toastError('Erreur: ' + error.message);
   }
 }
 
@@ -483,10 +489,10 @@ export async function deleteTeam(teamId, api, loadData) {
   try {
     await api(`/admin/teams/${teamId}`, { method: 'DELETE' });
     toastSuccess('Équipe supprimée');
-    closeModal('confirm-modal');
+    closeModal(EL_CONFIRM_MODAL);
     loadData();
-  } catch (err) {
-    toastError('Erreur: ' + err.message);
+  } catch (error) {
+    toastError('Erreur: ' + error.message);
   }
 }
 
@@ -501,12 +507,12 @@ export async function deleteMember(memberId, api, loadData, updateDeleteButton) 
   try {
     await api(`/admin/members/${memberId}`, { method: 'DELETE' });
     toastSuccess('Membre supprimé');
-    closeModal('confirm-modal');
+    closeModal(EL_CONFIRM_MODAL);
     selectedMembers.delete(memberId);
     updateDeleteButton();
     loadData();
-  } catch (err) {
-    toastError('Erreur: ' + err.message);
+  } catch (error) {
+    toastError('Erreur: ' + error.message);
   }
 }
 
@@ -525,18 +531,18 @@ export async function deleteSelectedMembers(api, loadData, updateDeleteButton) {
     try {
       await api('/admin/members/delete-batch', {
         method: 'POST',
-        body: JSON.stringify({ memberIds: Array.from(selectedMembers) })
+        body: JSON.stringify({ memberIds: [...selectedMembers] })
       });
       toastSuccess(`${selectedMembers.size} membre(s) supprimé(s)`);
-      closeModal('confirm-modal');
+      closeModal(EL_CONFIRM_MODAL);
       selectedMembers.clear();
       updateDeleteButton();
       loadData();
-    } catch (err) {
-      toastError('Erreur: ' + err.message);
+    } catch (error) {
+      toastError('Erreur: ' + error.message);
     }
   };
-  openModal('confirm-modal');
+  openModal(EL_CONFIRM_MODAL);
 }
 
 /**
@@ -548,8 +554,8 @@ export function selectAllParticipants(updateDeleteButton, selectAllBtn) {
   const allCheckboxes = document.querySelectorAll('.member-row input[type="checkbox"]');
   const allSelected = selectedMembers.size === allCheckboxes.length && allCheckboxes.length > 0;
 
-  allCheckboxes.forEach(cb => {
-    const memberId = parseInt(cb.closest('.member-row').dataset.memberId);
+  for (const cb of allCheckboxes) {
+    const memberId = Number.parseInt(cb.closest('.member-row').dataset.memberId);
     if (allSelected) {
       cb.checked = false;
       selectedMembers.delete(memberId);
@@ -557,13 +563,13 @@ export function selectAllParticipants(updateDeleteButton, selectAllBtn) {
       cb.checked = true;
       selectedMembers.add(memberId);
     }
-  });
+  }
 
-  document.querySelectorAll('.team-block input[type="checkbox"]').forEach(cb => {
+  for (const cb of document.querySelectorAll('.team-block input[type="checkbox"]')) {
     if (!cb.closest('.member-row')) {
       cb.checked = !allSelected;
     }
-  });
+  }
 
   updateDeleteButton();
   selectAllBtn.textContent = allSelected ? 'Tout sélectionner' : 'Tout désélectionner';
@@ -582,16 +588,16 @@ export function renderAllParticipants() {
 
   // Build flat list from teamsData
   const participantsData = [];
-  teamsData.forEach(team => {
+  for (const team of teamsData) {
     if (team.members) {
-      team.members.forEach(member => {
+      for (const member of team.members) {
         participantsData.push({
           ...member,
           team_name: team.name
         });
-      });
+      }
     }
-  });
+  }
   setAllParticipantsData(participantsData);
 
   let filtered = [...allParticipantsData];
@@ -611,33 +617,36 @@ export function renderAllParticipants() {
   filtered.sort((a, b) => {
     let valA, valB;
     switch (allParticipantsSortKey) {
-      case 'name':
-        valA = `${a.first_name} ${a.last_name}`.toLowerCase();
-        valB = `${b.first_name} ${b.last_name}`.toLowerCase();
-        break;
-      case 'email':
+      case 'email': {
         valA = a.email.toLowerCase();
         valB = b.email.toLowerCase();
         break;
-      case 'team':
+      }
+      case 'team': {
         valA = a.team_name.toLowerCase();
         valB = b.team_name.toLowerCase();
         break;
-      case 'pizza':
+      }
+      case 'pizza': {
         valA = (a.food_diet || '').toLowerCase();
         valB = (b.food_diet || '').toLowerCase();
         break;
-      case 'bac':
+      }
+      case 'bac': {
         valA = a.bac_level || 0;
         valB = b.bac_level || 0;
         break;
-      case 'manager':
+      }
+      case 'manager': {
         valA = a.is_leader ? 1 : 0;
         valB = b.is_leader ? 1 : 0;
         break;
-      default:
+      }
+      default: {
+        // 'name' or any other value defaults to sorting by full name
         valA = `${a.first_name} ${a.last_name}`.toLowerCase();
         valB = `${b.first_name} ${b.last_name}`.toLowerCase();
+      }
     }
 
     if (valA < valB) return allParticipantsSortDir === 'asc' ? -1 : 1;
@@ -677,14 +686,14 @@ export function sortAllParticipants(key) {
   }
 
   // Update sort indicators
-  document.querySelectorAll('#all-participants-table .sortable-header').forEach(h => {
+  for (const h of document.querySelectorAll('#all-participants-table .sortable-header')) {
     const indicator = h.querySelector('.sort-indicator');
     if (h.dataset.sort === allParticipantsSortKey) {
       indicator.textContent = allParticipantsSortDir === 'asc' ? '@sfs:chevron.up@' : '@sfs:chevron.down@';
     } else {
       indicator.textContent = '@sfs:arrow.up.arrow.down@';
     }
-  });
+  }
 
   renderAllParticipants();
 }
@@ -730,10 +739,10 @@ export function filterTeams() {
 
   const teamBlocks = container.querySelectorAll('.team-block');
 
-  teamBlocks.forEach(block => {
+  for (const block of teamBlocks) {
     const teamName = block.querySelector('.team-header h3')?.textContent.toLowerCase() || '';
-    const memberNames = Array.from(block.querySelectorAll('.member-row td:nth-child(2)')).map(td => td.textContent.toLowerCase());
-    const memberEmails = Array.from(block.querySelectorAll('.member-row td:nth-child(3)')).map(td => td.textContent.toLowerCase());
+    const memberNames = [...block.querySelectorAll('.member-row td:nth-child(2)')].map(td => td.textContent.toLowerCase());
+    const memberEmails = [...block.querySelectorAll('.member-row td:nth-child(3)')].map(td => td.textContent.toLowerCase());
 
     const matchesTeam = teamName.includes(teamsSearchTerm);
     const matchesMember = memberNames.some(name => name.includes(teamsSearchTerm)) ||
@@ -747,7 +756,7 @@ export function filterTeams() {
     } else {
       block.style.display = 'none';
     }
-  });
+  }
 }
 
 // ============================================================
@@ -767,13 +776,13 @@ export async function exportTeam(teamId, teamName, api) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `participants_${teamName.replace(/[^a-z0-9]/gi, '_')}.csv`;
+    a.download = `participants_${teamName.replaceAll(/[^a-z0-9]/gi, '_')}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  } catch (err) {
-    toastError('Erreur export: ' + err.message);
+  } catch (error) {
+    toastError(MSG_EXPORT_ERROR + error.message);
   }
 }
 
@@ -790,14 +799,14 @@ export async function exportTeamOfficial(teamId, teamName, api) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `participants_officiel_${teamName.replace(/[^a-z0-9]/gi, '_')}.csv`;
+    a.download = `participants_officiel_${teamName.replaceAll(/[^a-z0-9]/gi, '_')}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toastSuccess('Export officiel téléchargé');
-  } catch (err) {
-    toastError('Erreur export: ' + err.message);
+  } catch (error) {
+    toastError(MSG_EXPORT_ERROR + error.message);
   }
 }
 
@@ -817,8 +826,8 @@ export async function handleExportAll(api) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  } catch (err) {
-    toastError('Erreur export: ' + err.message);
+  } catch (error) {
+    toastError(MSG_EXPORT_ERROR + error.message);
   }
 }
 
@@ -839,7 +848,7 @@ export async function handleExportOfficial(api) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toastSuccess('Export officiel téléchargé');
-  } catch (err) {
-    toastError('Erreur export: ' + err.message);
+  } catch (error) {
+    toastError(MSG_EXPORT_ERROR + error.message);
   }
 }

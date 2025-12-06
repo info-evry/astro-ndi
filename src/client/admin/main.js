@@ -12,26 +12,21 @@
 
 // Core utilities
 import { $ } from './utils.js';
-import { toastSuccess, toastError } from './toast.js';
+import { toastError } from './toast.js';
 import { createApiClient, setToken } from './api.js';
 import { closeModal, toggleDisclosure } from './modals.js';
 import { initTabs } from './tabs.js';
 
 // State management
 import {
-  teamsData,
-  setTeamsData,
   selectedMembers,
-  setPizzasConfig,
-  pricingSettings,
-  attendanceData
+  setPizzasConfig
 } from './state.js';
 
 // Domain modules
 import {
   renderStats,
   renderTeams,
-  updateTeamSelect,
   toggleTeam,
   toggleSelectAll,
   toggleMemberSelect,
@@ -140,9 +135,9 @@ async function loadData() {
       loadSettings(api)
     ]);
 
-  } catch (err) {
-    console.error('Error loading data:', err);
-    if (err.message === 'Unauthorized') {
+  } catch (error) {
+    console.error('Error loading data:', error);
+    if (error.message === 'Unauthorized') {
       showAuth();
       localStorage.removeItem('ndi_admin_token');
       adminToken = '';
@@ -209,8 +204,8 @@ async function handleAuth() {
   try {
     await loadData();
     showAdmin();
-  } catch (err) {
-    showAuthError(err.message === 'Unauthorized' ? 'Token invalide' : err.message);
+  } catch (error) {
+    showAuthError(error.message === 'Unauthorized' ? 'Token invalide' : error.message);
     localStorage.removeItem('ndi_admin_token');
     adminToken = '';
   }
@@ -319,13 +314,13 @@ async function init() {
   elements.memberForm?.addEventListener('submit', (e) => handleMemberSubmit(e, api, loadData));
 
   // Modal close on backdrop click
-  document.querySelectorAll('.modal').forEach(modal => {
+  for (const modal of document.querySelectorAll('.modal')) {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
         modal.classList.add('hidden');
       }
     });
-  });
+  }
 
   // Initialize tabs and modules
   initTabs();
@@ -343,9 +338,9 @@ async function init() {
       initImport(api, loadData);
       initAllParticipants();
       initArchives(api, loadData);
-    } catch (err) {
+    } catch (error) {
       showAuth();
-      if (err.message === 'Unauthorized') {
+      if (error.message === 'Unauthorized') {
         localStorage.removeItem('ndi_admin_token');
         adminToken = '';
       }
@@ -359,5 +354,5 @@ async function init() {
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
-  init();
+  init(); // eslint-disable-line unicorn/prefer-top-level-await -- IIFE pattern for broader compatibility
 }

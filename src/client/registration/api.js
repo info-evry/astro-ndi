@@ -63,10 +63,9 @@ export async function loadStats() {
  */
 export async function loadPricing() {
   try {
-    const pricing = await api('/payment/pricing');
-    return pricing;
-  } catch (err) {
-    console.log('Pricing not available:', err.message);
+    return await api('/payment/pricing');
+  } catch (error) {
+    console.log('Pricing not available:', error.message);
     return null;
   }
 }

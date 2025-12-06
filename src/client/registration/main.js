@@ -30,22 +30,22 @@ function getBaseUrl() {
  */
 function setupEventListeners() {
   // Team mode toggle
-  document.querySelectorAll('input[name="team-mode"]').forEach(radio => {
+  for (const radio of document.querySelectorAll('input[name="team-mode"]')) {
     radio.addEventListener('change', (e) => {
       setTeamMode(e.target.value === 'new');
       elements.newTeamFields.classList.toggle('hidden', !state.isNewTeam);
       elements.joinTeamFields.classList.toggle('hidden', state.isNewTeam);
       updateLeaderToggle();
     });
-  });
+  }
 
   // Payment method selection
-  document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
+  for (const radio of document.querySelectorAll('input[name="paymentMethod"]')) {
     radio.addEventListener('change', (e) => {
-      document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
+      for (const m of document.querySelectorAll('.payment-method')) m.classList.remove('selected');
       e.target.closest('.payment-method').classList.add('selected');
     });
-  });
+  }
 
   // Form submission
   elements.form?.addEventListener('submit', handleSubmit);
@@ -92,8 +92,8 @@ async function init() {
     // Setup event listeners
     setupEventListeners();
 
-  } catch (err) {
-    console.error('Initialization error:', err);
+  } catch (error) {
+    console.error('Initialization error:', error);
     showErrors(['Erreur de chargement. Veuillez rafraîchir la page.']);
   }
 }
@@ -102,5 +102,5 @@ async function init() {
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
-  init();
+  init(); // eslint-disable-line unicorn/prefer-top-level-await -- IIFE pattern for broader compatibility
 }

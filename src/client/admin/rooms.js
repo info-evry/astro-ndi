@@ -34,8 +34,8 @@ export async function loadRoomsData(api) {
     renderPizzaByRoom(data.pizza_by_room || []);
     renderRooms();
     updateRoomsBadge(data.stats?.unassigned_teams || 0);
-  } catch (err) {
-    console.error('Error loading rooms data:', err);
+  } catch (error) {
+    console.error('Error loading rooms data:', error);
     toastError('Erreur lors du chargement des salles');
   }
 }
@@ -47,10 +47,10 @@ export async function loadRoomsData(api) {
 export function renderPizzaByRoom(pizzaByRoom) {
   // Load pizza types
   if (settingsState.pizzas) {
-    settingsState.pizzas.forEach(p => { pizzaTypes[p.id] = p.name; });
+    for (const p of settingsState.pizzas) { pizzaTypes[p.id] = p.name; }
   }
   if (pizzasConfig && pizzasConfig.length > 0) {
-    pizzasConfig.forEach(p => { pizzaTypes[p.id] = p.name; });
+    for (const p of pizzasConfig) { pizzaTypes[p.id] = p.name; }
   }
 
   const container = $('room-pizza-container');
@@ -161,21 +161,21 @@ export function renderRooms() {
   filtered.sort((a, b) => {
     let valA, valB;
     switch (roomsSortKey) {
-      case 'name':
-        valA = a.name.toLowerCase();
-        valB = b.name.toLowerCase();
-        break;
-      case 'members':
+      case 'members': {
         valA = a.member_count || 0;
         valB = b.member_count || 0;
         break;
-      case 'room':
+      }
+      case 'room': {
         valA = (a.room || '').toLowerCase();
         valB = (b.room || '').toLowerCase();
         break;
-      default:
+      }
+      default: {
+        // 'name' or any other value defaults to sorting by name
         valA = a.name.toLowerCase();
         valB = b.name.toLowerCase();
+      }
     }
 
     if (valA < valB) return roomsSortDir === 'asc' ? -1 : 1;
@@ -241,8 +241,8 @@ export async function handleRoomChange(teamId, room, api, loadData) {
     });
     await loadData();
     toastSuccess(room ? `Équipe assignée à ${room}` : 'Salle retirée');
-  } catch (err) {
-    console.error('Error setting room:', err);
+  } catch (error) {
+    console.error('Error setting room:', error);
     toastError('Erreur lors de l\'assignation');
   }
 }
@@ -261,8 +261,8 @@ export async function handleClearRoom(teamId, api, loadData) {
     });
     await loadData();
     toastSuccess('Salle retirée');
-  } catch (err) {
-    console.error('Error clearing room:', err);
+  } catch (error) {
+    console.error('Error clearing room:', error);
     toastError('Erreur lors de la suppression');
   }
 }
@@ -291,17 +291,17 @@ export function initRooms(api) {
   }
 
   // Filter pills
-  document.querySelectorAll('input[name="rooms-filter"]').forEach(radio => {
+  for (const radio of document.querySelectorAll('input[name="rooms-filter"]')) {
     radio.addEventListener('change', (e) => {
       setRoomFilter(e.target.value);
       updateRoomsFilterPills();
       renderRooms();
     });
-  });
+  }
 
   // Sortable headers
   const sortableHeaders = document.querySelectorAll('#rooms-table .sortable-header');
-  sortableHeaders.forEach(header => {
+  for (const header of sortableHeaders) {
     header.addEventListener('click', () => {
       const sortKey = header.dataset.sort;
       if (roomsSortKey === sortKey) {
@@ -313,7 +313,7 @@ export function initRooms(api) {
       updateRoomsSortIndicators();
       renderRooms();
     });
-  });
+  }
 
   // Refresh button
   const refreshBtn = $('refresh-rooms-btn');
@@ -328,14 +328,14 @@ export function initRooms(api) {
  * Update filter pills
  */
 function updateRoomsFilterPills() {
-  document.querySelectorAll('[id^="rooms-filter-"]').forEach(pill => {
+  for (const pill of document.querySelectorAll('[id^="rooms-filter-"]')) {
     const radio = pill.querySelector('input[type="radio"]');
     if (radio?.checked) {
       pill.classList.add('active');
     } else {
       pill.classList.remove('active');
     }
-  });
+  }
 }
 
 /**
@@ -343,7 +343,7 @@ function updateRoomsFilterPills() {
  */
 function updateRoomsSortIndicators() {
   const headers = document.querySelectorAll('#rooms-table .sortable-header');
-  headers.forEach(header => {
+  for (const header of headers) {
     const sortKey = header.dataset.sort;
     if (sortKey === roomsSortKey) {
       header.setAttribute('data-sort-dir', roomsSortDir);
@@ -352,5 +352,5 @@ function updateRoomsSortIndicators() {
       header.removeAttribute('data-sort-dir');
       header.querySelector('.sort-indicator').textContent = '@sfs:arrow.up.arrow.down@';
     }
-  });
+  }
 }
