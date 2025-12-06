@@ -39,7 +39,7 @@ export function getTierPrice(tier, config) {
 
 /**
  * Get the on-site payment price for a tier
- * @param {'asso_member'|'non_member'|'late'} tier - On-site payment tier
+ * @param {'asso_member'|'non_member'|'late'|'organisation'} tier - On-site payment tier
  * @param {object} config - Pricing configuration
  * @returns {number} Price in cents
  */
@@ -51,6 +51,10 @@ export function getOnsitePrice(tier, config) {
   } = config || {};
 
   switch (tier) {
+    case 'organisation': {
+      // Organization members are always free
+      return 0;
+    }
     case 'asso_member': {
       return priceAssoMember;
     }
@@ -90,18 +94,20 @@ export function getTierLabel(tier, locale = 'fr') {
 
 /**
  * Get on-site tier label
- * @param {'asso_member'|'non_member'|'late'} tier - On-site tier
+ * @param {'asso_member'|'non_member'|'late'|'organisation'} tier - On-site tier
  * @param {string} locale - Locale (default: 'fr')
  * @returns {string} Tier label
  */
 export function getOnsiteTierLabel(tier, locale = 'fr') {
   const labels = {
     fr: {
+      organisation: 'Organisation (gratuit)',
       asso_member: 'Membre asso',
       non_member: 'Non-membre',
       late: 'Retardataire'
     },
     en: {
+      organisation: 'Organization (free)',
       asso_member: 'Association member',
       non_member: 'Non-member',
       late: 'Late arrival'
@@ -214,19 +220,28 @@ export function calculateRevenue(members) {
  * Determine available payment options based on time
  * @param {string} lateCutoffTime - Late cutoff time in HH:MM format
  * @param {Date} now - Current time (for testing)
+ * @param {boolean} includeOrg - Whether to include organisation tier (default: false)
  * @returns {object} Available options
  */
-export function getAvailablePaymentOptions(lateCutoffTime, now = new Date()) {
+export function getAvailablePaymentOptions(lateCutoffTime, now = new Date(), includeOrg = false) {
   const [hours, minutes] = (lateCutoffTime || '19:00').split(':').map(Number);
   const cutoff = new Date(now);
   cutoff.setHours(hours, minutes, 0, 0);
 
   const isAfterCutoff = now >= cutoff;
 
+  // Base options based on time
+  let options = isAfterCutoff
+    ? ['asso_member', 'late']
+    : ['asso_member', 'non_member'];
+
+  // Add organisation tier if requested (for admin use)
+  if (includeOrg) {
+    options = ['organisation', ...options];
+  }
+
   return {
     isAfterCutoff,
-    options: isAfterCutoff
-      ? ['asso_member', 'late']
-      : ['asso_member', 'non_member']
+    options
   };
 }

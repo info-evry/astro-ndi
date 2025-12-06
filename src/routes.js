@@ -52,7 +52,8 @@ import {
   checkExpiration,
   getEventYear,
   resetData,
-  checkResetSafety
+  checkResetSafety,
+  deleteArchive
 } from './api/admin/archives.js';
 
 export function createRouter() {
@@ -126,6 +127,7 @@ export function createRouter() {
   router.get('/api/admin/event-year', getEventYear);
   router.post('/api/admin/reset', resetData);
   router.get('/api/admin/reset/check', checkResetSafety);
+  router.delete('/api/admin/archives/:year', deleteArchive);
 
   return router;
 }

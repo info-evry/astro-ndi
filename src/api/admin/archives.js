@@ -4,7 +4,6 @@
  */
 
 import { json, error } from '../../lib/router.js';
-import { generateCSV } from '../../lib/csv.js';
 import { verifyAdmin } from '../../shared/auth.js';
 import * as archivesDb from '../../database/db.archives.js';
 
@@ -121,7 +120,7 @@ export async function createArchive(request, env) {
 }
 
 /**
- * GET /api/admin/archives/:year/export - Export archive as ZIP
+ * GET /api/admin/archives/:year/export - Export archive as JSON
  */
 export async function exportArchive(request, env, ctx, params) {
   if (!await verifyAdmin(request, env)) {
@@ -142,14 +141,25 @@ export async function exportArchive(request, env, ctx, params) {
       return error('Archive not found', 404);
     }
 
-    // Generate export files
-    const files = generateExportFiles(archive);
-
-    // For now, return JSON with file contents
-    // Full ZIP implementation would require a ZIP library
+    // Return structured JSON export
     return json({
       filename: `ndi-${year}-archive.json`,
-      files: files
+      export: {
+        metadata: {
+          event_year: archive.event_year,
+          archived_at: archive.archived_at,
+          expiration_date: archive.expiration_date,
+          is_expired: archive.is_expired,
+          total_teams: archive.total_teams,
+          total_participants: archive.total_participants,
+          total_revenue: archive.total_revenue,
+          data_hash: archive.data_hash
+        },
+        statistics: archive.stats,
+        teams: archive.teams,
+        participants: archive.members,
+        payment_events: archive.payment_events || []
+      }
     });
   } catch (error_) {
     console.error('Error exporting archive:', error_);
@@ -265,11 +275,26 @@ export async function checkResetSafety(request, env) {
     const archiveExists = await archivesDb.archiveExists(env.DB, year);
     const counts = await archivesDb.getDataCounts(env.DB);
 
+    // Calculate if there's any data in the database
+    const hasData = counts.teams > 0 || counts.members > 0 || counts.payments > 0;
+
+    // Reset is safe if:
+    // 1. Archive exists for current year (data is backed up), OR
+    // 2. There's no data to lose
+    const safeToReset = archiveExists || !hasData;
+
     return json({
       year: year,
       archiveExists: archiveExists,
       counts: counts,
-      safe: archiveExists || (counts.teams === 0 && counts.members === 0)
+      has_data: hasData,
+      safe: safeToReset,
+      // Provide a clear message for the frontend
+      message: !hasData
+        ? 'La base de données est vide.'
+        : archiveExists
+          ? `Une archive existe pour ${year}. Vous pouvez réinitialiser en toute sécurité.`
+          : `Attention: Il y a des données non archivées pour ${year}.`
     });
   } catch (error_) {
     console.error('Error checking reset safety:', error_);
@@ -278,154 +303,43 @@ export async function checkResetSafety(request, env) {
 }
 
 /**
- * Generate export file contents from archive
+ * DELETE /api/admin/archives/:year - Delete an archive (development only)
  */
-function generateExportFiles(archive) {
-  const files = {};
-
-  // Metadata
-  files['metadata.json'] = JSON.stringify({
-    event_year: archive.event_year,
-    archived_at: archive.archived_at,
-    expiration_date: archive.expiration_date,
-    is_expired: archive.is_expired,
-    total_teams: archive.total_teams,
-    total_participants: archive.total_participants,
-    total_revenue: archive.total_revenue,
-    data_hash: archive.data_hash
-  }, null, 2);
-
-  // Statistics (always full, even after expiration)
-  files['statistics.json'] = JSON.stringify(archive.stats, null, 2);
-
-  // Teams
-  files['teams.json'] = JSON.stringify(archive.teams, null, 2);
-  files['teams.csv'] = generateTeamsCSV(archive.teams);
-
-  // Participants
-  files['participants.json'] = JSON.stringify(archive.members, null, 2);
-  files['participants.csv'] = generateArchiveMembersCSV(archive.members, archive.is_expired);
-
-  // Payment events (if available)
-  if (archive.payment_events && archive.payment_events.length > 0) {
-    files['payment_events.json'] = JSON.stringify(archive.payment_events, null, 2);
-    files['payment_events.csv'] = generatePaymentEventsCSV(archive.payment_events);
+export async function deleteArchive(request, env, ctx, params) {
+  if (!await verifyAdmin(request, env)) {
+    return error('Unauthorized', 401);
   }
 
-  // README
-  files['README.txt'] = generateReadme(archive);
+  // Only allow in development environment
+  if (env.ENVIRONMENT !== 'development') {
+    return error('Archive deletion is only allowed in development environment', 403);
+  }
 
-  return files;
-}
-
-/**
- * Generate teams CSV
- */
-function generateTeamsCSV(teams) {
-  const headers = ['ID', 'Nom', 'Description', 'Membres', 'Salle', 'Date création'];
-
-  const rows = teams.map(t => [
-    t.id,
-    t.name,
-    t.description || '',
-    t.member_count,
-    t.room_id || '',
-    t.created_at
-  ]);
-
-  return generateCSV(headers, rows);
-}
-
-/**
- * Generate members CSV
- */
-function generateArchiveMembersCSV(members, isExpired) {
-  const headers = isExpired
-    ? ['ID', 'Équipe ID', 'Niveau BAC', 'Chef équipe', 'Pizza', 'Présent', 'Statut paiement', 'Montant']
-    : ['ID', 'Prénom', 'Nom', 'Email', 'Équipe ID', 'Niveau BAC', 'Chef équipe', 'Pizza', 'Présent', 'Statut paiement', 'Montant'];
-
-  const rows = members.map(m => {
-    if (isExpired) {
-      return [
-        m.id,
-        m.team_id,
-        m.bac_level,
-        m.is_leader ? 'Oui' : 'Non',
-        m.food_diet || '',
-        m.checked_in ? 'Oui' : 'Non',
-        m.payment_status || '',
-        m.payment_amount || ''
-      ];
+  try {
+    const year = Number.parseInt(params.year, 10);
+    if (Number.isNaN(year)) {
+      return error('Invalid year', 400);
     }
-    return [
-      m.id,
-      m.first_name,
-      m.last_name,
-      m.email || '',
-      m.team_id,
-      m.bac_level,
-      m.is_leader ? 'Oui' : 'Non',
-      m.food_diet || '',
-      m.checked_in ? 'Oui' : 'Non',
-      m.payment_status || '',
-      m.payment_amount || ''
-    ];
-  });
 
-  return generateCSV(headers, rows);
-}
+    // Check if archive exists
+    const exists = await archivesDb.archiveExists(env.DB, year);
+    if (!exists) {
+      return error(`Archive for ${year} not found`, 404);
+    }
 
-/**
- * Generate payment events CSV
- */
-function generatePaymentEventsCSV(events) {
-  const headers = ['ID', 'Membre ID', 'Type', 'Montant (cents)', 'Tier', 'Date'];
+    // Delete the archive
+    const deleted = await archivesDb.deleteArchive(env.DB, year);
 
-  const rows = events.map(e => [
-    e.id,
-    e.member_id,
-    e.event_type,
-    e.amount,
-    e.tier,
-    e.created_at
-  ]);
-
-  return generateCSV(headers, rows);
-}
-
-/**
- * Generate README file
- */
-function generateReadme(archive) {
-  const expirationStatus = archive.is_expired
-    ? 'DONNÉES ANONYMISÉES (conformité GDPR)'
-    : `Expiration: ${archive.expiration_date}`;
-
-  return `
-=== ARCHIVE NDI ${archive.event_year} ===
-
-Date d'archivage: ${archive.archived_at}
-${expirationStatus}
-
-STATISTIQUES
-------------
-Équipes: ${archive.total_teams}
-Participants: ${archive.total_participants}
-Revenus: ${archive.total_revenue / 100}€
-
-FICHIERS
---------
-- metadata.json: Informations sur l'archive
-- statistics.json: Statistiques détaillées
-- teams.csv/json: Liste des équipes
-- participants.csv/json: Liste des participants${archive.is_expired ? ' (anonymisé)' : ''}
-- payment_events.csv/json: Événements de paiement
-
-INTÉGRITÉ
----------
-Hash: ${archive.data_hash}
-
----
-Généré par astro-ndi
-`.trim();
+    if (deleted) {
+      return json({
+        success: true,
+        message: `Archive for ${year} has been deleted`
+      });
+    } else {
+      return error('Failed to delete archive', 500);
+    }
+  } catch (error_) {
+    console.error('Error deleting archive:', error_);
+    return error('Failed to delete archive', 500);
+  }
 }

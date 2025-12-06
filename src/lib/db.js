@@ -807,3 +807,137 @@ export async function getDistinctRooms(db) {
   `).all();
   return result.results.map(r => r.room);
 }
+
+// ============================================================================
+// Functions that INCLUDE Organization team (for admin panel views)
+// These should be used in admin tabs where org members should be visible
+// ============================================================================
+
+/**
+ * Get all teams with room assignments (including Organisation)
+ * For admin panel display where org members should be visible
+ */
+export async function getAllTeamsWithRooms(db) {
+  const result = await db.prepare(`
+    SELECT
+      t.id,
+      t.name,
+      t.description,
+      t.room,
+      t.created_at,
+      COUNT(m.id) as member_count,
+      CASE WHEN t.name = 'Organisation' THEN 1 ELSE 0 END as is_organisation
+    FROM teams t
+    LEFT JOIN members m ON t.id = m.team_id
+    GROUP BY t.id
+    ORDER BY t.name = 'Organisation' DESC, t.room IS NULL, t.room, t.name
+  `).all();
+  return result.results;
+}
+
+/**
+ * Get room assignment statistics (including Organisation)
+ * For admin panel display
+ */
+export async function getAllRoomStats(db) {
+  const result = await db.prepare(`
+    SELECT
+      COUNT(DISTINCT t.id) as total_teams,
+      COUNT(DISTINCT CASE WHEN t.room IS NOT NULL AND t.room != '' THEN t.id END) as assigned_teams,
+      COUNT(DISTINCT CASE WHEN t.room IS NULL OR t.room = '' THEN t.id END) as unassigned_teams,
+      COUNT(DISTINCT CASE WHEN t.name = 'Organisation' THEN t.id END) as organisation_teams
+    FROM teams t
+  `).first();
+
+  // Get rooms with team counts (including org)
+  const byRoom = await db.prepare(`
+    SELECT
+      t.room,
+      COUNT(t.id) as team_count,
+      SUM((SELECT COUNT(*) FROM members m WHERE m.team_id = t.id)) as member_count,
+      SUM(CASE WHEN t.name = 'Organisation' THEN 1 ELSE 0 END) as org_count
+    FROM teams t
+    WHERE t.room IS NOT NULL AND t.room != ''
+    GROUP BY t.room
+    ORDER BY t.room
+  `).all();
+
+  return { ...result, by_room: byRoom.results };
+}
+
+/**
+ * Get pizza stats grouped by room (including Organisation)
+ * For admin panel display
+ */
+export async function getAllPizzaStatsByRoom(db) {
+  const result = await db.prepare(`
+    SELECT
+      t.room,
+      m.food_diet,
+      COUNT(*) as total,
+      SUM(CASE WHEN m.checked_in = 1 THEN 1 ELSE 0 END) as present,
+      SUM(CASE WHEN m.pizza_received = 1 THEN 1 ELSE 0 END) as received,
+      SUM(CASE WHEN t.name = 'Organisation' THEN 1 ELSE 0 END) as org_count
+    FROM members m
+    JOIN teams t ON m.team_id = t.id
+    WHERE t.room IS NOT NULL AND t.room != ''
+      AND m.food_diet IS NOT NULL AND m.food_diet != ''
+    GROUP BY t.room, m.food_diet
+    ORDER BY t.room, m.food_diet
+  `).all();
+
+  // Group by room
+  const byRoom = {};
+  for (const row of result.results) {
+    if (!byRoom[row.room]) {
+      byRoom[row.room] = {
+        room: row.room,
+        pizzas: [],
+        totals: { total: 0, present: 0, received: 0, org_count: 0 }
+      };
+    }
+    byRoom[row.room].pizzas.push({
+      food_diet: row.food_diet,
+      total: row.total,
+      present: row.present,
+      received: row.received,
+      org_count: row.org_count
+    });
+    byRoom[row.room].totals.total += row.total;
+    byRoom[row.room].totals.present += row.present;
+    byRoom[row.room].totals.received += row.received;
+    byRoom[row.room].totals.org_count += row.org_count;
+  }
+
+  return Object.values(byRoom);
+}
+
+/**
+ * Get all teams (including Organisation) with member counts
+ * For admin panel team list
+ */
+export async function getAllTeams(db) {
+  const result = await db.prepare(`
+    SELECT
+      t.id,
+      t.name,
+      t.description,
+      t.created_at,
+      COUNT(m.id) as member_count,
+      CASE WHEN t.name = 'Organisation' THEN 1 ELSE 0 END as is_organisation
+    FROM teams t
+    LEFT JOIN members m ON t.id = m.team_id
+    GROUP BY t.id
+    ORDER BY t.name = 'Organisation' DESC, t.created_at DESC
+  `).all();
+  return result.results;
+}
+
+/**
+ * Get total participant count (including Organisation)
+ * For admin panel stats
+ */
+export async function getAllParticipants(db) {
+  const result = await db.prepare('SELECT COUNT(*) as count FROM members').first();
+  return result?.count || 0;
+}

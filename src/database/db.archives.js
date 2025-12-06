@@ -18,10 +18,20 @@ export async function detectEventYear(db) {
     return Number.parseInt(settingYear, 10);
   }
 
-  // Fallback: infer from registration dates
+  // Get current year as default
+  const currentYear = new Date().getFullYear();
+
+  // Check if there's any registration data to infer from
   try {
+    const countResult = await db.prepare('SELECT COUNT(*) as count FROM members').first();
+    if (!countResult || countResult.count === 0) {
+      // No registrations - return current year
+      return currentYear;
+    }
+
+    // Infer from registration dates
     const result = await db.prepare(`
-      SELECT 
+      SELECT
         strftime('%Y', created_at) as year,
         strftime('%m', created_at) as month,
         COUNT(*) as count
@@ -32,16 +42,18 @@ export async function detectEventYear(db) {
     `).first();
 
     if (!result || !result.year) {
-      return new Date().getFullYear();
+      return currentYear;
     }
 
     const year = Number.parseInt(result.year, 10);
     const month = Number.parseInt(result.month, 10);
 
-    // If January registrations, likely for previous year's event
+    // NDI events typically occur in December
+    // If most registrations are in January, likely for previous year's event
+    // Otherwise, use the registration year
     return month === 1 ? year - 1 : year;
   } catch {
-    return new Date().getFullYear();
+    return currentYear;
   }
 }
 
@@ -493,7 +505,7 @@ export async function resetAllData(db) {
 export async function getDataCounts(db) {
   const teamsCount = await db.prepare('SELECT COUNT(*) as count FROM teams').first();
   const membersCount = await db.prepare('SELECT COUNT(*) as count FROM members').first();
-  
+
   let paymentsCount = { count: 0 };
   try {
     paymentsCount = await db.prepare('SELECT COUNT(*) as count FROM payment_events').first();
@@ -506,4 +518,18 @@ export async function getDataCounts(db) {
     members: membersCount?.count || 0,
     payments: paymentsCount?.count || 0
   };
+}
+
+/**
+ * Delete an archive by year
+ * WARNING: This is destructive and should only be used in development
+ * @param {D1Database} db
+ * @param {number} year
+ * @returns {Promise<boolean>}
+ */
+export async function deleteArchive(db, year) {
+  const result = await db.prepare(
+    'DELETE FROM archives WHERE event_year = ?'
+  ).bind(year).run();
+  return result.meta.changes > 0;
 }
