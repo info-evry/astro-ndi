@@ -138,6 +138,7 @@ export function setPizzasConfig(config) {
  */
 export function clearState() {
   teamsData = [];
+  // eslint-disable-next-line sonarjs/no-empty-collection -- Set is populated by consuming code
   selectedMembers.clear();
   pizzasConfig = [];
   csvData = null;
