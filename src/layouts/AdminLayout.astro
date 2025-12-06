@@ -765,9 +765,10 @@ const { title } = Astro.props;
   position: relative;
   width: 44px;
   height: 24px;
-  background: var(--bg-muted);
+  background: var(--border-default);
   border-radius: 12px;
   transition: background 0.2s ease;
+  flex-shrink: 0;
 }
 
 .toggle-switch::after {
