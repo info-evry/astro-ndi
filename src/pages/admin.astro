@@ -51,6 +51,10 @@ import AdminLayout from '../layouts/AdminLayout.astro';
           <span class="tab-label">Salles</span>
           <span id="rooms-badge" class="tab-badge">0</span>
         </button>
+        <button type="button" role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false" class="tab-item" data-tab="settings">
+          <span class="tab-icon">&#x2699;</span>
+          <span class="tab-label">Paramètres</span>
+        </button>
       </nav>
 
       <!-- Registrations Panel -->
@@ -78,98 +82,6 @@ import AdminLayout from '../layouts/AdminLayout.astro';
         </div>
         <div class="disclosure-body">
           <div id="food-stats" class="food-stats"></div>
-        </div>
-      </div>
-
-      <!-- Settings Section -->
-      <div class="disclosure-group" data-disclosure="settings" id="settings-section">
-        <div class="disclosure-header" onclick="toggleDisclosure('settings')">
-          <h2><span class="disclosure-chevron">􀆊</span> Paramètres</h2>
-          <div class="header-actions" onclick="event.stopPropagation()">
-            <button type="button" id="save-settings-btn" class="btn btn-primary btn-sm" disabled>
-              Enregistrer
-            </button>
-          </div>
-        </div>
-        <div class="disclosure-body">
-          <!-- School Name for Official Export -->
-          <div class="settings-card">
-            <h3>Export Officiel NDI</h3>
-            <div class="form-group">
-              <label for="setting-school-name">Nom de l'école (exact comme saisi sur le site NDI)</label>
-              <input type="text" id="setting-school-name" value="Université d'Evry" maxlength="256" placeholder="Université d'Evry">
-            </div>
-          </div>
-
-          <!-- Capacity Settings -->
-          <div class="settings-card">
-            <h3>Limites de capacité</h3>
-            <div class="settings-grid">
-              <div class="form-group">
-                <label for="setting-max-team">Taille max d'équipe</label>
-                <input type="number" id="setting-max-team" min="1" max="100" value="15">
-              </div>
-              <div class="form-group">
-                <label for="setting-max-participants">Participants max</label>
-                <input type="number" id="setting-max-participants" min="1" max="10000" value="200">
-              </div>
-              <div class="form-group">
-                <label for="setting-min-team">Taille min d'équipe</label>
-                <input type="number" id="setting-min-team" min="1" max="50" value="1">
-              </div>
-            </div>
-          </div>
-
-          <!-- Pizza Management -->
-          <div class="settings-card">
-            <h3>Gestion des pizzas</h3>
-            <div id="pizzas-list" class="pizzas-list"></div>
-
-            <div id="pizza-add-form" class="pizza-add-form">
-              <h4>Ajouter une pizza</h4>
-              <form id="add-pizza-form-element">
-                <div class="settings-grid">
-                  <div class="form-group">
-                    <label for="new-pizza-id">ID (unique)</label>
-                    <input type="text" id="new-pizza-id" placeholder="ex: hawaienne" required>
-                  </div>
-                  <div class="form-group">
-                    <label for="new-pizza-name">Nom</label>
-                    <input type="text" id="new-pizza-name" placeholder="ex: Hawaïenne" required>
-                  </div>
-                  <div class="form-group">
-                    <label for="new-pizza-desc">Description</label>
-                    <input type="text" id="new-pizza-desc" placeholder="ex: Tomate, jambon, ananas">
-                  </div>
-                </div>
-                <button type="submit" class="btn btn-secondary btn-sm">􀁍 Ajouter</button>
-              </form>
-            </div>
-          </div>
-
-          <!-- Pricing Settings -->
-          <div class="settings-card">
-            <h3>Tarification</h3>
-            <p class="settings-description">Prix de participation à l'événement selon le statut du participant.</p>
-            <div class="settings-grid">
-              <div class="form-group">
-                <label for="setting-price-asso-member">Prix membre asso (€)</label>
-                <input type="number" id="setting-price-asso-member" min="0" max="100" step="0.01" value="5.00">
-              </div>
-              <div class="form-group">
-                <label for="setting-price-non-member">Prix non-membre (€)</label>
-                <input type="number" id="setting-price-non-member" min="0" max="100" step="0.01" value="8.00">
-              </div>
-              <div class="form-group">
-                <label for="setting-late-cutoff">Heure limite (arrivée tardive)</label>
-                <input type="time" id="setting-late-cutoff" value="19:00">
-              </div>
-              <div class="form-group">
-                <label for="setting-price-late">Prix retardataire (€)</label>
-                <input type="number" id="setting-price-late" min="0" max="100" step="0.01" value="10.00">
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -461,6 +373,167 @@ import AdminLayout from '../layouts/AdminLayout.astro';
           </div>
         </div>
       </div><!-- End Rooms Panel -->
+
+      <!-- Settings Panel -->
+      <div id="panel-settings" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-settings">
+        <div class="settings-header">
+          <h2>Paramètres</h2>
+          <button type="button" id="save-settings-btn" class="btn btn-primary" disabled>
+            Enregistrer les modifications
+          </button>
+        </div>
+
+        <!-- General Settings -->
+        <div class="disclosure-group open" data-disclosure="settings-general">
+          <div class="disclosure-header" onclick="toggleDisclosure('settings-general')">
+            <h2><span class="disclosure-chevron">&#x276F;</span> Général</h2>
+          </div>
+          <div class="disclosure-body">
+            <div class="settings-card">
+              <h3>Export Officiel NDI</h3>
+              <div class="form-group">
+                <label for="setting-school-name">Nom de l'école (exact comme saisi sur le site NDI)</label>
+                <input type="text" id="setting-school-name" value="Université d'Evry" maxlength="256" placeholder="Université d'Evry">
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <h3>Limites de capacité</h3>
+              <div class="settings-grid">
+                <div class="form-group">
+                  <label for="setting-max-team">Taille max d'équipe</label>
+                  <input type="number" id="setting-max-team" min="1" max="100" value="15">
+                </div>
+                <div class="form-group">
+                  <label for="setting-max-participants">Participants max</label>
+                  <input type="number" id="setting-max-participants" min="1" max="10000" value="200">
+                </div>
+                <div class="form-group">
+                  <label for="setting-min-team">Taille min d'équipe</label>
+                  <input type="number" id="setting-min-team" min="1" max="50" value="1">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pizza Management -->
+        <div class="disclosure-group open" data-disclosure="settings-pizzas">
+          <div class="disclosure-header" onclick="toggleDisclosure('settings-pizzas')">
+            <h2><span class="disclosure-chevron">&#x276F;</span> Pizzas</h2>
+          </div>
+          <div class="disclosure-body">
+            <div class="settings-card">
+              <h3>Gestion des pizzas</h3>
+              <div id="pizzas-list" class="pizzas-list"></div>
+
+              <div id="pizza-add-form" class="pizza-add-form">
+                <h4>Ajouter une pizza</h4>
+                <form id="add-pizza-form-element">
+                  <div class="settings-grid">
+                    <div class="form-group">
+                      <label for="new-pizza-id">ID (unique)</label>
+                      <input type="text" id="new-pizza-id" placeholder="ex: hawaienne" required>
+                    </div>
+                    <div class="form-group">
+                      <label for="new-pizza-name">Nom</label>
+                      <input type="text" id="new-pizza-name" placeholder="ex: Hawaïenne" required>
+                    </div>
+                    <div class="form-group">
+                      <label for="new-pizza-desc">Description</label>
+                      <input type="text" id="new-pizza-desc" placeholder="ex: Tomate, jambon, ananas">
+                    </div>
+                  </div>
+                  <button type="submit" class="btn btn-secondary btn-sm">&#x2795; Ajouter</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Online Payment Settings -->
+        <div class="disclosure-group open" data-disclosure="settings-payment">
+          <div class="disclosure-header" onclick="toggleDisclosure('settings-payment')">
+            <h2><span class="disclosure-chevron">&#x276F;</span> Paiement en ligne</h2>
+          </div>
+          <div class="disclosure-body">
+            <div class="settings-card">
+              <h3>Activation</h3>
+              <p class="settings-description">Activer ou désactiver le paiement en ligne lors de l'inscription.</p>
+              <div class="form-group">
+                <label class="toggle-label">
+                  <input type="checkbox" id="setting-payment-enabled">
+                  <span class="toggle-switch"></span>
+                  <span>Paiement en ligne activé</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <h3>Tarifs d'inscription</h3>
+              <p class="settings-description">Prix de l'inscription en ligne selon la période.</p>
+              <div class="settings-grid">
+                <div class="form-group">
+                  <label for="setting-price-tier1">Prix anticipé (€)</label>
+                  <input type="number" id="setting-price-tier1" min="0" max="100" step="0.01" value="5.00">
+                  <span class="form-hint">Inscription avant la date limite</span>
+                </div>
+                <div class="form-group">
+                  <label for="setting-price-tier2">Prix dernière semaine (€)</label>
+                  <input type="number" id="setting-price-tier2" min="0" max="100" step="0.01" value="7.00">
+                  <span class="form-hint">Inscription dans les derniers jours</span>
+                </div>
+                <div class="form-group">
+                  <label for="setting-tier1-cutoff-days">Jours avant deadline pour tarif anticipé</label>
+                  <input type="number" id="setting-tier1-cutoff-days" min="1" max="30" value="7">
+                  <span class="form-hint">Nombre de jours avant la deadline</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <h3>Date limite d'inscription</h3>
+              <p class="settings-description">Date et heure de clôture des inscriptions en ligne.</p>
+              <div class="form-group">
+                <label for="setting-registration-deadline">Date et heure limite</label>
+                <input type="datetime-local" id="setting-registration-deadline" value="">
+                <span class="form-hint">Les inscriptions seront fermées à cette date</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- On-site Pricing Settings -->
+        <div class="disclosure-group open" data-disclosure="settings-onsite">
+          <div class="disclosure-header" onclick="toggleDisclosure('settings-onsite')">
+            <h2><span class="disclosure-chevron">&#x276F;</span> Tarification sur place</h2>
+          </div>
+          <div class="disclosure-body">
+            <div class="settings-card">
+              <h3>Tarification à l'entrée</h3>
+              <p class="settings-description">Prix de participation pour ceux qui paient sur place.</p>
+              <div class="settings-grid">
+                <div class="form-group">
+                  <label for="setting-price-asso-member">Prix membre asso (€)</label>
+                  <input type="number" id="setting-price-asso-member" min="0" max="100" step="0.01" value="5.00">
+                </div>
+                <div class="form-group">
+                  <label for="setting-price-non-member">Prix non-membre (€)</label>
+                  <input type="number" id="setting-price-non-member" min="0" max="100" step="0.01" value="8.00">
+                </div>
+                <div class="form-group">
+                  <label for="setting-late-cutoff">Heure limite (arrivée tardive)</label>
+                  <input type="time" id="setting-late-cutoff" value="19:00">
+                </div>
+                <div class="form-group">
+                  <label for="setting-price-late">Prix retardataire (€)</label>
+                  <input type="number" id="setting-price-late" min="0" max="100" step="0.01" value="10.00">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- End Settings Panel -->
 
     </div>
 
@@ -1560,11 +1633,18 @@ async function loadSettings() {
     settingsState.bacLevels = data.settings.bac_levels || [];
     settingsState.isDirty = false;
 
-    // Load pricing settings
+    // Load on-site pricing settings
     pricingSettings.priceAssoMember = parseInt(data.settings.price_asso_member, 10) || 500;
     pricingSettings.priceNonMember = parseInt(data.settings.price_non_member, 10) || 800;
     pricingSettings.priceLate = parseInt(data.settings.price_late, 10) || 1000;
     pricingSettings.lateCutoffTime = data.settings.late_cutoff_time || '19:00';
+
+    // Load online payment settings
+    pricingSettings.paymentEnabled = data.settings.payment_enabled === 'true' || data.settings.payment_enabled === true;
+    pricingSettings.priceTier1 = parseInt(data.settings.price_tier1, 10) || 500;
+    pricingSettings.priceTier2 = parseInt(data.settings.price_tier2, 10) || 700;
+    pricingSettings.tier1CutoffDays = parseInt(data.settings.tier1_cutoff_days, 10) || 7;
+    pricingSettings.registrationDeadline = data.settings.registration_deadline || '';
 
     renderSettings();
   } catch (err) {
@@ -1584,7 +1664,7 @@ function renderSettings() {
   if (maxParticipantsInput) maxParticipantsInput.value = settingsState.maxTotalParticipants;
   if (minTeamInput) minTeamInput.value = settingsState.minTeamSize;
 
-  // Render pricing settings (convert cents to euros for display)
+  // Render on-site pricing settings (convert cents to euros for display)
   const priceAssoInput = $('setting-price-asso-member');
   const priceNonMemberInput = $('setting-price-non-member');
   const priceLateInput = $('setting-price-late');
@@ -1594,6 +1674,26 @@ function renderSettings() {
   if (priceNonMemberInput) priceNonMemberInput.value = (pricingSettings.priceNonMember / 100).toFixed(2);
   if (priceLateInput) priceLateInput.value = (pricingSettings.priceLate / 100).toFixed(2);
   if (lateCutoffInput) lateCutoffInput.value = pricingSettings.lateCutoffTime;
+
+  // Render online payment settings
+  const paymentEnabledInput = $('setting-payment-enabled');
+  const priceTier1Input = $('setting-price-tier1');
+  const priceTier2Input = $('setting-price-tier2');
+  const tier1CutoffDaysInput = $('setting-tier1-cutoff-days');
+  const registrationDeadlineInput = $('setting-registration-deadline');
+
+  if (paymentEnabledInput) paymentEnabledInput.checked = pricingSettings.paymentEnabled;
+  if (priceTier1Input) priceTier1Input.value = (pricingSettings.priceTier1 / 100).toFixed(2);
+  if (priceTier2Input) priceTier2Input.value = (pricingSettings.priceTier2 / 100).toFixed(2);
+  if (tier1CutoffDaysInput) tier1CutoffDaysInput.value = pricingSettings.tier1CutoffDays;
+  if (registrationDeadlineInput && pricingSettings.registrationDeadline) {
+    // Convert ISO string to datetime-local format (YYYY-MM-DDTHH:MM)
+    const deadline = new Date(pricingSettings.registrationDeadline);
+    if (!isNaN(deadline.getTime())) {
+      const localDatetime = deadline.toISOString().slice(0, 16);
+      registrationDeadlineInput.value = localDatetime;
+    }
+  }
 
   renderPizzasList();
   updateSaveButton();
@@ -1632,8 +1732,16 @@ function renderPizzasList() {
 }
 
 function initSettings() {
-  ['setting-max-team', 'setting-max-participants', 'setting-min-team', 'setting-school-name',
-   'setting-price-asso-member', 'setting-price-non-member', 'setting-price-late', 'setting-late-cutoff'].forEach(id => {
+  // All settings inputs that should trigger dirty state
+  const settingsInputs = [
+    'setting-max-team', 'setting-max-participants', 'setting-min-team', 'setting-school-name',
+    'setting-price-asso-member', 'setting-price-non-member', 'setting-price-late', 'setting-late-cutoff',
+    // Online payment settings
+    'setting-payment-enabled', 'setting-price-tier1', 'setting-price-tier2',
+    'setting-tier1-cutoff-days', 'setting-registration-deadline'
+  ];
+
+  settingsInputs.forEach(id => {
     const input = $(id);
     if (input) {
       input.addEventListener('change', markDirty);
@@ -1738,11 +1846,20 @@ async function saveSettings() {
     const minTeamSize = parseInt($('setting-min-team')?.value, 10);
     const schoolName = $('setting-school-name')?.value?.trim() || "Université d'Evry";
 
-    // Pricing settings (convert euros to cents)
+    // On-site pricing settings (convert euros to cents)
     const priceAssoMember = Math.round(parseFloat($('setting-price-asso-member')?.value || '5') * 100);
     const priceNonMember = Math.round(parseFloat($('setting-price-non-member')?.value || '8') * 100);
     const priceLate = Math.round(parseFloat($('setting-price-late')?.value || '10') * 100);
     const lateCutoffTime = $('setting-late-cutoff')?.value || '19:00';
+
+    // Online payment settings
+    const paymentEnabled = $('setting-payment-enabled')?.checked || false;
+    const priceTier1 = Math.round(parseFloat($('setting-price-tier1')?.value || '5') * 100);
+    const priceTier2 = Math.round(parseFloat($('setting-price-tier2')?.value || '7') * 100);
+    const tier1CutoffDays = parseInt($('setting-tier1-cutoff-days')?.value, 10) || 7;
+    const registrationDeadlineValue = $('setting-registration-deadline')?.value || '';
+    // Convert datetime-local value to ISO string
+    const registrationDeadline = registrationDeadlineValue ? new Date(registrationDeadlineValue).toISOString() : '';
 
     if (isNaN(maxTeamSize) || maxTeamSize < 1 || maxTeamSize > 100) {
       toastError('Taille max d\'équipe invalide (1-100)');
@@ -1768,6 +1885,18 @@ async function saveSettings() {
       toastError('Prix retardataire invalide');
       return;
     }
+    if (isNaN(priceTier1) || priceTier1 < 0) {
+      toastError('Prix anticipé invalide');
+      return;
+    }
+    if (isNaN(priceTier2) || priceTier2 < 0) {
+      toastError('Prix dernière semaine invalide');
+      return;
+    }
+    if (isNaN(tier1CutoffDays) || tier1CutoffDays < 1 || tier1CutoffDays > 30) {
+      toastError('Jours avant deadline invalide (1-30)');
+      return;
+    }
 
     const saveBtn = $('save-settings-btn');
     if (saveBtn) {
@@ -1784,7 +1913,13 @@ async function saveSettings() {
       price_asso_member: priceAssoMember,
       price_non_member: priceNonMember,
       price_late: priceLate,
-      late_cutoff_time: lateCutoffTime
+      late_cutoff_time: lateCutoffTime,
+      // Online payment settings
+      payment_enabled: paymentEnabled,
+      price_tier1: priceTier1,
+      price_tier2: priceTier2,
+      tier1_cutoff_days: tier1CutoffDays,
+      registration_deadline: registrationDeadline
     });
 
     settingsState.isDirty = false;
@@ -1793,11 +1928,18 @@ async function saveSettings() {
     settingsState.minTeamSize = minTeamSize;
     settingsState.schoolName = schoolName;
 
-    // Update pricing settings
+    // Update on-site pricing settings
     pricingSettings.priceAssoMember = priceAssoMember;
     pricingSettings.priceNonMember = priceNonMember;
     pricingSettings.priceLate = priceLate;
     pricingSettings.lateCutoffTime = lateCutoffTime;
+
+    // Update online payment settings
+    pricingSettings.paymentEnabled = paymentEnabled;
+    pricingSettings.priceTier1 = priceTier1;
+    pricingSettings.priceTier2 = priceTier2;
+    pricingSettings.tier1CutoffDays = tier1CutoffDays;
+    pricingSettings.registrationDeadline = registrationDeadline;
 
     updateSaveButton();
     toastSuccess('Paramètres enregistrés');
@@ -2211,13 +2353,31 @@ function renderAttendance() {
     const checkedInTime = m.checked_in_at ? new Date(m.checked_in_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '-';
     const teamInfo = formatTeamWithRoom(m.team_name, m.team_room, 40);
 
-    // Payment badge
+    // Payment badge - check for online payment status first, then on-site payment tier
     let paymentBadge = '<span class="badge badge-muted">-</span>';
-    if (m.payment_tier) {
+
+    // Online payment status (new columns from payment integration)
+    if (m.payment_status === 'paid') {
+      // Paid online
+      const tierLabels = { 'tier1': 'Anticipé', 'tier2': 'Standard' };
+      const tierLabel = tierLabels[m.registration_tier] || 'En ligne';
+      const amount = m.payment_amount ? formatCurrency(m.payment_amount) : '';
+      paymentBadge = `<span class="badge badge-success">&#x1F4B3; ${tierLabel}</span>`;
+      if (amount) {
+        paymentBadge += ` <span class="text-muted text-sm">${amount}</span>`;
+      }
+    } else if (m.payment_status === 'delayed') {
+      // Chose to pay on-site
+      paymentBadge = '<span class="badge badge-warning">&#x1F4C5; À payer</span>';
+    } else if (m.payment_status === 'pending') {
+      // Payment in progress
+      paymentBadge = '<span class="badge badge-info">&#x23F3; En cours</span>';
+    } else if (m.payment_tier) {
+      // On-site payment (existing logic for backward compatibility)
       const tierLabels = {
-        'asso_member': '􀉩 Membre asso',
-        'non_member': '􀉮 Non-membre',
-        'late': '􀐫 Retardataire'
+        'asso_member': '&#x2713; Membre asso',
+        'non_member': '&#x2713; Non-membre',
+        'late': '&#x23F0; Retardataire'
       };
       const tierLabel = tierLabels[m.payment_tier] || m.payment_tier;
       const amount = m.payment_amount ? formatCurrency(m.payment_amount) : '';
@@ -2256,9 +2416,26 @@ function updateAttendanceBadge(count) {
   if (badge) badge.textContent = count || 0;
 }
 
-window.handleCheckIn = function(memberId) {
+window.handleCheckIn = async function(memberId) {
   const member = attendanceData.find(m => m.id === memberId);
   if (!member) return;
+
+  // If member already paid online, skip the payment modal and check in directly
+  if (member.payment_status === 'paid') {
+    try {
+      await adminPost(`/admin/attendance/check-in/${memberId}`, {
+        paymentTier: member.registration_tier === 'tier1' ? 'online_tier1' : 'online_tier2',
+        paymentAmount: member.payment_amount,
+        skipPayment: true  // Indicate payment was already collected online
+      });
+      await loadAttendanceData();
+      toastSuccess(`${member.first_name} ${member.last_name} enregistré(e) (déjà payé en ligne)`);
+    } catch (err) {
+      console.error('Error checking in:', err);
+      toastError(err.message || 'Erreur lors de l\'enregistrement');
+    }
+    return;
+  }
 
   checkInMemberId = memberId;
   $('checkin-member-id').value = memberId;
@@ -2289,6 +2466,11 @@ window.handleCheckIn = function(memberId) {
   $('price-asso').textContent = formatCurrency(pricingSettings.priceAssoMember);
   $('price-non-member').textContent = formatCurrency(pricingSettings.priceNonMember);
   $('price-late').textContent = formatCurrency(pricingSettings.priceLate);
+
+  // If member chose delayed payment, show a message and pre-select a tier
+  if (member.payment_status === 'delayed') {
+    $('checkin-member-name').textContent = `${member.first_name} ${member.last_name} (paiement sur place)`;
+  }
 
   // Reset to asso member option
   document.querySelector('input[name="payment-tier"][value="asso_member"]').checked = true;

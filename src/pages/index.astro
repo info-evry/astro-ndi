@@ -244,14 +244,89 @@ function formatTime(dateString: string) {
           </div>
 
           <div class="form-card">
-            <div class="form-card-header">
-              <h3 class="form-card-title">Membres <span id="member-count">(1)</span></h3>
-              <button type="button" id="add-member" class="btn btn-secondary btn-sm">
-                + Ajouter un membre
-              </button>
+            <h3 class="form-card-title">Vos informations</h3>
+
+            <div id="member-form" class="member-grid">
+              <div class="form-group">
+                <label for="member-first-name">Prénom *</label>
+                <input type="text" id="member-first-name" name="firstName" required maxlength="128">
+              </div>
+
+              <div class="form-group">
+                <label for="member-last-name">Nom *</label>
+                <input type="text" id="member-last-name" name="lastName" required maxlength="128">
+              </div>
+
+              <div class="form-group">
+                <label for="member-email">Email *</label>
+                <input type="email" id="member-email" name="email" required maxlength="256">
+              </div>
+
+              <div class="form-group">
+                <label for="member-bac-level">Niveau d'études *</label>
+                <select id="member-bac-level" name="bacLevel" required>
+                  <!-- Options populated by JS -->
+                </select>
+              </div>
+
+              <div id="leader-toggle-container" class="form-group full-width hidden">
+                <label>
+                  <span class="toggle-group">
+                    <span class="toggle">
+                      <input type="checkbox" id="member-is-leader" name="isLeader">
+                      <span class="toggle-slider"></span>
+                    </span>
+                    Chef d'équipe
+                  </span>
+                </label>
+              </div>
+
+              <div class="form-group full-width">
+                <label>Choix de pizza</label>
+                <div id="pizza-options" class="pizza-grid">
+                  <!-- Options populated by JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment Section -->
+          <div class="form-card" id="payment-section">
+            <h3 class="form-card-title">Paiement</h3>
+
+            <!-- Dynamic pricing display -->
+            <div id="pricing-info" class="pricing-info">
+              <div class="price-display">
+                <span class="price-amount" id="current-price">-</span>
+                <span class="price-tier" id="current-tier-label">-</span>
+              </div>
+              <p class="pricing-note" id="pricing-deadline-note"></p>
             </div>
 
-            <div id="members-container"></div>
+            <!-- Payment method selection -->
+            <div class="payment-methods">
+              <label class="payment-method selected">
+                <input type="radio" name="paymentMethod" value="online" checked>
+                <span class="method-content">
+                  <span class="method-icon">&#128179;</span>
+                  <span class="method-title">Payer maintenant</span>
+                  <span class="method-desc">Paiement sécurisé par carte bancaire</span>
+                </span>
+              </label>
+              <label class="payment-method">
+                <input type="radio" name="paymentMethod" value="delayed">
+                <span class="method-content">
+                  <span class="method-icon">&#128197;</span>
+                  <span class="method-title">Payer sur place</span>
+                  <span class="method-desc">Le jour de l'événement (espèces ou carte)</span>
+                </span>
+              </label>
+            </div>
+
+            <!-- Payment disabled message -->
+            <div id="payment-disabled" class="payment-disabled hidden">
+              <p>Le paiement en ligne n'est pas encore activé. Votre inscription sera enregistrée et vous pourrez payer sur place.</p>
+            </div>
           </div>
 
           <div id="form-errors" class="errors hidden"></div>
@@ -569,6 +644,124 @@ function formatTime(dateString: string) {
     font-weight: 600;
   }
 
+  /* Payment Section Styles */
+  .pricing-info {
+    text-align: center;
+    padding: var(--space-4);
+    background: rgba(0, 27, 165, 0.05);
+    border: 1px solid rgba(0, 27, 165, 0.1);
+    border-radius: var(--radius);
+    margin-bottom: var(--space-4);
+  }
+
+  .price-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-2);
+  }
+
+  .price-amount {
+    font-size: var(--text-3xl);
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+
+  .price-tier {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    padding: var(--space-1) var(--space-2);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm);
+  }
+
+  .pricing-note {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+
+  .payment-methods {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .payment-method {
+    display: flex;
+    cursor: pointer;
+    padding: var(--space-4);
+    background: rgba(255, 255, 255, 0.02);
+    border: 2px solid var(--border-subtle);
+    border-radius: var(--radius);
+    transition: all var(--transition-base);
+  }
+
+  .payment-method:hover {
+    border-color: var(--color-primary);
+    background: rgba(0, 27, 165, 0.05);
+  }
+
+  .payment-method.selected {
+    border-color: var(--color-primary);
+    background: rgba(0, 27, 165, 0.1);
+  }
+
+  .payment-method input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .method-content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex: 1;
+  }
+
+  .method-icon {
+    font-size: 1.5rem;
+  }
+
+  .method-title {
+    font-weight: 600;
+    color: var(--color-text);
+    display: block;
+  }
+
+  .method-desc {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    display: block;
+  }
+
+  .payment-disabled {
+    padding: var(--space-4);
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: var(--radius);
+    text-align: center;
+  }
+
+  .payment-disabled p {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+  }
+
+  /* Member grid layout */
+  .member-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-4);
+  }
+
+  .member-grid .full-width {
+    grid-column: 1 / -1;
+  }
+
   /* Responsive */
   @media (max-width: 768px) {
     .hero-datetime {
@@ -622,10 +815,11 @@ const state = {
   config: null,
   teams: [],
   stats: null,
-  members: [],
+  pricing: null,
   isNewTeam: true,
   selectedTeamId: null,
-  isAtCapacity: false
+  isAtCapacity: false,
+  paymentEnabled: false
 };
 
 // DOM Elements
@@ -641,9 +835,6 @@ const elements = {
   // Form
   newTeamFields: document.getElementById('new-team-fields'),
   joinTeamFields: document.getElementById('join-team-fields'),
-  membersContainer: document.getElementById('members-container'),
-  memberCount: document.getElementById('member-count'),
-  addMemberBtn: document.getElementById('add-member'),
   form: document.getElementById('registration-form'),
   submitBtn: document.getElementById('submit-btn'),
   errorsDiv: document.getElementById('form-errors'),
@@ -653,6 +844,18 @@ const elements = {
   capacityWarningText: document.getElementById('capacity-warning-text'),
   inscriptionSection: document.getElementById('inscription'),
   heroRegisterBtn: document.getElementById('hero-register-btn'),
+  // Member form elements
+  memberBacLevel: document.getElementById('member-bac-level'),
+  pizzaOptions: document.getElementById('pizza-options'),
+  leaderToggle: document.getElementById('leader-toggle-container'),
+  memberIsLeader: document.getElementById('member-is-leader'),
+  // Payment elements
+  paymentSection: document.getElementById('payment-section'),
+  pricingInfo: document.getElementById('pricing-info'),
+  currentPrice: document.getElementById('current-price'),
+  currentTierLabel: document.getElementById('current-tier-label'),
+  pricingDeadlineNote: document.getElementById('pricing-deadline-note'),
+  paymentDisabled: document.getElementById('payment-disabled'),
   // Team view modal elements
   teamViewModal: document.getElementById('team-view-modal'),
   teamViewAuth: document.getElementById('team-view-auth'),
@@ -695,6 +898,19 @@ async function loadStats() {
   const { stats } = await api('/stats');
   state.stats = stats;
   return stats;
+}
+
+async function loadPricing() {
+  try {
+    const pricing = await api('/payment/pricing');
+    state.pricing = pricing;
+    state.paymentEnabled = pricing.enabled;
+    return pricing;
+  } catch (err) {
+    console.log('Pricing not available:', err.message);
+    state.paymentEnabled = false;
+    return null;
+  }
 }
 
 async function submitRegistration(data) {
@@ -822,172 +1038,81 @@ function renderTeamSelect(teams) {
   `;
 }
 
-function createMemberCard(index) {
+// Initialize member form with options from config
+function initMemberForm() {
   const { pizzas, bacLevels } = state.config;
 
-  const card = document.createElement('div');
-  card.className = 'member-card';
-  card.dataset.index = index;
+  // Populate BAC level dropdown
+  elements.memberBacLevel.innerHTML = bacLevels.map(level =>
+    `<option value="${level.value}">${escapeHtml(level.label)}</option>`
+  ).join('');
 
-  card.innerHTML = `
-    <div class="member-header">
-      <span class="member-title">Membre ${index + 1}</span>
-      ${index > 0 ? '<button type="button" class="remove-btn">Retirer</button>' : ''}
-    </div>
-
-    <div class="member-grid">
-      <div class="form-group">
-        <label>
-          <span class="toggle-group">
-            <span class="toggle">
-              <input type="checkbox" name="members[${index}].isLeader">
-              <span class="toggle-slider"></span>
-            </span>
-            Chef d'équipe
-          </span>
-        </label>
+  // Populate pizza options
+  elements.pizzaOptions.innerHTML = pizzas.map((pizza, i) => `
+    <label class="pizza-option ${i === 0 ? 'selected' : ''}">
+      <input type="radio" name="foodDiet" value="${pizza.id}" ${i === 0 ? 'checked' : ''}>
+      <div class="pizza-info">
+        <div class="pizza-name">${escapeHtml(pizza.name)}</div>
+        ${pizza.description ? `<div class="pizza-desc">${escapeHtml(pizza.description)}</div>` : ''}
       </div>
+    </label>
+  `).join('');
 
-      <div></div>
-
-      <div class="form-group">
-        <label>Prénom *</label>
-        <input type="text" name="members[${index}].firstName" required maxlength="128">
-      </div>
-
-      <div class="form-group">
-        <label>Nom *</label>
-        <input type="text" name="members[${index}].lastName" required maxlength="128">
-      </div>
-
-      <div class="form-group">
-        <label>Email *</label>
-        <input type="email" name="members[${index}].email" required maxlength="256">
-      </div>
-
-      <div class="form-group">
-        <label>Niveau d'études *</label>
-        <select name="members[${index}].bacLevel" required>
-          ${bacLevels.map(level => `
-            <option value="${level.value}">${level.label}</option>
-          `).join('')}
-        </select>
-      </div>
-
-      <div class="form-group full-width">
-        <label>Choix de pizza</label>
-        <div class="pizza-grid">
-          ${pizzas.map((pizza, i) => `
-            <label class="pizza-option ${i === 0 ? 'selected' : ''}">
-              <input type="radio" name="members[${index}].foodDiet" value="${pizza.id}" ${i === 0 ? 'checked' : ''}>
-              <div class="pizza-info">
-                <div class="pizza-name">${escapeHtml(pizza.name)}</div>
-                ${pizza.description ? `<div class="pizza-desc">${escapeHtml(pizza.description)}</div>` : ''}
-              </div>
-            </label>
-          `).join('')}
-        </div>
-      </div>
-    </div>
-  `;
-
-  // Event listeners
-  const removeBtn = card.querySelector('.remove-btn');
-  if (removeBtn) {
-    removeBtn.addEventListener('click', () => removeMember(index));
-  }
-
-  // Pizza selection highlighting
-  card.querySelectorAll('.pizza-option input').forEach(input => {
+  // Add pizza selection highlighting
+  elements.pizzaOptions.querySelectorAll('.pizza-option input').forEach(input => {
     input.addEventListener('change', (e) => {
-      card.querySelectorAll('.pizza-option').forEach(opt => opt.classList.remove('selected'));
+      elements.pizzaOptions.querySelectorAll('.pizza-option').forEach(opt => opt.classList.remove('selected'));
       e.target.closest('.pizza-option').classList.add('selected');
     });
   });
-
-  return card;
 }
 
-function addMember() {
-  if (state.isAtCapacity) return;
-
-  const maxSize = state.config.maxTeamSize;
-  if (state.members.length >= maxSize) {
-    showErrors([`Maximum ${maxSize} membres par équipe`]);
+// Render pricing information
+function renderPricing(pricing) {
+  if (!pricing) {
+    elements.paymentSection.classList.add('hidden');
     return;
   }
 
-  // Check available spots
-  if (state.stats && state.members.length >= state.stats.available_spots) {
-    showErrors([`Il ne reste que ${state.stats.available_spots} place(s) disponible(s)`]);
-    return;
+  state.paymentEnabled = pricing.enabled;
+
+  // Update price display
+  elements.currentPrice.textContent = pricing.currentPriceFormatted;
+  elements.currentTierLabel.textContent = pricing.currentTier === 'tier1'
+    ? 'Inscription anticipée'
+    : 'Inscription standard';
+
+  // Update deadline note
+  if (pricing.daysUntilDeadline !== null && pricing.currentTier === 'tier1') {
+    elements.pricingDeadlineNote.textContent =
+      `Prix valable jusqu'au ${new Date(pricing.registrationDeadline).toLocaleDateString('fr-FR')}. Après cette date : ${pricing.tier2.priceFormatted}`;
+  } else if (pricing.daysUntilDeadline !== null && pricing.daysUntilDeadline <= 0) {
+    elements.pricingDeadlineNote.textContent = 'Date limite de pré-inscription dépassée.';
+  } else {
+    elements.pricingDeadlineNote.textContent = '';
   }
 
-  const index = state.members.length;
-  const card = createMemberCard(index);
-  elements.membersContainer.appendChild(card);
-  state.members.push({ index });
-  updateMemberCount();
-}
-
-function removeMember(index) {
-  if (state.members.length <= 1) {
-    showErrors(['Au moins un membre est requis']);
-    return;
-  }
-
-  const card = elements.membersContainer.querySelector(`[data-index="${index}"]`);
-  if (card) {
-    card.style.animation = 'fadeInUp 0.2s ease-out reverse';
-    setTimeout(() => {
-      card.remove();
-      state.members = state.members.filter(m => m.index !== index);
-      reindexMembers();
-      updateMemberCount();
-    }, 200);
+  // Show/hide payment options based on enabled state
+  if (!pricing.enabled) {
+    elements.paymentDisabled.classList.remove('hidden');
+    document.querySelectorAll('.payment-method').forEach(el => el.classList.add('hidden'));
+  } else {
+    elements.paymentDisabled.classList.add('hidden');
+    document.querySelectorAll('.payment-method').forEach(el => el.classList.remove('hidden'));
   }
 }
 
-function reindexMembers() {
-  const cards = elements.membersContainer.querySelectorAll('.member-card');
-  state.members = [];
-
-  cards.forEach((card, newIndex) => {
-    card.dataset.index = newIndex;
-    card.querySelector('.member-title').textContent = `Membre ${newIndex + 1}`;
-
-    // Update all input names
-    card.querySelectorAll('input, select').forEach(input => {
-      if (input.name) {
-        input.name = input.name.replace(/members\[\d+\]/, `members[${newIndex}]`);
-      }
-    });
-
-    // Show/hide remove button
-    const removeBtn = card.querySelector('.remove-btn');
-    if (newIndex === 0 && removeBtn) {
-      removeBtn.remove();
-    } else if (newIndex > 0 && !removeBtn) {
-      const header = card.querySelector('.member-header');
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'remove-btn';
-      btn.textContent = 'Retirer';
-      btn.addEventListener('click', () => removeMember(newIndex));
-      header.appendChild(btn);
-    }
-
-    state.members.push({ index: newIndex });
-  });
-}
-
-function updateMemberCount() {
-  elements.memberCount.textContent = `(${state.members.length})`;
-
-  // Check capacity
-  const maxSize = state.config.maxTeamSize;
-  const maxBySpots = state.stats ? state.stats.available_spots : maxSize;
-  elements.addMemberBtn.disabled = state.members.length >= Math.min(maxSize, maxBySpots) || state.isAtCapacity;
+// Handle team mode change (show/hide leader toggle)
+function updateLeaderToggle() {
+  // When creating a new team, user is automatically leader (hide toggle)
+  // When joining a team, show toggle so user can optionally become a leader
+  if (state.isNewTeam) {
+    elements.leaderToggle.classList.add('hidden');
+    elements.memberIsLeader.checked = true; // Auto-check for new teams
+  } else {
+    elements.leaderToggle.classList.remove('hidden');
+    elements.memberIsLeader.checked = false; // Uncheck by default when joining
+  }
 }
 
 // Form Handling
@@ -995,6 +1120,7 @@ function collectFormData() {
   const formData = new FormData(elements.form);
   const data = {
     createNewTeam: state.isNewTeam,
+    paymentMethod: formData.get('paymentMethod') || 'delayed',
     members: []
   };
 
@@ -1007,16 +1133,14 @@ function collectFormData() {
     data.teamPassword = formData.get('joinPassword');
   }
 
-  // Collect members
-  state.members.forEach((_, i) => {
-    data.members.push({
-      firstName: formData.get(`members[${i}].firstName`),
-      lastName: formData.get(`members[${i}].lastName`),
-      email: formData.get(`members[${i}].email`),
-      bacLevel: parseInt(formData.get(`members[${i}].bacLevel`), 10),
-      isLeader: formData.get(`members[${i}].isLeader`) === 'on',
-      foodDiet: formData.get(`members[${i}].foodDiet`) || 'none'
-    });
+  // Collect single member data
+  data.members.push({
+    firstName: formData.get('firstName'),
+    lastName: formData.get('lastName'),
+    email: formData.get('email'),
+    bacLevel: parseInt(formData.get('bacLevel'), 10),
+    isLeader: state.isNewTeam ? true : formData.get('isLeader') === 'on',
+    foodDiet: formData.get('foodDiet') || 'none'
   });
 
   return data;
@@ -1035,11 +1159,6 @@ function validateForm() {
     } else if (data.teamPassword.length < 4) {
       errors.push("Le mot de passe doit faire au moins 4 caractères");
     }
-
-    const hasLeader = data.members.some(m => m.isLeader);
-    if (!hasLeader) {
-      errors.push("Une nouvelle équipe doit avoir au moins un chef d'équipe");
-    }
   } else {
     if (!data.teamId) {
       errors.push("Veuillez sélectionner une équipe");
@@ -1049,23 +1168,12 @@ function validateForm() {
     }
   }
 
-  // Validate each member
-  data.members.forEach((member, i) => {
-    if (!member.firstName?.trim()) errors.push(`Membre ${i + 1}: Prénom requis`);
-    if (!member.lastName?.trim()) errors.push(`Membre ${i + 1}: Nom requis`);
-    if (!member.email?.trim()) errors.push(`Membre ${i + 1}: Email requis`);
-    else if (!isValidEmail(member.email)) errors.push(`Membre ${i + 1}: Email invalide`);
-  });
-
-  // Check duplicates
-  const seen = new Set();
-  data.members.forEach((m, i) => {
-    const key = `${m.firstName?.toLowerCase()}|${m.lastName?.toLowerCase()}`;
-    if (seen.has(key)) {
-      errors.push(`Membre ${i + 1}: Nom en double`);
-    }
-    seen.add(key);
-  });
+  // Validate member
+  const member = data.members[0];
+  if (!member.firstName?.trim()) errors.push("Prénom requis");
+  if (!member.lastName?.trim()) errors.push("Nom requis");
+  if (!member.email?.trim()) errors.push("Email requis");
+  else if (!isValidEmail(member.email)) errors.push("Email invalide");
 
   return errors;
 }
@@ -1216,11 +1324,17 @@ function setupEventListeners() {
       state.isNewTeam = e.target.value === 'new';
       elements.newTeamFields.classList.toggle('hidden', !state.isNewTeam);
       elements.joinTeamFields.classList.toggle('hidden', state.isNewTeam);
+      updateLeaderToggle();
     });
   });
 
-  // Add member button
-  elements.addMemberBtn.addEventListener('click', addMember);
+  // Payment method selection
+  document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
+      e.target.closest('.payment-method').classList.add('selected');
+    });
+  });
 
   // Form submission
   elements.form.addEventListener('submit', handleSubmit);
@@ -1262,19 +1376,22 @@ function setupEventListeners() {
 async function init() {
   try {
     // Load data in parallel
-    const [config, teams, stats] = await Promise.all([
+    const [config, teams, stats, pricing] = await Promise.all([
       loadConfig(),
       loadTeams(),
-      loadStats()
+      loadStats(),
+      loadPricing()
     ]);
 
     renderStats(stats);
     renderTeams(teams);
     renderTeamSelect(teams);
+    renderPricing(pricing);
 
-    // Only add initial member if not at capacity
+    // Initialize member form if not at capacity
     if (!state.isAtCapacity) {
-      addMember();
+      initMemberForm();
+      updateLeaderToggle();
     }
 
     setupEventListeners();

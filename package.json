@@ -15,7 +15,8 @@
   "license": "AGPL-3.0-only",
   "dependencies": {
     "astro": "^5.16.4",
-    "@astrojs/cloudflare": "^12.6.12"
+    "@astrojs/cloudflare": "^12.6.12",
+    "astro-payments": "file:../astro-payments"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.10.14",

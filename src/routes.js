@@ -37,6 +37,13 @@ import {
 } from './api/admin/index.js';
 import { getSettings, updateSettings } from './features/admin/admin.settings.js';
 import { importCSV } from './features/admin/admin.import.js';
+import {
+  createCheckout,
+  verifyPayment,
+  markPaymentDelayed,
+  getPricing,
+  paymentCallback
+} from './features/payment/payment.api.js';
 
 export function createRouter() {
   // Pass base path to handle subpath deployments
@@ -92,6 +99,13 @@ export function createRouter() {
   router.get('/api/admin/rooms', getRooms);
   router.put('/api/admin/rooms/:teamId', setRoom);
   router.post('/api/admin/rooms/batch', setRoomsBatch);
+
+  // Payment API routes
+  router.get('/api/payment/pricing', getPricing);
+  router.post('/api/payment/checkout', createCheckout);
+  router.post('/api/payment/verify', verifyPayment);
+  router.post('/api/payment/delayed', markPaymentDelayed);
+  router.post('/api/payment/callback', paymentCallback);
 
   return router;
 }

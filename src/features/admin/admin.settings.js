@@ -17,7 +17,13 @@ const VALID_KEYS = new Set([
   'price_asso_member',
   'price_non_member',
   'price_late',
-  'late_cutoff_time'
+  'late_cutoff_time',
+  // Online payment settings
+  'price_tier1',
+  'price_tier2',
+  'tier1_cutoff_days',
+  'payment_enabled',
+  'registration_deadline'
 ]);
 
 /**
@@ -164,6 +170,29 @@ const VALIDATORS = {
   late_cutoff_time: (v) => {
     if (typeof v !== 'string' || !/^\d{2}:\d{2}$/.test(v)) {
       return { valid: false, error: 'Must be a time in HH:MM format' };
+    }
+    return { valid: true };
+  },
+  // Online payment settings validators
+  price_tier1: (v) => validateNumber(v, 0, 100_000),
+  price_tier2: (v) => validateNumber(v, 0, 100_000),
+  tier1_cutoff_days: (v) => validateNumber(v, 1, 365),
+  payment_enabled: (v) => {
+    if (typeof v !== 'string' || !['true', 'false'].includes(v)) {
+      return { valid: false, error: 'Must be "true" or "false"' };
+    }
+    return { valid: true };
+  },
+  registration_deadline: (v) => {
+    if (typeof v !== 'string') {
+      return { valid: false, error: 'Must be a string' };
+    }
+    // Allow empty string (no deadline set)
+    if (v === '') return { valid: true };
+    // Validate ISO date format
+    const date = new Date(v);
+    if (Number.isNaN(date.getTime())) {
+      return { valid: false, error: 'Must be a valid ISO date string' };
     }
     return { valid: true };
   }
