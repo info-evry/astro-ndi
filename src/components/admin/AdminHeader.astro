@@ -1,19 +1,13 @@
 ---
 /**
- * AdminHeader - Hero section for admin dashboard
+ * AdminHeader - Sticky header for NDI admin dashboard
+ * Uses shared AdminPageHeader from astro-design
  */
+import AdminPageHeader from 'astro-design/components/admin/AdminPageHeader.astro';
 ---
 
-<section class="page-hero">
-  <div class="page-hero-bg">
-    <div class="orb orb-blue"></div>
-    <div class="orb orb-indigo"></div>
-  </div>
-  <div class="page-hero-content container">
-    <h1 class="page-hero-title">
-      <span>Administration</span>
-      <span class="gradient-text">NDI</span>
-    </h1>
-    <p class="page-hero-subtitle">Gestion des équipes et participants</p>
-  </div>
-</section>
+<AdminPageHeader
+  title="Administration NDI"
+  subtitle="Gestion des equipes et participants"
+  breadcrumb="Nuit de l'Info"
+/>
