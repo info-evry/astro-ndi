@@ -44,9 +44,9 @@ export async function createCheckout(request, env) {
 
     // Get pricing configuration
     const registrationDeadline = await settingsDb.getSetting(env.DB, 'registration_deadline');
-    const tierCutoffDays = parseInt(await settingsDb.getSetting(env.DB, 'tier1_cutoff_days') || '7', 10);
-    const tier1Price = parseInt(await settingsDb.getSetting(env.DB, 'price_tier1') || '500', 10);
-    const tier2Price = parseInt(await settingsDb.getSetting(env.DB, 'price_tier2') || '700', 10);
+    const tierCutoffDays = Number.parseInt(await settingsDb.getSetting(env.DB, 'tier1_cutoff_days') || '7', 10);
+    const tier1Price = Number.parseInt(await settingsDb.getSetting(env.DB, 'price_tier1') || '500', 10);
+    const tier2Price = Number.parseInt(await settingsDb.getSetting(env.DB, 'price_tier2') || '700', 10);
 
     // Calculate tier and price
     const tier = member.registration_tier || calculateTier(registrationDeadline, tierCutoffDays);
@@ -103,9 +103,9 @@ export async function createCheckout(request, env) {
       tier,
       reference: checkoutReference
     });
-  } catch (err) {
-    console.error('Error creating checkout:', err);
-    return error(err.message || 'Failed to create checkout', 500);
+  } catch (error_) {
+    console.error('Error creating checkout:', error_);
+    return error(error_.message || 'Failed to create checkout', 500);
   }
 }
 
@@ -194,9 +194,9 @@ export async function verifyPayment(request, env) {
       status: 'pending',
       message: 'Payment not yet completed'
     });
-  } catch (err) {
-    console.error('Error verifying payment:', err);
-    return error(err.message || 'Failed to verify payment', 500);
+  } catch (error_) {
+    console.error('Error verifying payment:', error_);
+    return error(error_.message || 'Failed to verify payment', 500);
   }
 }
 
@@ -219,7 +219,7 @@ export async function markPaymentDelayed(request, env) {
 
     // Get pricing tier for the member
     const registrationDeadline = await settingsDb.getSetting(env.DB, 'registration_deadline');
-    const tierCutoffDays = parseInt(await settingsDb.getSetting(env.DB, 'tier1_cutoff_days') || '7', 10);
+    const tierCutoffDays = Number.parseInt(await settingsDb.getSetting(env.DB, 'tier1_cutoff_days') || '7', 10);
     const tier = calculateTier(registrationDeadline, tierCutoffDays);
 
     // Update member
@@ -242,9 +242,9 @@ export async function markPaymentDelayed(request, env) {
       status: 'delayed',
       tier
     });
-  } catch (err) {
-    console.error('Error marking payment delayed:', err);
-    return error(err.message || 'Failed to mark payment delayed', 500);
+  } catch (error_) {
+    console.error('Error marking payment delayed:', error_);
+    return error(error_.message || 'Failed to mark payment delayed', 500);
   }
 }
 
@@ -255,9 +255,9 @@ export async function getPricing(request, env) {
   try {
     // Get pricing configuration
     const registrationDeadline = await settingsDb.getSetting(env.DB, 'registration_deadline');
-    const tierCutoffDays = parseInt(await settingsDb.getSetting(env.DB, 'tier1_cutoff_days') || '7', 10);
-    const tier1Price = parseInt(await settingsDb.getSetting(env.DB, 'price_tier1') || '500', 10);
-    const tier2Price = parseInt(await settingsDb.getSetting(env.DB, 'price_tier2') || '700', 10);
+    const tierCutoffDays = Number.parseInt(await settingsDb.getSetting(env.DB, 'tier1_cutoff_days') || '7', 10);
+    const tier1Price = Number.parseInt(await settingsDb.getSetting(env.DB, 'price_tier1') || '500', 10);
+    const tier2Price = Number.parseInt(await settingsDb.getSetting(env.DB, 'price_tier2') || '700', 10);
     const paymentEnabled = await settingsDb.getSetting(env.DB, 'payment_enabled');
 
     // Calculate current tier
@@ -292,9 +292,9 @@ export async function getPricing(request, env) {
       registrationDeadline,
       daysUntilDeadline
     });
-  } catch (err) {
-    console.error('Error getting pricing:', err);
-    return error(err.message || 'Failed to get pricing', 500);
+  } catch (error_) {
+    console.error('Error getting pricing:', error_);
+    return error(error_.message || 'Failed to get pricing', 500);
   }
 }
 
@@ -307,7 +307,7 @@ export async function paymentCallback(request, env) {
     const body = await request.json();
 
     // SumUp sends checkout_reference and status
-    const { checkout_reference, status, id: checkoutId } = body;
+    const { checkout_reference, id: checkoutId } = body;
 
     if (!checkout_reference && !checkoutId) {
       return json({ received: true }); // Acknowledge but ignore
@@ -353,8 +353,8 @@ export async function paymentCallback(request, env) {
     }
 
     return json({ received: true, processed: true });
-  } catch (err) {
-    console.error('Error processing payment callback:', err);
-    return json({ received: true, error: err.message });
+  } catch (error_) {
+    console.error('Error processing payment callback:', error_);
+    return json({ received: true, error: error_.message });
   }
 }
