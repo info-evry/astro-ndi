@@ -7,6 +7,9 @@ import { json, error } from '../../lib/router.js';
 import { verifyAdmin } from '../../shared/auth.js';
 import * as archivesDb from '../../database/db.archives.js';
 
+// Error messages
+const ERR_INVALID_YEAR = 'Invalid year';
+
 /**
  * GET /api/admin/archives - List all archives
  */
@@ -48,7 +51,7 @@ export async function getArchive(request, env, ctx, params) {
   try {
     const year = Number.parseInt(params.year, 10);
     if (Number.isNaN(year)) {
-      return error('Invalid year', 400);
+      return error(ERR_INVALID_YEAR, 400);
     }
 
     // Check and apply expiration if needed
@@ -82,7 +85,7 @@ export async function createArchive(request, env) {
   if (year) {
     year = Number.parseInt(year, 10);
     if (Number.isNaN(year) || year < 2000 || year > 2100) {
-      return error('Invalid year', 400);
+      return error(ERR_INVALID_YEAR, 400);
     }
   } else {
     year = await archivesDb.detectEventYear(env.DB);
@@ -130,7 +133,7 @@ export async function exportArchive(request, env, ctx, params) {
   try {
     const year = Number.parseInt(params.year, 10);
     if (Number.isNaN(year)) {
-      return error('Invalid year', 400);
+      return error(ERR_INVALID_YEAR, 400);
     }
 
     // Check and apply expiration if needed
@@ -283,18 +286,21 @@ export async function checkResetSafety(request, env) {
     // 2. There's no data to lose
     const safeToReset = archiveExists || !hasData;
 
+    // Build message based on state
+    let message = 'La base de données est vide.';
+    if (hasData) {
+      message = archiveExists
+        ? `Une archive existe pour ${year}. Vous pouvez réinitialiser en toute sécurité.`
+        : `Attention: Il y a des données non archivées pour ${year}.`;
+    }
+
     return json({
       year: year,
       archiveExists: archiveExists,
       counts: counts,
       has_data: hasData,
       safe: safeToReset,
-      // Provide a clear message for the frontend
-      message: !hasData
-        ? 'La base de données est vide.'
-        : archiveExists
-          ? `Une archive existe pour ${year}. Vous pouvez réinitialiser en toute sécurité.`
-          : `Attention: Il y a des données non archivées pour ${year}.`
+      message: message
     });
   } catch (error_) {
     console.error('Error checking reset safety:', error_);
@@ -318,7 +324,7 @@ export async function deleteArchive(request, env, ctx, params) {
   try {
     const year = Number.parseInt(params.year, 10);
     if (Number.isNaN(year)) {
-      return error('Invalid year', 400);
+      return error(ERR_INVALID_YEAR, 400);
     }
 
     // Check if archive exists
@@ -330,14 +336,9 @@ export async function deleteArchive(request, env, ctx, params) {
     // Delete the archive
     const deleted = await archivesDb.deleteArchive(env.DB, year);
 
-    if (deleted) {
-      return json({
-        success: true,
-        message: `Archive for ${year} has been deleted`
-      });
-    } else {
-      return error('Failed to delete archive', 500);
-    }
+    return deleted
+      ? json({ success: true, message: `Archive for ${year} has been deleted` })
+      : error('Failed to delete archive', 500);
   } catch (error_) {
     console.error('Error deleting archive:', error_);
     return error('Failed to delete archive', 500);
