@@ -9,7 +9,7 @@ import { csvData, setCsvData, setParsedRows } from './state.js';
 
 // Element ID constants
 const EL_IMPORT_BTN = 'import-btn';
-const EL_IMPORT_STATUS = EL_IMPORT_STATUS;
+const EL_IMPORT_STATUS = 'import-status';
 
 /**
  * Handle file selection
