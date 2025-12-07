@@ -20,7 +20,7 @@ export function switchTab(tabId) {
 
   // Update tab panels
   for (const panel of document.querySelectorAll('.tab-panel')) {
-    panel.classList.toggle('hidden', panel.id !== `tab-${tabId}`);
+    panel.classList.toggle('hidden', panel.id !== `panel-${tabId}`);
   }
 }
 
