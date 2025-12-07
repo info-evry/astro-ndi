@@ -337,7 +337,7 @@ async function init() {
       initSettings(api);
       initImport(api, loadData);
       initAllParticipants();
-      initArchives(api, loadData);
+      initArchives(api, apiBase, adminToken, loadData);
     } catch (error) {
       showAuth();
       if (error.message === 'Unauthorized') {
