@@ -144,6 +144,7 @@ async function loadData() {
     } else {
       toastError('Erreur lors du chargement des données');
     }
+    throw error; // Re-throw to let caller know loading failed
   }
 }
 
