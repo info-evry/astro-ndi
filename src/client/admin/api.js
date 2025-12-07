@@ -68,14 +68,8 @@ export async function api(endpoint, options = {}, apiBase = '') {
 /**
  * Create API client bound to a base URL
  * @param {string} apiBase - Base URL
- * @returns {Object}
+ * @returns {Function} API function bound to base URL
  */
 export function createApiClient(apiBase) {
-  return {
-    get: (endpoint) => api(endpoint, { method: 'GET' }, apiBase),
-    post: (endpoint, body) => api(endpoint, { method: 'POST', body: JSON.stringify(body) }, apiBase),
-    put: (endpoint, body) => api(endpoint, { method: 'PUT', body: JSON.stringify(body) }, apiBase),
-    delete: (endpoint) => api(endpoint, { method: 'DELETE' }, apiBase),
-    raw: (endpoint, options) => api(endpoint, options, apiBase)
-  };
+  return (endpoint, options = {}) => api(endpoint, options, apiBase);
 }
