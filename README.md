@@ -24,7 +24,7 @@ Registration platform for the "Nuit de l'Info" event organized by Asso Info Evry
 
 ## Tech Stack
 
-- **Framework**: Astro 6.x (SSR mode)
+- **Framework**: Astro 7.x (SSR mode)
 - **Runtime**: Cloudflare Workers
 - **Database**: Cloudflare D1 (SQLite)
 - **Storage**: Cloudflare KV (configuration)
