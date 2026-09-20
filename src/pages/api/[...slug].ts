@@ -4,6 +4,7 @@
  */
 
 import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
 import { corsHeaders, error } from 'astro-core/router';
 import { createRouter } from '../../routes.js';
 
@@ -43,8 +44,7 @@ function getCorsOrigin(request: Request): string {
 }
 
 export const ALL: APIRoute = async ({ request, locals }) => {
-  const env = locals.runtime.env;
-  const ctx = locals.runtime.ctx;
+  const ctx = locals.cfContext;
   const origin = getCorsOrigin(request);
 
   // Handle CORS preflight

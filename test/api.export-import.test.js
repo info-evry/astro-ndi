@@ -72,9 +72,10 @@ describe('CSV Export Format', () => {
       }
     });
 
-    const text = await response.text();
-    // UTF-8 BOM is \ufeff
-    expect(text.charCodeAt(0)).toBe(0xFE_FF);
+    // `Response#text()` decodes with a UTF-8 TextDecoder, which strips a
+    // leading BOM per the WHATWG spec. Check the raw bytes instead.
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    expect([bytes[0], bytes[1], bytes[2]]).toEqual([0xEF, 0xBB, 0xBF]);
   });
 
   it('should set proper Content-Disposition header', async () => {
@@ -228,8 +229,10 @@ describe('CSV Export - Official NDI Format', () => {
       }
     });
 
-    const text = await response.text();
-    expect(text.charCodeAt(0)).toBe(0xFE_FF);
+    // `Response#text()` decodes with a UTF-8 TextDecoder, which strips a
+    // leading BOM per the WHATWG spec. Check the raw bytes instead.
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    expect([bytes[0], bytes[1], bytes[2]]).toEqual([0xEF, 0xBB, 0xBF]);
   });
 
   it('should set proper filename', async () => {
@@ -437,10 +440,15 @@ describe('CSV Import - Authentication', () => {
 
 describe('CSV Import - Basic Functionality', () => {
   it('should import members from CSV', async () => {
+    // Names distinct from other tests in this file: `members` has a
+    // UNIQUE(first_name, last_name) constraint and the D1 storage created in
+    // `beforeAll` is shared across every test in this file (no per-test
+    // isolation), so reusing a name like "Jean Dupont" from another test
+    // silently drops one row on import.
     const csv = `id,firstname,lastname,email,fooddiet,baclevel,ismanager,teamName,date
-1,Jean,Dupont,jean@example.com,margherita,3,Yes,Import Team,2024-01-01
-2,Marie,Martin,marie@example.com,pepperoni,2,No,Import Team,2024-01-01
-3,Pierre,Bernard,pierre@example.com,4fromages,4,Yes,Other Import Team,2024-01-01`;
+1,Jean,Imported,jean.imported@example.com,margherita,3,Yes,Import Team,2024-01-01
+2,Marie,Imported,marie.imported@example.com,pepperoni,2,No,Import Team,2024-01-01
+3,Pierre,Imported,pierre.imported@example.com,4fromages,4,Yes,Other Import Team,2024-01-01`;
 
     const response = await SELF.fetch('http://localhost/api/admin/import', {
       method: 'POST',

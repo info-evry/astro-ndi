@@ -163,9 +163,11 @@ bunx wrangler d1 execute ndi-db --remote --file=./db/schema.sql
 
 ### "Invalid binding SESSION"
 
-The Astro Cloudflare adapter expects a KV binding for sessions. Either:
-- Add a KV binding named `SESSION` in wrangler.toml
-- Or add an empty `.assetsignore` to public/ to suppress the warning
+`@astrojs/cloudflare` (13.x) auto-provisions a `SESSION` KV namespace on
+deploy and adds the binding to the generated wrangler config; this project
+does not use `Astro.session`, so the binding exists but is unused. If you see
+this warning it usually means the KV namespace hasn't been provisioned yet -
+redeploy, or add a `SESSION` KV binding manually in wrangler.toml.
 
 ### "Unauthorized" on admin page
 

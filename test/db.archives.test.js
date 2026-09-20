@@ -38,6 +38,13 @@ beforeEach(async () => {
   await env.DB.exec('DELETE FROM teams');
   await env.DB.exec('DELETE FROM archives');
   await env.DB.exec('DELETE FROM settings');
+  // Reset AUTOINCREMENT counters so tests that rely on hardcoded ids (e.g.
+  // team_id = 1) stay stable. The Cloudflare vitest plugin's D1 simulator
+  // persists storage per test file (not per `it()`), unlike the previous
+  // @cloudflare/vitest-pool-workers pool.
+  await env.DB.exec(
+    "DELETE FROM sqlite_sequence WHERE name IN ('teams', 'members', 'payment_events', 'archives')"
+  );
 });
 
 describe('detectEventYear', () => {
