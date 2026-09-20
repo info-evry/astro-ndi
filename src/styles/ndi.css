@@ -1,0 +1,126 @@
+/* ===========================================
+   NDI-Specific Styles
+   Styles that extend or override the design system.
+   Duplicates of @info-evry/astro-design/components/{buttons,forms,team-cards}.css
+   (team cards, member cards, pizza options, capacity warning, button
+   color overrides) have been removed — see astro-design for those.
+   =========================================== */
+
+/* Container - narrower for registration form */
+.container {
+  max-width: 960px;
+  padding: var(--space-8) var(--space-4);
+}
+
+/* Header container should use design system defaults */
+.header-container.container {
+  padding: 0 var(--container-padding);
+  max-width: var(--container-max);
+}
+
+/* Footer container should be wider */
+.footer-container.container {
+  max-width: var(--container-max);
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: var(--space-6) var(--space-4);
+  }
+}
+
+/* ===========================================
+   NDI Page Styles
+   =========================================== */
+
+/* Page Header */
+.page-header {
+  text-align: center;
+  margin-bottom: var(--space-8);
+}
+
+.page-header h1 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  color: var(--color-text-muted);
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+/* Stats */
+.stats {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-6);
+  margin-top: var(--space-6);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  min-width: 100px;
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.stat:hover {
+  border-color: var(--border-default);
+  box-shadow: var(--glow-primary);
+}
+
+.stat-value {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--color-primary);
+  line-height: 1.2;
+}
+
+.stat-label {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  margin-top: var(--space-1);
+}
+
+@media (max-width: 600px) {
+  .stats {
+    gap: var(--space-3);
+  }
+
+  .stat {
+    min-width: 80px;
+    padding: var(--space-3);
+  }
+
+  .stat-value {
+    font-size: var(--text-xl);
+  }
+}
+
+/* Section Card */
+.section {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.section h2 {
+  margin: 0 0 var(--space-5);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--color-text);
+}

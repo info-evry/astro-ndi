@@ -8,7 +8,7 @@
  */
 /* eslint-env browser */
 
-import { closeModal, toggleDisclosure } from './modals.js';
+import { toggleDisclosure } from '@info-evry/astro-design/scripts/disclosure';
 import {
   toggleTeam,
   toggleSelectAll,
@@ -46,13 +46,13 @@ export function buildActions({ api, loadData, updateDeleteButton }) {
     'export-team-official': (el) => exportTeamOfficial(Number(el.dataset.teamId), el.dataset.teamName, api),
     'confirm-delete-team': (el) =>
       confirmDeleteTeam(Number(el.dataset.teamId), el.dataset.teamName, (id) => deleteTeam(id, api, loadData)),
-    'sort-team': (el) => sortTeamMembers(Number(el.dataset.teamId), el.dataset.sort, el),
+    'sort-team': (el) => sortTeamMembers(Number(el.dataset.teamId), el.dataset.sortKey, el),
 
     'edit-member': (el) => editMember(Number(el.dataset.memberId), Number(el.dataset.teamId)),
     'confirm-delete-member': (el) =>
       confirmDeleteMember(Number(el.dataset.memberId), el.dataset.memberName, (id) => deleteMember(id, api, loadData, updateDeleteButton)),
 
-    'sort-all-participants': (el) => sortAllParticipants(el.dataset.sort),
+    'sort-all-participants': (el) => sortAllParticipants(el.dataset.sortKey),
 
     'check-in': (el) => handleCheckIn(Number(el.dataset.memberId), api, loadData),
     'check-out': (el) => handleCheckOut(Number(el.dataset.memberId), api, loadData),
@@ -70,7 +70,6 @@ export function buildActions({ api, loadData, updateDeleteButton }) {
       const group = el.closest('[data-disclosure]');
       if (group) toggleDisclosure(group.dataset.disclosure);
     },
-    'close-modal': (el) => closeModal(el.dataset.modal),
     'load-data': () => loadData(),
     // Absorbs clicks on wrapper elements that must not bubble to an
     // ancestor's data-action (e.g. header buttons inside a disclosure

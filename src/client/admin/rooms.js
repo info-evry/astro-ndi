@@ -3,8 +3,8 @@
  */
 /* eslint-env browser */
 
-import { $, escapeHtml, truncateText } from './utils.js';
-import { toastSuccess, toastError } from './toast.js';
+import { $, escapeHtml, truncateText } from '@info-evry/astro-design/scripts/dom';
+import { toastSuccess, toastError } from '@info-evry/astro-design/scripts/toast';
 import {
   roomsData,
   setRoomsData,

@@ -3,9 +3,10 @@
  */
 /* eslint-env browser */
 
-import { $, escapeHtml, formatTeamWithRoom, formatCurrency } from './utils.js';
-import { toastSuccess, toastError } from './toast.js';
-import { openModal, closeModal } from './modals.js';
+import { $, escapeHtml, formatCurrency } from '@info-evry/astro-design/scripts/dom';
+import { formatTeamWithRoom } from './format.js';
+import { toastSuccess, toastError } from '@info-evry/astro-design/scripts/toast';
+import { openModal, closeModal } from '@info-evry/astro-design/scripts/modal';
 import {
   attendanceData,
   setAttendanceData,
@@ -411,10 +412,10 @@ export function initAttendance(api) {
   }
 
   // Sortable headers
-  const sortableHeaders = document.querySelectorAll('#attendance-table .sortable-header');
+  const sortableHeaders = document.querySelectorAll('#attendance-table .sortable');
   for (const header of sortableHeaders) {
     header.addEventListener('click', () => {
-      const sortKey = header.dataset.sort;
+      const sortKey = header.dataset.sortKey;
       if (attendanceSortKey === sortKey) {
         attendanceSortDir = attendanceSortDir === 'asc' ? 'desc' : 'asc';
       } else {
@@ -453,15 +454,12 @@ function updateFilterPills() {
  * Update sort indicators
  */
 function updateSortIndicators() {
-  const headers = document.querySelectorAll('#attendance-table .sortable-header');
+  const headers = document.querySelectorAll('#attendance-table .sortable');
   for (const header of headers) {
-    const sortKey = header.dataset.sort;
-    if (sortKey === attendanceSortKey) {
-      header.setAttribute('data-sort-dir', attendanceSortDir);
-      header.querySelector('.sort-indicator').textContent = attendanceSortDir === 'asc' ? '@sfs:chevron.up@' : '@sfs:chevron.down@';
+    if (header.dataset.sortKey === attendanceSortKey) {
+      header.dataset.sort = attendanceSortDir;
     } else {
-      header.removeAttribute('data-sort-dir');
-      header.querySelector('.sort-indicator').textContent = '@sfs:arrow.up.arrow.down@';
+      delete header.dataset.sort;
     }
   }
 }

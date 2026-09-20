@@ -30,7 +30,7 @@
       </div>
     </div>
     <div class="disclosure-body">
-      <div class="attendance-filters">
+      <div class="filter-bar">
         <label class="filter-pill" id="filter-all-pill">
           <input type="radio" name="attendance-filter" value="all" checked> 􀋲 Tous
         </label>
@@ -45,12 +45,12 @@
         <table id="attendance-table" class="members-table attendance-table">
           <thead>
             <tr>
-              <th class="sortable-header" data-sort="name">Nom <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-              <th class="sortable-header" data-sort="email">Email <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-              <th class="sortable-header team-col" data-sort="team">Équipe <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-              <th class="sortable-header status-col" data-sort="status">Statut <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-              <th class="sortable-header time-col" data-sort="time">Heure <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-              <th class="sortable-header" data-sort="payment">Paiement <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="sortable" data-sort-key="name">Nom <span class="sort-indicator"></span></th>
+              <th class="sortable" data-sort-key="email">Email <span class="sort-indicator"></span></th>
+              <th class="sortable team-col" data-sort-key="team">Équipe <span class="sort-indicator"></span></th>
+              <th class="sortable status-col" data-sort-key="status">Statut <span class="sort-indicator"></span></th>
+              <th class="sortable time-col" data-sort-key="time">Heure <span class="sort-indicator"></span></th>
+              <th class="sortable" data-sort-key="payment">Paiement <span class="sort-indicator"></span></th>
               <th class="actions-col">Actions</th>
             </tr>
           </thead>

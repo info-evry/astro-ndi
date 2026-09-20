@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../src/client/admin/modals.js', () => ({
-  closeModal: vi.fn(),
-  toggleDisclosure: vi.fn()
+vi.mock('@info-evry/astro-design/scripts/disclosure', () => ({
+  toggleDisclosure: vi.fn(),
+  initDisclosures: vi.fn()
 }));
 
 vi.mock('../../src/client/admin/registrations.js', () => ({
@@ -48,7 +48,7 @@ const { handleCheckIn, handleCheckOut } = await import('../../src/client/admin/a
 const { handleGivePizza, handleRevokePizza } = await import('../../src/client/admin/pizza.js');
 const { handleRoomChange, handleClearRoom } = await import('../../src/client/admin/rooms.js');
 const { viewArchive, deleteArchive } = await import('../../src/client/admin/archives.js');
-const { closeModal, toggleDisclosure } = await import('../../src/client/admin/modals.js');
+const { toggleDisclosure } = await import('@info-evry/astro-design/scripts/disclosure');
 
 describe('buildActions', () => {
   let api;
@@ -94,7 +94,7 @@ describe('buildActions', () => {
   });
 
   it('reads team id and sort key for sort-team', () => {
-    const el = { dataset: { teamId: '2', sort: 'email' } };
+    const el = { dataset: { teamId: '2', sortKey: 'email' } };
     actions['sort-team'](el);
     expect(sortTeamMembers).toHaveBeenCalledWith(2, 'email', el);
   });
@@ -110,11 +110,6 @@ describe('buildActions', () => {
 
     actions['delete-archive']({ dataset: { year: '2023' } });
     expect(deleteArchive).toHaveBeenCalledWith(2023, api, loadData);
-  });
-
-  it('reads modal id for close-modal', () => {
-    actions['close-modal']({ dataset: { modal: 'team-modal' } });
-    expect(closeModal).toHaveBeenCalledWith('team-modal');
   });
 
   it('resolves the disclosure group from an ancestor for toggle-disclosure', () => {

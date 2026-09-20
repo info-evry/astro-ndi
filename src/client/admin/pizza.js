@@ -3,8 +3,9 @@
  */
 /* eslint-env browser */
 
-import { $, escapeHtml, formatTeamWithRoom } from './utils.js';
-import { toastSuccess, toastError } from './toast.js';
+import { $, escapeHtml } from '@info-evry/astro-design/scripts/dom';
+import { formatTeamWithRoom } from './format.js';
+import { toastSuccess, toastError } from '@info-evry/astro-design/scripts/toast';
 import {
   pizzaData,
   setPizzaData,

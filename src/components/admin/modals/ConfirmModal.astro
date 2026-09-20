@@ -2,15 +2,11 @@
 /**
  * ConfirmModal - Generic confirmation dialog
  */
+import Modal from '@info-evry/astro-design/components/admin/Modal.astro';
 ---
 
-<div id="confirm-modal" class="modal hidden">
-  <div class="modal-content">
-    <h3>Confirmer la suppression</h3>
-    <p id="confirm-message"></p>
-    <div class="modal-actions">
-      <button type="button" class="btn btn-secondary" data-action="close-modal" data-modal="confirm-modal">􀁑 Annuler</button>
-      <button type="button" id="confirm-delete-btn" class="btn btn-danger">􀈑 Supprimer</button>
-    </div>
-  </div>
-</div>
+<Modal id="confirm-modal" title="Confirmer la suppression">
+  <p id="confirm-message"></p>
+  <button type="button" slot="actions" class="btn btn-secondary" data-modal-close="confirm-modal">􀁑 Annuler</button>
+  <button type="button" slot="actions" id="confirm-delete-btn" class="btn btn-danger">􀈑 Supprimer</button>
+</Modal>

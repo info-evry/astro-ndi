@@ -5,12 +5,16 @@
  * For the main admin page, these are used via the inline script.
  */
 
-// Core utilities
-export * from './utils.js';
-export * from './toast.js';
-export * from './api.js';
-export * from './modals.js';
-export * from './tabs.js';
+// Core utilities (shared with all admin dashboards via the design system)
+export * from '@info-evry/astro-design/scripts/dom';
+export * from '@info-evry/astro-design/scripts/toast';
+export * from '@info-evry/astro-design/scripts/api-client';
+export * from '@info-evry/astro-design/scripts/modal';
+export * from '@info-evry/astro-design/scripts/tabs';
+export * from '@info-evry/astro-design/scripts/disclosure';
+
+// NDI-only helpers
+export * from './format.js';
 export * from './state.js';
 
 // Domain modules

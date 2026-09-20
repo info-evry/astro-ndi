@@ -3,9 +3,11 @@
  */
 /* eslint-env browser */
 
-import { $, escapeHtml, formatTeamWithRoom } from './utils.js';
-import { toastSuccess, toastError } from './toast.js';
-import { openModal, closeModal } from './modals.js';
+import { $, escapeHtml } from '@info-evry/astro-design/scripts/dom';
+import { formatTeamWithRoom } from './format.js';
+import { toastSuccess, toastError } from '@info-evry/astro-design/scripts/toast';
+import { openModal, closeModal } from '@info-evry/astro-design/scripts/modal';
+import { statCardHtml } from '@info-evry/astro-design/scripts/templates';
 import {
   teamsData,
   setTeamsData,
@@ -38,24 +40,12 @@ const teamSortState = {};
  */
 export function renderStats(stats, statsGrid, foodStats) {
   if (statsGrid) {
-    statsGrid.innerHTML = `
-      <div class="stat-card">
-        <div class="stat-value">${stats.total_teams}</div>
-        <div class="stat-label">Équipes</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value">${stats.total_participants}</div>
-        <div class="stat-label">Participants</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value">${stats.max_participants}</div>
-        <div class="stat-label">Capacité max</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value">${stats.available_spots}</div>
-        <div class="stat-label">Places restantes</div>
-      </div>
-    `;
+    statsGrid.innerHTML = [
+      statCardHtml({ value: stats.total_teams, label: 'Équipes' }),
+      statCardHtml({ value: stats.total_participants, label: 'Participants' }),
+      statCardHtml({ value: stats.max_participants, label: 'Capacité max' }),
+      statCardHtml({ value: stats.available_spots, label: 'Places restantes' })
+    ].join('');
   }
 
   if (foodStats) {
@@ -132,9 +122,9 @@ export function renderMembersTable(members, teamId) {
               <input type="checkbox" data-change="toggle-select-all" data-team-id="${teamId}">
             </label>
           </th>
-          <th class="sortable-header" data-sort="name" data-action="sort-team" data-team-id="${teamId}">Nom <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-          <th class="sortable-header" data-sort="email" data-action="sort-team" data-team-id="${teamId}">Email <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-          <th class="sortable-header" data-sort="bac" data-action="sort-team" data-team-id="${teamId}">Niveau <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+          <th class="sortable" data-sort-key="name" data-action="sort-team" data-team-id="${teamId}">Nom <span class="sort-indicator"></span></th>
+          <th class="sortable" data-sort-key="email" data-action="sort-team" data-team-id="${teamId}">Email <span class="sort-indicator"></span></th>
+          <th class="sortable" data-sort-key="bac" data-action="sort-team" data-team-id="${teamId}">Niveau <span class="sort-indicator"></span></th>
           <th>Pizza</th>
           <th>Rôle</th>
           <th class="actions-col">Actions</th>
@@ -281,15 +271,14 @@ export function sortTeamMembers(teamId, sortKey, headerElement) {
     return 0;
   });
 
-  // Update sort indicators
+  // Update sort indicators (.sort-indicator::after reads the `data-sort`
+  // direction from the sorted <th> itself — see admin/tables.css)
   const table = headerElement.closest('table');
-  for (const h of table.querySelectorAll('.sortable-header')) {
-    if (h.dataset.sort === key) {
-      h.setAttribute('data-sort-dir', dir);
-      h.querySelector('.sort-indicator').textContent = dir === 'asc' ? '@sfs:chevron.up@' : '@sfs:chevron.down@';
+  for (const h of table.querySelectorAll('.sortable')) {
+    if (h.dataset.sortKey === key) {
+      h.dataset.sort = dir;
     } else {
-      h.removeAttribute('data-sort-dir');
-      h.querySelector('.sort-indicator').textContent = '@sfs:arrow.up.arrow.down@';
+      delete h.dataset.sort;
     }
   }
 
@@ -685,13 +674,13 @@ export function sortAllParticipants(key) {
     setAllParticipantsSortDir('asc');
   }
 
-  // Update sort indicators
-  for (const h of document.querySelectorAll('#all-participants-table .sortable-header')) {
-    const indicator = h.querySelector('.sort-indicator');
-    if (h.dataset.sort === allParticipantsSortKey) {
-      indicator.textContent = allParticipantsSortDir === 'asc' ? '@sfs:chevron.up@' : '@sfs:chevron.down@';
+  // Update sort indicators (.sort-indicator::after reads the `data-sort`
+  // direction from the sorted <th> itself — see admin/tables.css)
+  for (const h of document.querySelectorAll('#all-participants-table .sortable')) {
+    if (h.dataset.sortKey === allParticipantsSortKey) {
+      h.dataset.sort = allParticipantsSortDir;
     } else {
-      indicator.textContent = '@sfs:arrow.up.arrow.down@';
+      delete h.dataset.sort;
     }
   }
 

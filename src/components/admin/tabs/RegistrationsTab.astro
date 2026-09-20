@@ -3,125 +3,96 @@
  * RegistrationsTab - Main registrations management tab
  * Contains stats, import, quick actions, teams, and all participants sections
  */
+import Disclosure from '@info-evry/astro-design/components/Disclosure.astro';
+import SearchInput from '@info-evry/astro-design/components/SearchInput.astro';
 ---
 
 <div id="panel-registrations" class="tab-panel" role="tabpanel" aria-labelledby="tab-registrations">
 
   <!-- Stats Section -->
-  <div class="disclosure-group open" data-disclosure="stats">
-    <div class="disclosure-header" data-action="toggle-disclosure">
-      <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Vue d'ensemble</h2>
-      <div class="header-actions" data-action="stop-propagation" data-stop>
+  <div class="settings-card">
+    <div class="admin-header">
+      <h3>Vue d'ensemble</h3>
+      <div class="header-actions">
         <button type="button" id="export-official-btn" class="btn btn-primary btn-sm">Export Officiel</button>
         <button type="button" id="export-all-btn" class="btn btn-secondary btn-sm">Exporter CSV</button>
         <button type="button" id="refresh-btn" class="btn btn-secondary btn-sm">Rafraîchir</button>
       </div>
     </div>
-    <div class="disclosure-body">
-      <div id="stats-grid" class="stats-grid"></div>
-    </div>
+    <div id="stats-grid" class="stats-grid"></div>
   </div>
 
   <!-- Food Stats -->
-  <div class="disclosure-group open" data-disclosure="food">
-    <div class="disclosure-header" data-action="toggle-disclosure">
-      <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Préférences alimentaires</h2>
-    </div>
-    <div class="disclosure-body">
-      <div id="food-stats" class="food-stats"></div>
-    </div>
+  <div class="settings-card">
+    <h3>Préférences alimentaires</h3>
+    <div id="food-stats" class="food-stats"></div>
   </div>
 
-  <!-- Import Section -->
-  <div class="disclosure-group" data-disclosure="import">
-    <div class="disclosure-header" data-action="toggle-disclosure">
-      <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Importer des données</h2>
+  <!-- Import Section (secondary) -->
+  <Disclosure id="import" title="Importer des données">
+    <p class="import-description">
+      Importez des membres depuis un fichier CSV. Les équipes seront créées automatiquement avec un mot de passe aléatoire, affiché une seule fois après l'import.
+    </p>
+    <div class="import-format">
+      <strong>Format attendu :</strong>
+      <code>id,firstname,lastname,email,fooddiet,baclevel,ismanager,teamName,date</code>
     </div>
-    <div class="disclosure-body">
-      <div class="settings-card">
-        <h3>Import CSV</h3>
-        <p class="import-description">
-          Importez des membres depuis un fichier CSV. Les équipes seront créées automatiquement avec un mot de passe aléatoire, affiché une seule fois après l'import.
-        </p>
-        <div class="import-format">
-          <strong>Format attendu :</strong>
-          <code>id,firstname,lastname,email,fooddiet,baclevel,ismanager,teamName,date</code>
-        </div>
-        <div class="form-group">
-          <label for="import-file">Fichier CSV</label>
-          <input type="file" id="import-file" accept=".csv,text/csv">
-        </div>
-        <div id="import-preview" class="import-preview hidden">
-          <h4>Aperçu</h4>
-          <div id="import-preview-content"></div>
-        </div>
-        <div class="import-actions">
-          <button type="button" id="import-btn" class="btn btn-primary" disabled>Importer</button>
-          <span id="import-status" class="import-status"></span>
-        </div>
-      </div>
+    <div class="form-group">
+      <label for="import-file">Fichier CSV</label>
+      <input type="file" id="import-file" accept=".csv,text/csv">
     </div>
-  </div>
+    <div id="import-preview" class="import-preview hidden">
+      <h4>Aperçu</h4>
+      <div id="import-preview-content"></div>
+    </div>
+    <div class="import-actions">
+      <button type="button" id="import-btn" class="btn btn-primary" disabled>Importer</button>
+      <span id="import-status" class="import-status"></span>
+    </div>
+  </Disclosure>
 
   <!-- Quick Actions -->
-  <div class="disclosure-group open" data-disclosure="actions">
-    <div class="disclosure-header" data-action="toggle-disclosure">
-      <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Actions rapides</h2>
-    </div>
-    <div class="disclosure-body">
-      <div class="quick-actions">
-        <button type="button" id="add-team-btn" class="btn btn-primary">􀁍 Nouvelle équipe</button>
-        <button type="button" id="add-member-btn" class="btn btn-primary">􀁍 Nouveau membre</button>
-        <button type="button" id="select-all-btn" class="btn btn-secondary">Tout sélectionner</button>
-        <button type="button" id="delete-selected-btn" class="btn btn-danger" disabled>􀈑 Supprimer sélection</button>
-      </div>
+  <div class="settings-card">
+    <h3>Actions rapides</h3>
+    <div class="quick-actions">
+      <button type="button" id="add-team-btn" class="btn btn-primary">􀁍 Nouvelle équipe</button>
+      <button type="button" id="add-member-btn" class="btn btn-primary">􀁍 Nouveau membre</button>
+      <button type="button" id="select-all-btn" class="btn btn-secondary">Tout sélectionner</button>
+      <button type="button" id="delete-selected-btn" class="btn btn-danger" disabled>􀈑 Supprimer sélection</button>
     </div>
   </div>
 
   <!-- Teams Section -->
-  <div class="disclosure-group open" data-disclosure="teams">
-    <div class="disclosure-header" data-action="toggle-disclosure">
-      <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Équipes et membres</h2>
-      <div class="header-actions" data-action="stop-propagation" data-stop>
-        <div class="search-input-wrapper">
-          <span class="search-icon sf-symbol" aria-hidden="true">@sfs:magnifyingglass@</span>
-          <input type="search" id="teams-search" class="search-input" placeholder="Rechercher...">
-        </div>
+  <div class="settings-card">
+    <div class="admin-header">
+      <h3>Équipes et membres</h3>
+      <div class="header-actions">
+        <SearchInput id="teams-search" placeholder="Rechercher..." />
       </div>
     </div>
-    <div class="disclosure-body">
-      <div id="teams-container"></div>
-    </div>
+    <div id="teams-container"></div>
   </div>
 
-  <!-- All Participants List Section -->
-  <div class="disclosure-group" data-disclosure="all-participants">
-    <div class="disclosure-header" data-action="toggle-disclosure">
-      <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Tous les participants</h2>
-      <div class="header-actions" data-action="stop-propagation" data-stop>
-        <div class="search-input-wrapper">
-          <span class="search-icon sf-symbol" aria-hidden="true">@sfs:magnifyingglass@</span>
-          <input type="search" id="all-participants-search" class="search-input" placeholder="Rechercher un participant...">
-        </div>
-      </div>
+  <!-- All Participants List Section (secondary) -->
+  <Disclosure id="all-participants" title="Tous les participants">
+    <Fragment slot="actions">
+      <SearchInput id="all-participants-search" placeholder="Rechercher un participant..." />
+    </Fragment>
+    <div class="table-container">
+      <table id="all-participants-table" class="members-table">
+        <thead>
+          <tr>
+            <th class="sortable" data-sort-key="name" data-action="sort-all-participants">Nom <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort-key="email" data-action="sort-all-participants">Email <span class="sort-indicator"></span></th>
+            <th class="sortable team-col" data-sort-key="team" data-action="sort-all-participants">Équipe <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort-key="pizza" data-action="sort-all-participants">Pizza <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort-key="bac" data-action="sort-all-participants">BAC <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort-key="manager" data-action="sort-all-participants">Rôle <span class="sort-indicator"></span></th>
+          </tr>
+        </thead>
+        <tbody id="all-participants-tbody"></tbody>
+      </table>
     </div>
-    <div class="disclosure-body">
-      <div class="table-container">
-        <table id="all-participants-table" class="members-table">
-          <thead>
-            <tr>
-              <th class="sortable-header" data-sort="name" data-action="sort-all-participants">Nom <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-              <th class="sortable-header" data-sort="email" data-action="sort-all-participants">Email <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-              <th class="sortable-header team-col" data-sort="team" data-action="sort-all-participants">Équipe <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-              <th class="sortable-header" data-sort="pizza" data-action="sort-all-participants">Pizza <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-              <th class="sortable-header" data-sort="bac" data-action="sort-all-participants">BAC <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-              <th class="sortable-header" data-sort="manager" data-action="sort-all-participants">Rôle <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-            </tr>
-          </thead>
-          <tbody id="all-participants-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+  </Disclosure>
 
 </div><!-- End Registrations Panel -->

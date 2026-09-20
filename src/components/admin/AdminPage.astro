@@ -1,0 +1,65 @@
+---
+/**
+ * NDI Admin Dashboard page body.
+ *
+ * Kept separate from src/pages/admin.astro so that page stays a thin
+ * wrapper importable only via the `@/` alias — deploying under a secret
+ * path (src/pages/<secret>.astro, at any depth) then only requires
+ * copying that one-line wrapper.
+ */
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import AdminHeader from '@/components/admin/AdminHeader.astro';
+import AdminAuth from '@/components/admin/AdminAuth.astro';
+import AdminSidebar from '@info-evry/astro-design/components/admin/AdminSidebar.astro';
+import RegistrationsTab from '@/components/admin/tabs/RegistrationsTab.astro';
+import AttendanceTab from '@/components/admin/tabs/AttendanceTab.astro';
+import PizzaTab from '@/components/admin/tabs/PizzaTab.astro';
+import RoomsTab from '@/components/admin/tabs/RoomsTab.astro';
+import ArchivesTab from '@/components/admin/tabs/ArchivesTab.astro';
+import SettingsTab from '@/components/admin/tabs/SettingsTab.astro';
+import TeamModal from '@/components/admin/modals/TeamModal.astro';
+import MemberModal from '@/components/admin/modals/MemberModal.astro';
+import ConfirmModal from '@/components/admin/modals/ConfirmModal.astro';
+import CheckinModal from '@/components/admin/modals/CheckinModal.astro';
+
+const sidebarTabs = [
+  { id: 'registrations', label: 'Inscriptions', icon: 'list.bullet' },
+  { id: 'attendance', label: 'Présences', icon: 'person.badge.clock', badge: 0 },
+  { id: 'pizza', label: 'Pizzas', icon: 'fork.knife', badge: 0 },
+  { id: 'rooms', label: 'Salles', icon: 'building.2', badge: 0 },
+  { id: 'archives', label: 'Archives', icon: 'archivebox', badge: 0, badgeHidden: true },
+  { id: 'settings', label: 'Paramètres', icon: 'gear' }
+];
+---
+
+<AdminLayout title="NDI Admin - Gestion des équipes - Asso Info Evry">
+  <AdminHeader />
+
+  <main class="container-wide admin">
+    <AdminAuth />
+
+    <div id="admin-content" class="hidden admin-layout">
+      <AdminSidebar id="admin-sidebar" activeTab="registrations" tabs={sidebarTabs} />
+
+      <!-- Main Content Area -->
+      <div class="admin-main">
+        <RegistrationsTab />
+        <AttendanceTab />
+        <PizzaTab />
+        <RoomsTab />
+        <ArchivesTab />
+        <SettingsTab />
+      </div>
+    </div>
+
+    <!-- Modals -->
+    <TeamModal />
+    <MemberModal />
+    <ConfirmModal />
+    <CheckinModal />
+  </main>
+
+<script>
+import '@/client/admin/main.js';
+</script>
+</AdminLayout>

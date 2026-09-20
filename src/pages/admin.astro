@@ -1,100 +1,13 @@
 ---
 /**
  * NDI Admin Dashboard
- * Refactored with modular components
+ *
+ * Thin wrapper around AdminPage.astro so that deploying this page under
+ * a secret path (e.g. src/pages/some/secret/path.astro) only requires
+ * copying this file — it only imports via the `@/` alias, which resolves
+ * from src/ regardless of this file's own location.
  */
-import AdminLayout from '../layouts/AdminLayout.astro';
-import AdminHeader from '../components/admin/AdminHeader.astro';
-import AdminAuth from '../components/admin/AdminAuth.astro';
-import RegistrationsTab from '../components/admin/tabs/RegistrationsTab.astro';
-import AttendanceTab from '../components/admin/tabs/AttendanceTab.astro';
-import PizzaTab from '../components/admin/tabs/PizzaTab.astro';
-import RoomsTab from '../components/admin/tabs/RoomsTab.astro';
-import ArchivesTab from '../components/admin/tabs/ArchivesTab.astro';
-import SettingsTab from '../components/admin/tabs/SettingsTab.astro';
-import TeamModal from '../components/admin/modals/TeamModal.astro';
-import MemberModal from '../components/admin/modals/MemberModal.astro';
-import ConfirmModal from '../components/admin/modals/ConfirmModal.astro';
-import CheckinModal from '../components/admin/modals/CheckinModal.astro';
-
-const baseUrl = import.meta.env.BASE_URL;
+import AdminPage from '@/components/admin/AdminPage.astro';
 ---
 
-<AdminLayout title="NDI Admin - Gestion des équipes - Asso Info Evry">
-  <AdminHeader />
-
-  <main class="container-wide admin">
-    <!-- Config data for JavaScript -->
-    <div id="admin-config" data-base-url={baseUrl} hidden></div>
-
-    <AdminAuth />
-
-    <div id="admin-content" class="hidden admin-layout">
-      <!-- Sidebar Navigation -->
-      <nav class="admin-sidebar" id="admin-sidebar">
-        <ul class="admin-sidebar-nav">
-          <li>
-            <button type="button" class="admin-sidebar-item active" data-tab="registrations">
-              <span class="admin-sidebar-icon sf-symbol">@sfs:list.bullet@</span>
-              <span class="admin-sidebar-label">Inscriptions</span>
-            </button>
-          </li>
-          <li>
-            <button type="button" class="admin-sidebar-item" data-tab="attendance">
-              <span class="admin-sidebar-icon sf-symbol">@sfs:person.badge.clock@</span>
-              <span class="admin-sidebar-label">Présences</span>
-              <span id="attendance-badge" class="admin-sidebar-badge">0</span>
-            </button>
-          </li>
-          <li>
-            <button type="button" class="admin-sidebar-item" data-tab="pizza">
-              <span class="admin-sidebar-icon sf-symbol">@sfs:fork.knife@</span>
-              <span class="admin-sidebar-label">Pizzas</span>
-              <span id="pizza-badge" class="admin-sidebar-badge">0</span>
-            </button>
-          </li>
-          <li>
-            <button type="button" class="admin-sidebar-item" data-tab="rooms">
-              <span class="admin-sidebar-icon sf-symbol">@sfs:building.2@</span>
-              <span class="admin-sidebar-label">Salles</span>
-              <span id="rooms-badge" class="admin-sidebar-badge">0</span>
-            </button>
-          </li>
-          <li>
-            <button type="button" class="admin-sidebar-item" data-tab="archives">
-              <span class="admin-sidebar-icon sf-symbol">@sfs:archivebox@</span>
-              <span class="admin-sidebar-label">Archives</span>
-              <span id="archives-badge" class="admin-sidebar-badge hidden">0</span>
-            </button>
-          </li>
-          <li>
-            <button type="button" class="admin-sidebar-item" data-tab="settings">
-              <span class="admin-sidebar-icon sf-symbol">@sfs:gear@</span>
-              <span class="admin-sidebar-label">Paramètres</span>
-            </button>
-          </li>
-        </ul>
-      </nav>
-
-      <!-- Main Content Area -->
-      <div class="admin-main">
-        <RegistrationsTab />
-        <AttendanceTab />
-        <PizzaTab />
-        <RoomsTab />
-        <ArchivesTab />
-        <SettingsTab />
-      </div>
-    </div>
-
-    <!-- Modals -->
-    <TeamModal />
-    <MemberModal />
-    <ConfirmModal />
-    <CheckinModal />
-  </main>
-
-<script>
-import '../client/admin/main.js';
-</script>
-</AdminLayout>
+<AdminPage />

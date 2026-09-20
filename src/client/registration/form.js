@@ -5,7 +5,7 @@
 /* eslint-env browser */
 
 import { isValidEmail } from '../lib/validation.js';
-import { escapeHtml } from '../admin/utils.js';
+import { escapeHtml } from '@info-evry/astro-design/scripts/dom';
 import { state } from './state.js';
 import { elements } from './elements.js';
 import { submitRegistration } from './api.js';

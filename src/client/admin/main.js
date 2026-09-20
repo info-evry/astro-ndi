@@ -2,18 +2,18 @@
  * Admin Dashboard Main Entry Point
  *
  * This module bootstraps the admin dashboard by:
- * 1. Reading baseUrl from DOM data attribute
- * 2. Creating the API client
- * 3. Initializing all modules
- * 4. Setting up event listeners (including delegated data-action/data-change handling)
+ * 1. Creating the API client (base URL read from <meta name="base-url">)
+ * 2. Initializing all modules
+ * 3. Setting up event listeners (including delegated data-action/data-change handling)
  */
 /* eslint-env browser */
 
-// Core utilities
-import { $ } from './utils.js';
-import { toastError } from './toast.js';
-import { createApiClient, setToken } from './api.js';
-import { initTabs } from './tabs.js';
+// Shared design-system client scripts
+import { $ } from '@info-evry/astro-design/scripts/dom';
+import { toastError } from '@info-evry/astro-design/scripts/toast';
+import { createApiClient, readBaseUrl } from '@info-evry/astro-design/scripts/api-client';
+import { initTabs } from '@info-evry/astro-design/scripts/tabs';
+import { initModals } from '@info-evry/astro-design/scripts/modal';
 import { buildActions, bindDelegation } from './actions.js';
 
 // State management
@@ -71,16 +71,12 @@ import {
 // INITIALIZATION
 // ============================================================
 
-let api;
-let adminToken = '';
+const TOKEN_KEY = 'ndi_admin_token';
+const client = createApiClient({ tokenKey: TOKEN_KEY });
+const { api, setToken, getToken, clearToken } = client;
+const apiBase = readBaseUrl();
 
-/**
- * Get baseUrl from DOM data attribute
- */
-function getBaseUrl() {
-  const el = document.getElementById('admin-config');
-  return el?.dataset.baseUrl || '';
-}
+let adminToken = getToken();
 
 /**
  * Load all data
@@ -118,7 +114,7 @@ async function loadData() {
     console.error('Error loading data:', error);
     if (error.message === 'Unauthorized') {
       showAuth();
-      localStorage.removeItem('ndi_admin_token');
+      clearToken();
       adminToken = '';
     } else {
       toastError('Erreur lors du chargement des données');
@@ -169,7 +165,6 @@ function hideAuthError() {
   elements.authError?.classList.add('hidden');
 }
 
-let apiBase = '';
 let authedModulesReady = false;
 
 /**
@@ -195,7 +190,6 @@ async function handleAuth() {
   hideAuthError();
   adminToken = token;
   setToken(token);
-  localStorage.setItem('ndi_admin_token', token);
 
   try {
     await loadData();
@@ -203,7 +197,7 @@ async function handleAuth() {
     initAuthedModules();
   } catch (error) {
     showAuthError(error.message === 'Unauthorized' ? 'Token invalide' : error.message);
-    localStorage.removeItem('ndi_admin_token');
+    clearToken();
     adminToken = '';
   }
 }
@@ -226,17 +220,6 @@ function updateDeleteButton() {
 // ============================================================
 
 async function init() {
-  // Get base URL and create API client
-  const baseUrl = getBaseUrl();
-  apiBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-  api = createApiClient(apiBase);
-
-  // Check for stored token
-  adminToken = localStorage.getItem('ndi_admin_token') || '';
-  if (adminToken) {
-    setToken(adminToken);
-  }
-
   // Wire up delegated data-action/data-change handlers
   const { actions, changes } = buildActions({ api, loadData, updateDeleteButton });
   bindDelegation(actions, changes);
@@ -263,17 +246,14 @@ async function init() {
   elements.teamForm?.addEventListener('submit', (e) => handleTeamSubmit(e, api, loadData));
   elements.memberForm?.addEventListener('submit', (e) => handleMemberSubmit(e, api, loadData));
 
-  // Modal close on backdrop click
-  for (const modal of document.querySelectorAll('.modal')) {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        modal.classList.add('hidden');
-      }
-    });
-  }
-
-  // Initialize tabs and modules
+  // Initialize tabs and modals. Disclosure.astro instances self-init via
+  // their own inline script (see astro-design/components/Disclosure.astro);
+  // calling initDisclosures() again here would double-bind their toggle
+  // listeners. Hand-written `.disclosure-group` sections elsewhere in this
+  // dashboard use `data-action="toggle-disclosure"`, wired through the
+  // delegated dispatcher below instead.
   initTabs();
+  initModals();
   initTeamsSearch();
   initAttendance(api);
   initPizza(api);
@@ -288,7 +268,7 @@ async function init() {
     } catch (error) {
       showAuth();
       if (error.message === 'Unauthorized') {
-        localStorage.removeItem('ndi_admin_token');
+        clearToken();
         adminToken = '';
       }
     }

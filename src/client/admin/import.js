@@ -3,8 +3,8 @@
  */
 /* eslint-env browser */
 
-import { $, escapeHtml } from './utils.js';
-import { toastSuccess, toastError } from './toast.js';
+import { $, escapeHtml } from '@info-evry/astro-design/scripts/dom';
+import { toastSuccess, toastError } from '@info-evry/astro-design/scripts/toast';
 import { csvData, setCsvData, setParsedRows } from './state.js';
 
 // Element ID constants

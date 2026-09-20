@@ -148,33 +148,43 @@ describe('Admin Authentication - Protected Endpoints', () => {
 });
 
 describe('Timing Attack Prevention', () => {
-  it('should take similar time for wrong vs correct token', async () => {
-    // This is a basic test - in practice timing attacks need more sophisticated testing
-    const iterations = 5;
-    const wrongTimes = [];
-    const correctTimes = [];
-
-    for (let i = 0; i < iterations; i++) {
-      const startWrong = performance.now();
-      await SELF.fetch('http://localhost/api/admin/stats', {
-        headers: { 'Authorization': 'Bearer wrong-token-123456' }
+  it('should reject tokens differing at the first vs last character in similar time', async () => {
+    // Both requests fail the bearer comparison and never reach D1, so the
+    // only work measured is the constant-time comparison itself. The old
+    // version compared a 401 against an authenticated /stats query (which
+    // hits the database) and was inherently flaky.
+    const correct = 'test-admin-token';
+    const wrongFirst = 'Xest-admin-toke' + correct.slice(-1);
+    const wrongLast = correct.slice(0, -1) + 'X';
+    const time = async (token) => {
+      const start = performance.now();
+      const res = await SELF.fetch('http://localhost/api/admin/stats', {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      wrongTimes.push(performance.now() - startWrong);
+      expect(res.status).toBe(401);
+      return performance.now() - start;
+    };
 
-      const startCorrect = performance.now();
-      await SELF.fetch('http://localhost/api/admin/stats', {
-        headers: { 'Authorization': 'Bearer test-admin-token' }
-      });
-      correctTimes.push(performance.now() - startCorrect);
+    // Warm up the isolate so JIT/cold-start noise does not skew the samples
+    for (let i = 0; i < 3; i++) {
+      await time(wrongFirst);
+      await time(wrongLast);
     }
 
-    // Calculate averages
-    const avgWrong = wrongTimes.reduce((a, b) => a + b, 0) / wrongTimes.length;
-    const avgCorrect = correctTimes.reduce((a, b) => a + b, 0) / correctTimes.length;
-
-    // Times should be within reasonable range (not a definitive test but sanity check)
-    // Allow up to 5x difference due to network/processing variability
-    const ratio = Math.max(avgWrong, avgCorrect) / Math.min(avgWrong, avgCorrect);
-    expect(ratio).toBeLessThan(5);
+    const iterations = 20;
+    const first = [];
+    const last = [];
+    for (let i = 0; i < iterations; i++) {
+      first.push(await time(wrongFirst));
+      last.push(await time(wrongLast));
+    }
+    const median = (xs) => {
+      const sorted = [...xs].sort((a, b) => a - b);
+      return sorted[Math.floor(sorted.length / 2)];
+    };
+    const ratio = Math.max(median(first), median(last)) / Math.min(median(first), median(last));
+    // Sanity bound only: a real early-exit comparison would differ by orders
+    // of magnitude on long tokens; scheduler noise stays well under this.
+    expect(ratio).toBeLessThan(4);
   });
 });

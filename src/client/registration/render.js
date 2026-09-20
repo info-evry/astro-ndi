@@ -4,7 +4,7 @@
  */
 /* eslint-env browser */
 
-import { escapeHtml } from '../admin/utils.js';
+import { escapeHtml } from '@info-evry/astro-design/scripts/dom';
 import { state, setAtCapacity } from './state.js';
 import { elements } from './elements.js';
 
