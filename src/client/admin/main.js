@@ -169,6 +169,22 @@ function hideAuthError() {
   elements.authError?.classList.add('hidden');
 }
 
+let apiBase = '';
+let authedModulesReady = false;
+
+/**
+ * Initialise the modules that need an authenticated API client.
+ * Runs once, on either the stored-token or the interactive login path.
+ */
+function initAuthedModules() {
+  if (authedModulesReady) return;
+  authedModulesReady = true;
+  initSettings(api);
+  initImport(api, loadData);
+  initAllParticipants();
+  initArchives(api, apiBase, adminToken, loadData);
+}
+
 async function handleAuth() {
   const token = elements.tokenInput?.value?.trim();
   if (!token) {
@@ -184,6 +200,7 @@ async function handleAuth() {
   try {
     await loadData();
     showAdmin();
+    initAuthedModules();
   } catch (error) {
     showAuthError(error.message === 'Unauthorized' ? 'Token invalide' : error.message);
     localStorage.removeItem('ndi_admin_token');
@@ -211,7 +228,7 @@ function updateDeleteButton() {
 async function init() {
   // Get base URL and create API client
   const baseUrl = getBaseUrl();
-  const apiBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  apiBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
   api = createApiClient(apiBase);
 
   // Check for stored token
@@ -267,10 +284,7 @@ async function init() {
     try {
       await loadData();
       showAdmin();
-      initSettings(api);
-      initImport(api, loadData);
-      initAllParticipants();
-      initArchives(api, apiBase, adminToken, loadData);
+      initAuthedModules();
     } catch (error) {
       showAuth();
       if (error.message === 'Unauthorized') {

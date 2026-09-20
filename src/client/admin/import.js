@@ -207,7 +207,7 @@ export async function handleImport(api, loadData) {
     toastError(error.message || 'Erreur lors de l\'import');
 
     if (status) {
-      status.innerHTML = `<span class="sf-symbol">@sfs:xmark@</span> Erreur: ${error.message}`;
+      status.innerHTML = `<span class="sf-symbol">@sfs:xmark@</span> Erreur: ${escapeHtml(error.message || '')}`;
       status.className = 'import-status error';
     }
   } finally {
