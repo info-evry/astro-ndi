@@ -86,31 +86,41 @@ astro-ndi/
 ### Prerequisites
 
 - [Bun](https://bun.sh/) (v1.0+)
-- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) (v3+)
+- Wrangler CLI (install via Bun: `bunx wrangler`)
 - Cloudflare account with Workers, D1, and KV access
 
 ### Installation
 
 ```bash
-# Clone with submodules
+# Clone the maestro repo (which includes this as a submodule)
+git clone --recurse-submodules https://github.com/info-evry/astro-maestro.git
+cd astro-maestro
+
+# Or clone this repo directly for development
 git clone --recursive https://github.com/info-evry/astro-ndi.git
 cd astro-ndi
-
-# Install dependencies
 bun install
 ```
 
 ### Local Development
 
+#### Via Maestro (recommended)
+
+From the maestro root:
+```bash
+bun run dev:ndi
+```
+
+This sets up the database, environment variables, and starts the dev server on **port 4321**.
+Admin interface at: http://localhost:4321/nuit-de-linfo/admin (token: `dev-admin-token`)
+
+#### Standalone
+
 ```bash
 bun run dev
 ```
 
-Visit `http://localhost:4321`
-
-### Database Setup
-
-See [docs/setup.md](./docs/setup.md) for Cloudflare D1 and KV configuration.
+See `docs/setup.md` for database configuration.
 
 ### Testing
 
@@ -118,9 +128,14 @@ See [docs/setup.md](./docs/setup.md) for Cloudflare D1 and KV configuration.
 # Build first (required for Workers tests)
 bun run build
 
-# Run tests
-bun run test
+# Run tests with Vitest
+bunx vitest run
+
+# Watch mode
+bunx vitest
 ```
+
+For detailed development and deployment instructions, see [maestro docs](../../docs/DEVELOPMENT.md).
 
 ## Environment Configuration
 
