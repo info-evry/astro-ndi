@@ -4,6 +4,7 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { env, SELF } from 'cloudflare:test';
+import { verifyPassword } from '../src/shared/crypto.js';
 
 beforeAll(async () => {
   await env.DB.exec(`CREATE TABLE IF NOT EXISTS teams (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, description TEXT DEFAULT '', password_hash TEXT DEFAULT '', room TEXT DEFAULT NULL, created_at TEXT DEFAULT (datetime('now')))`);
@@ -618,5 +619,86 @@ describe('CSV Import - isManager Parsing', () => {
     });
 
     expect(response.status).toBe(200);
+  });
+});
+
+describe('CSV Import - Generated Passwords', () => {
+  it('returns one password per newly created team', async () => {
+    const csv = `id,firstname,lastname,email,fooddiet,baclevel,ismanager,teamName,date
+1,Pw,One,pwone@example.com,none,1,Yes,Password Team A,2024-01-01
+2,Pw,Two,pwtwo@example.com,none,1,No,Password Team B,2024-01-01`;
+
+    const response = await SELF.fetch('http://localhost/api/admin/import', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({ csv })
+    });
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.stats.teamsCreated).toBe(2);
+    expect(data.passwords).toHaveLength(2);
+
+    const teamNames = data.passwords.map(p => p.team).sort();
+    expect(teamNames).toEqual(['Password Team A', 'Password Team B']);
+  });
+
+  it('generated password verifies against the stored team hash', async () => {
+    const csv = `id,firstname,lastname,email,fooddiet,baclevel,ismanager,teamName,date
+1,Verify,User,verifyuser@example.com,none,1,Yes,Password Verify Team,2024-01-01`;
+
+    const response = await SELF.fetch('http://localhost/api/admin/import', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({ csv })
+    });
+
+    const data = await response.json();
+    const entry = data.passwords.find(p => p.team === 'Password Verify Team');
+    expect(entry).toBeDefined();
+
+    const teamRow = await env.DB.prepare('SELECT password_hash FROM teams WHERE name = ?')
+      .bind('Password Verify Team')
+      .first();
+
+    const isValid = await verifyPassword(entry.password, teamRow.password_hash);
+    expect(isValid).toBe(true);
+  });
+
+  it('does not return a new password when re-importing an existing team', async () => {
+    const csv1 = `id,firstname,lastname,email,fooddiet,baclevel,ismanager,teamName,date
+1,Reimport,One,reimportone@example.com,none,1,Yes,Password Reimport Team,2024-01-01`;
+
+    await SELF.fetch('http://localhost/api/admin/import', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({ csv: csv1 })
+    });
+
+    const csv2 = `id,firstname,lastname,email,fooddiet,baclevel,ismanager,teamName,date
+2,Reimport,Two,reimporttwo@example.com,none,1,No,Password Reimport Team,2024-01-01`;
+
+    const response = await SELF.fetch('http://localhost/api/admin/import', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-admin-token'
+      },
+      body: JSON.stringify({ csv: csv2 })
+    });
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.stats.teamsCreated).toBe(0);
+    expect(data.passwords).toHaveLength(0);
   });
 });

@@ -7,6 +7,9 @@ import { json, error } from '../../lib/router.js';
 import * as paymentsDb from '../../database/db.payments.js';
 import * as membersDb from '../../database/db.members.js';
 import * as settingsDb from '../../database/db.settings.js';
+import * as db from '../../lib/db.js';
+import { verifyAdmin } from '../../shared/auth.js';
+import { verifyPassword } from '../../shared/crypto.js';
 import {
   SumUpClient,
   generateCheckoutReference,
@@ -16,11 +19,39 @@ import {
 } from 'astro-payments';
 
 /**
+ * Authorize a mutating action on behalf of a member's team.
+ * Allows either an authenticated admin, or a caller who supplies the
+ * correct team password for the member's team.
+ * @param {Request} request
+ * @param {object} env
+ * @param {object} member - Member row (must include team_id)
+ * @param {object} body - Parsed request body (may contain teamPassword)
+ * @returns {Promise<boolean>}
+ */
+async function authorizeMemberAction(request, env, member, body) {
+  if (await verifyAdmin(request, env)) {
+    return true;
+  }
+
+  if (typeof body.teamPassword !== 'string' || !body.teamPassword) {
+    return false;
+  }
+
+  const team = await db.getTeamById(env.DB, member.team_id);
+  if (!team) {
+    return false;
+  }
+
+  return verifyPassword(body.teamPassword, team.password_hash);
+}
+
+/**
  * POST /api/payment/checkout - Create SumUp checkout for a member
  */
 export async function createCheckout(request, env) {
   try {
-    const { memberId } = await request.json();
+    const body = await request.json();
+    const { memberId } = body;
 
     if (!memberId) {
       return error('memberId is required', 400);
@@ -30,6 +61,10 @@ export async function createCheckout(request, env) {
     const member = await membersDb.getMemberById(env.DB, memberId);
     if (!member) {
       return error('Member not found', 404);
+    }
+
+    if (!await authorizeMemberAction(request, env, member, body)) {
+      return error('Mot de passe d\'équipe requis ou incorrect', 403);
     }
 
     if (member.payment_status !== 'pending' && member.payment_status !== 'unpaid') {
@@ -60,6 +95,9 @@ export async function createCheckout(request, env) {
     }
     if (!env.SUMUP_MERCHANT_CODE) {
       return error('SumUp merchant code not configured', 500);
+    }
+    if (env.SUMUP_MERCHANT_CODE === 'PLACEHOLDER_MERCHANT_CODE') {
+      return error('SumUp merchant code is not configured for this environment', 503);
     }
 
     // Create SumUp checkout
@@ -114,7 +152,8 @@ export async function createCheckout(request, env) {
  */
 export async function verifyPayment(request, env) {
   try {
-    const { checkoutId } = await request.json();
+    const body = await request.json();
+    const { checkoutId } = body;
 
     if (!checkoutId) {
       return error('checkoutId is required', 400);
@@ -124,6 +163,12 @@ export async function verifyPayment(request, env) {
     const member = await paymentsDb.getMemberByCheckoutId(env.DB, checkoutId);
     if (!member) {
       return error('Member not found for checkout', 404);
+    }
+
+    // Require admin or team password before revealing anything about the
+    // payment status of this member.
+    if (!await authorizeMemberAction(request, env, member, body)) {
+      return error('Mot de passe d\'équipe requis ou incorrect', 403);
     }
 
     // Get checkout status from SumUp
@@ -205,7 +250,8 @@ export async function verifyPayment(request, env) {
  */
 export async function markPaymentDelayed(request, env) {
   try {
-    const { memberId } = await request.json();
+    const body = await request.json();
+    const { memberId } = body;
 
     if (!memberId) {
       return error('memberId is required', 400);
@@ -215,6 +261,14 @@ export async function markPaymentDelayed(request, env) {
     const member = await membersDb.getMemberById(env.DB, memberId);
     if (!member) {
       return error('Member not found', 404);
+    }
+
+    if (!await authorizeMemberAction(request, env, member, body)) {
+      return error('Mot de passe d\'équipe requis ou incorrect', 403);
+    }
+
+    if (member.payment_status === 'paid') {
+      return error('Member has already paid', 409);
     }
 
     // Get pricing tier for the member
@@ -324,32 +378,36 @@ export async function paymentCallback(request, env) {
       return json({ received: true }); // Acknowledge but ignore
     }
 
-    // Verify with SumUp API
-    if (env.SUMUP_API_KEY) {
-      const sumup = new SumUpClient(env.SUMUP_API_KEY);
-      const rawCheckout = await sumup.getCheckout(checkoutId);
-      const checkout = parseCheckoutResponse(rawCheckout);
+    // Verify with SumUp API - never mutate the DB unless we can actually
+    // verify the payment status with SumUp.
+    if (!env.SUMUP_API_KEY) {
+      console.warn('Payment callback: SUMUP_API_KEY not configured, ignoring callback');
+      return json({ received: true, processed: false });
+    }
 
-      if (checkout.isPaid && member.payment_status !== 'paid') {
-        // Update member
-        await paymentsDb.updateMemberPayment(env.DB, member.id, {
-          payment_status: 'paid',
-          payment_amount: checkout.amountCents,
-          payment_confirmed_at: new Date().toISOString(),
-          transaction_id: checkout.transactionId,
-          payment_tier: member.registration_tier
-        });
+    const sumup = new SumUpClient(env.SUMUP_API_KEY);
+    const rawCheckout = await sumup.getCheckout(checkoutId);
+    const checkout = parseCheckoutResponse(rawCheckout);
 
-        // Log payment event
-        await paymentsDb.logPaymentEvent(env.DB, {
-          member_id: member.id,
-          checkout_id: checkoutId,
-          event_type: 'payment_completed',
-          amount: checkout.amountCents,
-          tier: member.registration_tier,
-          metadata: { source: 'webhook', transaction_id: checkout.transactionId }
-        });
-      }
+    if (checkout.isPaid && member.payment_status !== 'paid') {
+      // Update member
+      await paymentsDb.updateMemberPayment(env.DB, member.id, {
+        payment_status: 'paid',
+        payment_amount: checkout.amountCents,
+        payment_confirmed_at: new Date().toISOString(),
+        transaction_id: checkout.transactionId,
+        payment_tier: member.registration_tier
+      });
+
+      // Log payment event
+      await paymentsDb.logPaymentEvent(env.DB, {
+        member_id: member.id,
+        checkout_id: checkoutId,
+        event_type: 'payment_completed',
+        amount: checkout.amountCents,
+        tier: member.registration_tier,
+        metadata: { source: 'webhook', transaction_id: checkout.transactionId }
+      });
     }
 
     return json({ received: true, processed: true });

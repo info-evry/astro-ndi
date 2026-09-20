@@ -89,10 +89,10 @@ describe('verifyPassword', () => {
     expect(typeof result).toBe('boolean');
   });
 
-  it('should match plain text password (deprecated but supported)', async () => {
-    // Plain text fallback for migration
+  it('should reject plain text stored values (no plaintext fallback)', async () => {
+    // Plain text is no longer accepted - fail closed
     const result = await verifyPassword('plaintext', 'plaintext');
-    expect(result).toBe(true);
+    expect(result).toBe(false);
   });
 
   it('should not match different plain text', async () => {

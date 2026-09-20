@@ -50,6 +50,24 @@ binding = "CONFIG"
 id = "YOUR_KV_ID"
 ```
 
+### Create KV Namespace for Rate Limiting
+
+Rate limiting on public/admin/payment endpoints requires a `RATE_LIMIT` KV
+namespace. It is optional - without it, rate limiting fails open - but is
+strongly recommended for production deployments.
+
+```bash
+bunx wrangler kv namespace create RATE_LIMIT
+```
+
+Copy the `id` from the output and update `wrangler.toml`:
+
+```toml
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "YOUR_RATE_LIMIT_KV_ID"
+```
+
 ## Step 3: Initialize Database
 
 Run migrations to create the database schema:

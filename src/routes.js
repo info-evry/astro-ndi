@@ -3,6 +3,7 @@
  */
 
 import { Router } from './lib/router.js';
+import { createRateLimiter, pathPrefix, pathPattern } from './lib/ratelimit.js';
 import { getConfig } from './api/config.js';
 import { listTeams, getTeam, getStats } from './api/teams.js';
 import { register } from './api/register.js';
@@ -59,6 +60,41 @@ import {
 export function createRouter() {
   // Pass base path to handle subpath deployments
   const router = new Router('/nuit-de-linfo');
+
+  // Rate limiting - protects public/write-heavy endpoints from abuse.
+  // Fails open (allows requests) if the RATE_LIMIT KV binding is missing.
+  router.use(createRateLimiter({
+    rules: [
+      {
+        name: 'register',
+        methods: ['POST'],
+        match: pathPrefix('/api/register'),
+        limit: 5,
+        windowSec: 600
+      },
+      {
+        name: 'team-view',
+        methods: ['POST'],
+        match: pathPattern(/^\/api\/teams\/[^/]+\/view$/),
+        limit: 10,
+        windowSec: 600
+      },
+      {
+        name: 'payment',
+        match: (path) => path.startsWith('/api/payment/')
+          && path !== '/api/payment/pricing'
+          && path !== '/api/payment/callback',
+        limit: 20,
+        windowSec: 600
+      },
+      {
+        name: 'admin',
+        match: pathPrefix('/api/admin/'),
+        limit: 60,
+        windowSec: 60
+      }
+    ]
+  }));
 
   // Public API routes
   router.get('/api/config', getConfig);

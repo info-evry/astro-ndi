@@ -130,6 +130,7 @@ bun run test
 |---------|------|-------------|
 | `DB` | D1 Database | SQLite database for teams/members |
 | `CONFIG` | KV Namespace | Dynamic configuration storage |
+| `RATE_LIMIT` | KV Namespace | Fixed-window rate limiting counters for public/admin/payment endpoints. Optional: if missing, rate limiting fails open (requests are allowed through) and a warning is logged. |
 
 ### Environment Variables
 
@@ -148,6 +149,23 @@ bun run test
 wrangler secret put ADMIN_TOKEN
 ```
 
+### Rate Limiting
+
+Public and write-heavy endpoints are protected by a fixed-window rate
+limiter backed by the `RATE_LIMIT` KV namespace (see
+[astro-core's `ratelimit.js`](../astro-core/src/lib/ratelimit.js)), keyed by
+client IP:
+
+| Rule | Scope | Limit |
+|------|-------|-------|
+| `register` | `POST /api/register` | 5 requests / 10 min |
+| `team-view` | `POST /api/teams/:id/view` | 10 requests / 10 min |
+| `payment` | any method under `/api/payment/*` (excluding `pricing` and `callback`) | 20 requests / 10 min |
+| `admin` | any method under `/api/admin/*` | 60 requests / 1 min |
+
+If the `RATE_LIMIT` KV binding is not configured, rate limiting fails open
+(requests are allowed through) rather than blocking traffic.
+
 ## API Endpoints
 
 ### Public
@@ -159,6 +177,24 @@ wrangler secret put ADMIN_TOKEN
 | `GET` | `/api/stats` | Registration statistics |
 | `POST` | `/api/register` | Register new team or join existing |
 | `POST` | `/api/teams/:id/view` | View team members (requires password) |
+| `GET` | `/api/payment/pricing` | Current pricing tier information |
+
+### Payment (admin bearer token OR team password required)
+
+These endpoints act on behalf of a specific member's team. Authorize a
+request either with an admin `Authorization: Bearer <ADMIN_TOKEN>` header,
+or by including the member's team password as `teamPassword` in the JSON
+body. Requests without either are rejected with `403`.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/payment/checkout` | Create a SumUp checkout for a member (`{ memberId, teamPassword? }`) |
+| `POST` | `/api/payment/verify` | Verify payment completion for a checkout (`{ checkoutId, teamPassword? }`) |
+| `POST` | `/api/payment/delayed` | Mark a member's payment as delayed/pay-at-event (`{ memberId, teamPassword? }`); rejected with `409` if the member has already paid |
+
+The `/api/payment/callback` webhook (called by SumUp, not by end users) never
+mutates the database unless `SUMUP_API_KEY` is configured; if it isn't, it
+acknowledges the callback without processing it (`{ received: true, processed: false }`).
 
 ### Admin (Bearer token required)
 
@@ -169,7 +205,7 @@ wrangler secret put ADMIN_TOKEN
 | `PUT` | `/api/admin/settings` | Update settings |
 | `GET` | `/api/admin/export` | Export all data to CSV |
 | `GET` | `/api/admin/export/ndi` | Export in official NDI format |
-| `POST` | `/api/admin/import` | Import members from CSV |
+| `POST` | `/api/admin/import` | Import members from CSV. Teams created by the import are assigned a random 16-character password (never a hash of the team name); the plain text passwords are returned once in the response as `passwords: [{ team, password }]` and are never logged or persisted anywhere other than the (hashed) `teams.password_hash` column. Re-importing rows for an already-existing team does not generate or return a new password. |
 | `GET` | `/api/admin/teams` | List all teams with members |
 | `POST` | `/api/admin/teams` | Create team |
 | `PUT` | `/api/admin/teams/:id` | Update team |

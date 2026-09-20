@@ -85,7 +85,7 @@ export function renderTeams(teams, container) {
 
   container.innerHTML = teams.map(team => `
     <div class="team-block" data-team-id="${team.id}">
-      <div class="team-header" onclick="toggleTeam(${team.id})">
+      <div class="team-header" data-action="toggle-team" data-team-id="${team.id}">
         <h3>${escapeHtml(team.name)}${team.room ? ` <span class="badge badge-muted">${escapeHtml(team.room)}</span>` : ''}</h3>
         <div class="team-info">
           <span>${team.members?.length || 0} membre(s)</span>
@@ -94,10 +94,10 @@ export function renderTeams(teams, container) {
       <div class="team-body">
         ${team.description ? `<p><em>${escapeHtml(team.description)}</em></p>` : ''}
         <div class="team-actions action-buttons">
-          <button type="button" class="icon-btn" onclick="editTeam(${team.id})" title="Modifier" aria-label="Modifier l'équipe">􀈊</button>
-          <button type="button" class="action-btn" onclick="exportTeam(${team.id}, '${escapeHtml(team.name)}')">Exporter CSV</button>
-          <button type="button" class="action-btn primary" onclick="exportTeamOfficial(${team.id}, '${escapeHtml(team.name)}')">Export Officiel</button>
-          ${team.name === 'Organisation' ? '' : `<button type="button" class="icon-btn danger" onclick="confirmDeleteTeam(${team.id}, '${escapeHtml(team.name)}')" title="Supprimer" aria-label="Supprimer l'équipe">􀈑</button>`}
+          <button type="button" class="icon-btn" data-action="edit-team" data-team-id="${team.id}" title="Modifier" aria-label="Modifier l'équipe">􀈊</button>
+          <button type="button" class="action-btn" data-action="export-team" data-team-id="${team.id}" data-team-name="${escapeHtml(team.name)}">Exporter CSV</button>
+          <button type="button" class="action-btn primary" data-action="export-team-official" data-team-id="${team.id}" data-team-name="${escapeHtml(team.name)}">Export Officiel</button>
+          ${team.name === 'Organisation' ? '' : `<button type="button" class="icon-btn danger" data-action="confirm-delete-team" data-team-id="${team.id}" data-team-name="${escapeHtml(team.name)}" title="Supprimer" aria-label="Supprimer l'équipe">􀈑</button>`}
         </div>
         ${renderMembersTable(team.members, team.id)}
       </div>
@@ -129,12 +129,12 @@ export function renderMembersTable(members, teamId) {
         <tr>
           <th class="checkbox-col">
             <label class="select-all-label">
-              <input type="checkbox" onchange="toggleSelectAll(${teamId}, this.checked)">
+              <input type="checkbox" data-change="toggle-select-all" data-team-id="${teamId}">
             </label>
           </th>
-          <th class="sortable-header" data-sort="name" onclick="sortTeamMembers(${teamId}, 'name', this)">Nom <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-          <th class="sortable-header" data-sort="email" onclick="sortTeamMembers(${teamId}, 'email', this)">Email <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-          <th class="sortable-header" data-sort="bac" onclick="sortTeamMembers(${teamId}, 'bac', this)">Niveau <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+          <th class="sortable-header" data-sort="name" data-action="sort-team" data-team-id="${teamId}">Nom <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+          <th class="sortable-header" data-sort="email" data-action="sort-team" data-team-id="${teamId}">Email <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+          <th class="sortable-header" data-sort="bac" data-action="sort-team" data-team-id="${teamId}">Niveau <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
           <th>Pizza</th>
           <th>Rôle</th>
           <th class="actions-col">Actions</th>
@@ -144,7 +144,7 @@ export function renderMembersTable(members, teamId) {
         ${sortedMembers.map(m => `
           <tr class="member-row" data-member-id="${m.id}">
             <td class="checkbox-col">
-              <input type="checkbox" onchange="toggleMemberSelect(${m.id}, this.checked)" ${selectedMembers.has(m.id) ? 'checked' : ''}>
+              <input type="checkbox" data-change="toggle-member-select" data-member-id="${m.id}" ${selectedMembers.has(m.id) ? 'checked' : ''}>
             </td>
             <td>${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</td>
             <td><a href="mailto:${escapeHtml(m.email)}">${escapeHtml(m.email)}</a></td>
@@ -153,8 +153,8 @@ export function renderMembersTable(members, teamId) {
             <td>${m.is_leader ? '<span class="badge badge-leader">􀋀 Chef</span>' : ''}</td>
             <td class="actions-col">
               <div class="action-buttons">
-                <button type="button" class="icon-btn" onclick="editMember(${m.id}, ${teamId})" title="Modifier" aria-label="Modifier le membre">􀈊</button>
-                <button type="button" class="icon-btn danger" onclick="confirmDeleteMember(${m.id}, '${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}')" title="Supprimer" aria-label="Supprimer le membre">􀈑</button>
+                <button type="button" class="icon-btn" data-action="edit-member" data-member-id="${m.id}" data-team-id="${teamId}" title="Modifier" aria-label="Modifier le membre">􀈊</button>
+                <button type="button" class="icon-btn danger" data-action="confirm-delete-member" data-member-id="${m.id}" data-member-name="${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}" title="Supprimer" aria-label="Supprimer le membre">􀈑</button>
               </div>
             </td>
           </tr>
@@ -298,7 +298,7 @@ export function sortTeamMembers(teamId, sortKey, headerElement) {
   tbody.innerHTML = team.members.map(m => `
     <tr class="member-row" data-member-id="${m.id}">
       <td class="checkbox-col">
-        <input type="checkbox" onchange="toggleMemberSelect(${m.id}, this.checked)" ${selectedMembers.has(m.id) ? 'checked' : ''}>
+        <input type="checkbox" data-change="toggle-member-select" data-member-id="${m.id}" ${selectedMembers.has(m.id) ? 'checked' : ''}>
       </td>
       <td>${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</td>
       <td><a href="mailto:${escapeHtml(m.email)}">${escapeHtml(m.email)}</a></td>
@@ -307,8 +307,8 @@ export function sortTeamMembers(teamId, sortKey, headerElement) {
       <td>${m.is_leader ? '<span class="badge badge-leader">􀋀 Chef</span>' : ''}</td>
       <td class="actions-col">
         <div class="action-buttons">
-          <button type="button" class="icon-btn" onclick="editMember(${m.id}, ${teamId})" title="Modifier" aria-label="Modifier le membre">􀈊</button>
-          <button type="button" class="icon-btn danger" onclick="confirmDeleteMember(${m.id}, '${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}')" title="Supprimer" aria-label="Supprimer le membre">􀈑</button>
+          <button type="button" class="icon-btn" data-action="edit-member" data-member-id="${m.id}" data-team-id="${teamId}" title="Modifier" aria-label="Modifier le membre">􀈊</button>
+          <button type="button" class="icon-btn danger" data-action="confirm-delete-member" data-member-id="${m.id}" data-member-name="${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}" title="Supprimer" aria-label="Supprimer le membre">􀈑</button>
         </div>
       </td>
     </tr>

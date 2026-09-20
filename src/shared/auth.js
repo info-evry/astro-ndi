@@ -58,8 +58,11 @@ export async function verifyAdmin(request, env) {
     try {
       const storedToken = await env.CONFIG.get('admin_token');
       if (storedToken) adminToken = storedToken;
-    } catch {
-      // Fall back to env variable if KV access fails
+    } catch (error_) {
+      // KV access failed - fail closed rather than silently falling back
+      // to the (potentially stale) environment variable token.
+      console.error('verifyAdmin: failed to read admin_token from KV', error_);
+      return false;
     }
   }
 

@@ -50,6 +50,11 @@ function setupEventListeners() {
   // Form submission
   elements.form?.addEventListener('submit', handleSubmit);
 
+  // Success modal close reloads the page to reset the form
+  document.getElementById('success-modal-close-btn')?.addEventListener('click', () => {
+    location.reload();
+  });
+
   // Setup modal listeners
   setupModalListeners();
 }

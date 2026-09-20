@@ -14,7 +14,7 @@
 
   <!-- Archives List -->
   <div class="disclosure-group open" data-disclosure="archives-list">
-    <div class="disclosure-header" onclick="toggleDisclosure('archives-list')">
+    <div class="disclosure-header" data-action="toggle-disclosure">
       <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Éditions archivées</h2>
     </div>
     <div class="disclosure-body">
@@ -26,9 +26,9 @@
 
   <!-- Archive Detail View (initially hidden) -->
   <div id="archive-detail" class="disclosure-group hidden" data-disclosure="archive-detail">
-    <div class="disclosure-header" onclick="toggleDisclosure('archive-detail')">
+    <div class="disclosure-header" data-action="toggle-disclosure">
       <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> <span id="archive-detail-title">Détails de l'archive</span></h2>
-      <div class="header-actions" onclick="event.stopPropagation()">
+      <div class="header-actions" data-action="stop-propagation" data-stop>
         <button type="button" id="export-archive-json-btn" class="btn btn-primary btn-sm">Export JSON</button>
         <button type="button" id="close-archive-detail-btn" class="btn btn-secondary btn-sm">Fermer</button>
       </div>

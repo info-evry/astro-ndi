@@ -63,9 +63,3 @@ export function initModalEscapeClose() {
     }
   });
 }
-
-// Expose to window for onclick handlers
-if (typeof window !== 'undefined') {
-  window.closeModal = closeModal;
-  window.toggleDisclosure = toggleDisclosure;
-}

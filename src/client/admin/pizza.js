@@ -233,8 +233,8 @@ export function renderPizza() {
         <td class="actions-col">
           <div class="action-buttons">
             ${isPizzaReceived
-              ? `<button type="button" class="icon-btn danger" onclick="handleRevokePizza(${m.id})" title="Annuler" aria-label="Annuler la distribution">􀁡</button>`
-              : `<button type="button" class="icon-btn success" onclick="handleGivePizza(${m.id})" title="Donner pizza" aria-label="Donner pizza">􀁣</button>`}
+              ? `<button type="button" class="icon-btn danger" data-action="revoke-pizza" data-member-id="${m.id}" title="Annuler" aria-label="Annuler la distribution">􀁡</button>`
+              : `<button type="button" class="icon-btn success" data-action="give-pizza" data-member-id="${m.id}" title="Donner pizza" aria-label="Donner pizza">􀁣</button>`}
           </div>
         </td>
       </tr>

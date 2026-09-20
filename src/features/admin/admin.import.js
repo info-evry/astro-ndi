@@ -8,6 +8,25 @@ import { verifyAdmin } from '../../shared/auth.js';
 import { hashPassword } from '../../shared/crypto.js';
 import * as db from '../../lib/db.js';
 
+// Alphabet without ambiguous characters (no 0/O, 1/I/l, etc.) - not a secret,
+// used only to build a charset for random generation.
+const GENERATION_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+const GENERATED_PASSWORD_LENGTH = 16;
+
+/**
+ * Generate a random, human-typeable password for newly created teams.
+ * @returns {string}
+ */
+function generateTeamPassword() {
+  const bytes = new Uint8Array(GENERATED_PASSWORD_LENGTH);
+  crypto.getRandomValues(bytes);
+  let generated = '';
+  for (const byte of bytes) {
+    generated += GENERATION_ALPHABET[byte % GENERATION_ALPHABET.length];
+  }
+  return generated;
+}
+
 /**
  * Parse CSV string into array of objects
  */
@@ -84,7 +103,8 @@ async function getOrCreateTeam(database, teamName, teamMap, stats) {
   if (team) return team;
 
   try {
-    const passwordHash = await hashPassword(teamName);
+    const password = generateTeamPassword();
+    const passwordHash = await hashPassword(password);
     const result = await database.prepare(
       'INSERT INTO teams (name, description, password_hash) VALUES (?, ?, ?)'
     ).bind(teamName, '', passwordHash).run();
@@ -92,6 +112,7 @@ async function getOrCreateTeam(database, teamName, teamMap, stats) {
     team = { id: result.meta.last_row_id, name: teamName };
     teamMap.set(teamName.toLowerCase(), team);
     stats.teamsCreated++;
+    stats.createdTeams.push({ team: teamName, password });
     return team;
   } catch (error_) {
     stats.errors.push(`Failed to create team "${teamName}": ${error_.message}`);
@@ -161,7 +182,7 @@ export async function importCSV(request, env) {
 
     const existingTeams = await db.getTeams(env.DB);
     const teamMap = new Map(existingTeams.map(t => [t.name.toLowerCase(), t]));
-    const stats = { teamsCreated: 0, membersImported: 0, membersSkipped: 0, errors: [] };
+    const stats = { teamsCreated: 0, membersImported: 0, membersSkipped: 0, errors: [], createdTeams: [] };
     const teamGroups = groupRowsByTeam(rows);
 
     for (const [teamName, members] of teamGroups) {
@@ -186,7 +207,8 @@ export async function importCSV(request, env) {
         membersSkipped: stats.membersSkipped,
         totalRows: rows.length,
         errors: stats.errors.slice(0, 10)
-      }
+      },
+      passwords: stats.createdTeams
     });
 
   } catch (error_) {

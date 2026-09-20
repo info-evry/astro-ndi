@@ -5,6 +5,7 @@
 
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { env, SELF } from 'cloudflare:test';
+import { createCheckout } from '../src/features/payment/payment.api.js';
 
 // Admin token from env (should match wrangler.toml test config)
 const ADMIN_TOKEN = 'test-admin-token';
@@ -25,11 +26,15 @@ beforeAll(async () => {
   await env.DB.exec(`INSERT OR IGNORE INTO teams (name, description, password_hash) VALUES ('Organisation', 'Équipe organisatrice', '')`);
 });
 
+// Default team password used by createTestMember, unless overridden
+const DEFAULT_TEAM_PASSWORD = 'testpass123';
+
 // Helper to create a test member
 async function createTestMember(overrides = {}) {
   const teamName = overrides.teamName || `Payment Team ${Date.now()}`;
   const firstName = overrides.firstName || `Test${Date.now()}`;
   const lastName = overrides.lastName || 'User';
+  const teamPassword = overrides.teamPassword || DEFAULT_TEAM_PASSWORD;
 
   const response = await SELF.fetch('http://localhost/api/register', {
     method: 'POST',
@@ -37,7 +42,7 @@ async function createTestMember(overrides = {}) {
     body: JSON.stringify({
       createNewTeam: true,
       teamName,
-      teamPassword: 'testpass123',
+      teamPassword,
       members: [{
         firstName,
         lastName,
@@ -50,7 +55,7 @@ async function createTestMember(overrides = {}) {
   });
 
   const data = await response.json();
-  return { team: data.team, member: data.members[0] };
+  return { team: data.team, member: data.members[0], teamPassword };
 }
 
 // Helper to set payment settings
@@ -165,14 +170,14 @@ describe('Payment API - POST /api/payment/checkout', () => {
   });
 
   it('rejects checkout when payments are disabled', async () => {
-    const { member } = await createTestMember({ teamName: `Team Disabled ${Date.now()}` });
+    const { member, teamPassword } = await createTestMember({ teamName: `Team Disabled ${Date.now()}` });
 
     await setPaymentSettings({ payment_enabled: 'false' });
 
     const response = await SELF.fetch('http://localhost/api/payment/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ memberId: member.id })
+      body: JSON.stringify({ memberId: member.id, teamPassword })
     });
 
     expect(response.status).toBe(400);
@@ -181,7 +186,7 @@ describe('Payment API - POST /api/payment/checkout', () => {
   });
 
   it('rejects checkout for already paid member', async () => {
-    const { member } = await createTestMember({ teamName: `Team Paid ${Date.now()}` });
+    const { member, teamPassword } = await createTestMember({ teamName: `Team Paid ${Date.now()}` });
 
     // Mark member as paid
     await env.DB.prepare('UPDATE members SET payment_status = ? WHERE id = ?')
@@ -193,7 +198,7 @@ describe('Payment API - POST /api/payment/checkout', () => {
     const response = await SELF.fetch('http://localhost/api/payment/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ memberId: member.id })
+      body: JSON.stringify({ memberId: member.id, teamPassword })
     });
 
     expect(response.status).toBe(400);
@@ -202,7 +207,7 @@ describe('Payment API - POST /api/payment/checkout', () => {
   });
 
   it('rejects checkout when SumUp API key is missing', async () => {
-    const { member } = await createTestMember({ teamName: `Team NoKey ${Date.now()}` });
+    const { member, teamPassword } = await createTestMember({ teamName: `Team NoKey ${Date.now()}` });
 
     await setPaymentSettings({ payment_enabled: 'true' });
 
@@ -210,12 +215,79 @@ describe('Payment API - POST /api/payment/checkout', () => {
     const response = await SELF.fetch('http://localhost/api/payment/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ memberId: member.id })
+      body: JSON.stringify({ memberId: member.id, teamPassword })
     });
 
     expect(response.status).toBe(500);
     const data = await response.json();
     expect(data.error).toContain('API key');
+  });
+
+  it('rejects checkout without a team password or admin token', async () => {
+    const { member } = await createTestMember({ teamName: `Team NoAuth ${Date.now()}` });
+
+    const response = await SELF.fetch('http://localhost/api/payment/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ memberId: member.id })
+    });
+
+    expect(response.status).toBe(403);
+  });
+
+  it('rejects checkout with an incorrect team password', async () => {
+    const { member } = await createTestMember({ teamName: `Team WrongPass ${Date.now()}` });
+
+    const response = await SELF.fetch('http://localhost/api/payment/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ memberId: member.id, teamPassword: 'not-the-password' })
+    });
+
+    expect(response.status).toBe(403);
+  });
+
+  it('accepts checkout with the correct team password', async () => {
+    const { member, teamPassword } = await createTestMember({ teamName: `Team RightPass ${Date.now()}` });
+
+    // No SUMUP_API_KEY configured in tests, so it fails past the auth check with 500
+    const response = await SELF.fetch('http://localhost/api/payment/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ memberId: member.id, teamPassword })
+    });
+
+    expect(response.status).not.toBe(403);
+  });
+
+  it('accepts checkout with an admin bearer token', async () => {
+    const { member } = await createTestMember({ teamName: `Team AdminAuth ${Date.now()}` });
+
+    const response = await SELF.fetch('http://localhost/api/payment/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader },
+      body: JSON.stringify({ memberId: member.id })
+    });
+
+    expect(response.status).not.toBe(403);
+  });
+
+  it('rejects checkout when the SumUp merchant code is a placeholder', async () => {
+    const { member, teamPassword } = await createTestMember({ teamName: `Team Placeholder ${Date.now()}` });
+
+    // wrangler.toml test config has SUMUP_MERCHANT_CODE = PLACEHOLDER_MERCHANT_CODE.
+    // SELF.fetch runs in a separate isolate whose env can't be mutated from
+    // here, so call the handler directly with a simulated API key to reach
+    // the merchant code check.
+    const request = new Request('http://localhost/api/payment/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ memberId: member.id, teamPassword })
+    });
+
+    const response = await createCheckout(request, { ...env, SUMUP_API_KEY: 'test-sumup-key' });
+
+    expect(response.status).toBe(503);
   });
 });
 
@@ -271,12 +343,12 @@ describe('Payment API - POST /api/payment/delayed', () => {
   });
 
   it('marks member payment as delayed', async () => {
-    const { member } = await createTestMember({ teamName: `Team Delayed ${Date.now()}` });
+    const { member, teamPassword } = await createTestMember({ teamName: `Team Delayed ${Date.now()}` });
 
     const response = await SELF.fetch('http://localhost/api/payment/delayed', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ memberId: member.id })
+      body: JSON.stringify({ memberId: member.id, teamPassword })
     });
 
     expect(response.status).toBe(200);
@@ -287,7 +359,7 @@ describe('Payment API - POST /api/payment/delayed', () => {
   });
 
   it('sets correct registration tier', async () => {
-    const { member } = await createTestMember({ teamName: `Team Tier ${Date.now()}` });
+    const { member, teamPassword } = await createTestMember({ teamName: `Team Tier ${Date.now()}` });
 
     // Ensure tier1 (deadline far in future)
     await setPaymentSettings({
@@ -297,7 +369,7 @@ describe('Payment API - POST /api/payment/delayed', () => {
     const response = await SELF.fetch('http://localhost/api/payment/delayed', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ memberId: member.id })
+      body: JSON.stringify({ memberId: member.id, teamPassword })
     });
 
     const data = await response.json();
@@ -313,12 +385,12 @@ describe('Payment API - POST /api/payment/delayed', () => {
   });
 
   it('logs payment event', async () => {
-    const { member } = await createTestMember({ teamName: `Team Event ${Date.now()}` });
+    const { member, teamPassword } = await createTestMember({ teamName: `Team Event ${Date.now()}` });
 
     await SELF.fetch('http://localhost/api/payment/delayed', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ memberId: member.id })
+      body: JSON.stringify({ memberId: member.id, teamPassword })
     });
 
     // Check payment event was logged
@@ -329,6 +401,22 @@ describe('Payment API - POST /api/payment/delayed', () => {
     expect(events.results).toHaveLength(1);
     expect(events.results[0].event_type).toBe('payment_delayed');
     expect(events.results[0].amount).toBe(0);
+  });
+
+  it('rejects marking payment as delayed for an already paid member', async () => {
+    const { member, teamPassword } = await createTestMember({ teamName: `Team AlreadyPaid ${Date.now()}` });
+
+    await env.DB.prepare('UPDATE members SET payment_status = ? WHERE id = ?')
+      .bind('paid', member.id)
+      .run();
+
+    const response = await SELF.fetch('http://localhost/api/payment/delayed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ memberId: member.id, teamPassword })
+    });
+
+    expect(response.status).toBe(409);
   });
 });
 
@@ -369,7 +457,7 @@ describe('Payment Flow - Integration', () => {
 
   it('complete delayed payment flow', async () => {
     // Step 1: Create member via registration
-    const { team, member } = await createTestMember({
+    const { team, member, teamPassword } = await createTestMember({
       teamName: `Integration Team ${Date.now()}`,
       firstName: `Delayed${Date.now()}`
     });
@@ -381,7 +469,7 @@ describe('Payment Flow - Integration', () => {
     const delayedResponse = await SELF.fetch('http://localhost/api/payment/delayed', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ memberId: member.id })
+      body: JSON.stringify({ memberId: member.id, teamPassword })
     });
 
     expect(delayedResponse.status).toBe(200);
@@ -437,7 +525,7 @@ describe('Payment Flow - Integration', () => {
       teamName: `Paid Team ${Date.now()}`,
       firstName: `Paid${Date.now()}`
     });
-    const { member: delayedMember } = await createTestMember({
+    const { member: delayedMember, teamPassword: delayedTeamPassword } = await createTestMember({
       teamName: `Delayed Team ${Date.now()}`,
       firstName: `Delayed${Date.now()}`
     });
@@ -457,7 +545,7 @@ describe('Payment Flow - Integration', () => {
     await SELF.fetch('http://localhost/api/payment/delayed', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ memberId: delayedMember.id })
+      body: JSON.stringify({ memberId: delayedMember.id, teamPassword: delayedTeamPassword })
     });
 
     // Get attendance data
@@ -486,7 +574,7 @@ describe('Payment Database Operations', () => {
   });
 
   it('payment_events table records all events', async () => {
-    const { member } = await createTestMember({
+    const { member, teamPassword } = await createTestMember({
       teamName: `Events Team ${Date.now()}`,
       firstName: `Events${Date.now()}`
     });
@@ -495,7 +583,7 @@ describe('Payment Database Operations', () => {
     await SELF.fetch('http://localhost/api/payment/delayed', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ memberId: member.id })
+      body: JSON.stringify({ memberId: member.id, teamPassword })
     });
 
     // Check event structure
@@ -511,7 +599,7 @@ describe('Payment Database Operations', () => {
   });
 
   it('member payment fields are properly set', async () => {
-    const { member } = await createTestMember({
+    const { member, teamPassword } = await createTestMember({
       teamName: `Fields Team ${Date.now()}`,
       firstName: `Fields${Date.now()}`
     });
@@ -529,7 +617,7 @@ describe('Payment Database Operations', () => {
     await SELF.fetch('http://localhost/api/payment/delayed', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ memberId: member.id })
+      body: JSON.stringify({ memberId: member.id, teamPassword })
     });
 
     // Check updated state

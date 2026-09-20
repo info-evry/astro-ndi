@@ -9,9 +9,9 @@
 
   <!-- Stats Section -->
   <div class="disclosure-group open" data-disclosure="stats">
-    <div class="disclosure-header" onclick="toggleDisclosure('stats')">
+    <div class="disclosure-header" data-action="toggle-disclosure">
       <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Vue d'ensemble</h2>
-      <div class="header-actions" onclick="event.stopPropagation()">
+      <div class="header-actions" data-action="stop-propagation" data-stop>
         <button type="button" id="export-official-btn" class="btn btn-primary btn-sm">Export Officiel</button>
         <button type="button" id="export-all-btn" class="btn btn-secondary btn-sm">Exporter CSV</button>
         <button type="button" id="refresh-btn" class="btn btn-secondary btn-sm">Rafraîchir</button>
@@ -24,7 +24,7 @@
 
   <!-- Food Stats -->
   <div class="disclosure-group open" data-disclosure="food">
-    <div class="disclosure-header" onclick="toggleDisclosure('food')">
+    <div class="disclosure-header" data-action="toggle-disclosure">
       <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Préférences alimentaires</h2>
     </div>
     <div class="disclosure-body">
@@ -34,7 +34,7 @@
 
   <!-- Import Section -->
   <div class="disclosure-group" data-disclosure="import">
-    <div class="disclosure-header" onclick="toggleDisclosure('import')">
+    <div class="disclosure-header" data-action="toggle-disclosure">
       <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Importer des données</h2>
     </div>
     <div class="disclosure-body">
@@ -65,7 +65,7 @@
 
   <!-- Quick Actions -->
   <div class="disclosure-group open" data-disclosure="actions">
-    <div class="disclosure-header" onclick="toggleDisclosure('actions')">
+    <div class="disclosure-header" data-action="toggle-disclosure">
       <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Actions rapides</h2>
     </div>
     <div class="disclosure-body">
@@ -80,9 +80,9 @@
 
   <!-- Teams Section -->
   <div class="disclosure-group open" data-disclosure="teams">
-    <div class="disclosure-header" onclick="toggleDisclosure('teams')">
+    <div class="disclosure-header" data-action="toggle-disclosure">
       <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Équipes et membres</h2>
-      <div class="header-actions" onclick="event.stopPropagation()">
+      <div class="header-actions" data-action="stop-propagation" data-stop>
         <div class="search-input-wrapper">
           <span class="search-icon sf-symbol" aria-hidden="true">@sfs:magnifyingglass@</span>
           <input type="search" id="teams-search" class="search-input" placeholder="Rechercher...">
@@ -96,9 +96,9 @@
 
   <!-- All Participants List Section -->
   <div class="disclosure-group" data-disclosure="all-participants">
-    <div class="disclosure-header" onclick="toggleDisclosure('all-participants')">
+    <div class="disclosure-header" data-action="toggle-disclosure">
       <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Tous les participants</h2>
-      <div class="header-actions" onclick="event.stopPropagation()">
+      <div class="header-actions" data-action="stop-propagation" data-stop>
         <div class="search-input-wrapper">
           <span class="search-icon sf-symbol" aria-hidden="true">@sfs:magnifyingglass@</span>
           <input type="search" id="all-participants-search" class="search-input" placeholder="Rechercher un participant...">
@@ -110,12 +110,12 @@
         <table id="all-participants-table" class="members-table">
           <thead>
             <tr>
-              <th class="sortable-header" data-sort="name" onclick="sortAllParticipants('name')">Nom <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-              <th class="sortable-header" data-sort="email" onclick="sortAllParticipants('email')">Email <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-              <th class="sortable-header team-col" data-sort="team" onclick="sortAllParticipants('team')">Équipe <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-              <th class="sortable-header" data-sort="pizza" onclick="sortAllParticipants('pizza')">Pizza <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-              <th class="sortable-header" data-sort="bac" onclick="sortAllParticipants('bac')">BAC <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
-              <th class="sortable-header" data-sort="manager" onclick="sortAllParticipants('manager')">Rôle <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="sortable-header" data-sort="name" data-action="sort-all-participants">Nom <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="sortable-header" data-sort="email" data-action="sort-all-participants">Email <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="sortable-header team-col" data-sort="team" data-action="sort-all-participants">Équipe <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="sortable-header" data-sort="pizza" data-action="sort-all-participants">Pizza <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="sortable-header" data-sort="bac" data-action="sort-all-participants">BAC <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
+              <th class="sortable-header" data-sort="manager" data-action="sort-all-participants">Rôle <span class="sort-indicator sf-symbol">@sfs:arrow.up.arrow.down@</span></th>
             </tr>
           </thead>
           <tbody id="all-participants-tbody"></tbody>

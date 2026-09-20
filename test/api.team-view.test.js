@@ -5,6 +5,7 @@
 
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { env, SELF } from 'cloudflare:test';
+import { hashPassword } from '../src/shared/crypto.js';
 
 beforeAll(async () => {
   // Setup schema
@@ -16,13 +17,14 @@ describe('Team View - Password Authentication', () => {
   let teamId;
 
   beforeEach(async () => {
-    // Create a team with plain text password for testing
+    // Create a team with a properly hashed password for testing
     await env.DB.exec(`DELETE FROM members`);
     await env.DB.exec(`DELETE FROM teams`);
 
+    const passwordHash = await hashPassword('testpassword123');
     const result = await env.DB.prepare(
       `INSERT INTO teams (name, description, password_hash) VALUES (?, ?, ?)`
-    ).bind('Test Team', 'A test team', 'testpassword123').run();
+    ).bind('Test Team', 'A test team', passwordHash).run();
     teamId = result.meta.last_row_id;
 
     // Add a member to the team
@@ -158,9 +160,10 @@ describe('Team View - Multiple Members', () => {
     await env.DB.exec(`DELETE FROM members`);
     await env.DB.exec(`DELETE FROM teams`);
 
+    const passwordHash = await hashPassword('teampass');
     const result = await env.DB.prepare(
       `INSERT INTO teams (name, description, password_hash) VALUES (?, ?, ?)`
-    ).bind('Large Team', 'Team with many members', 'teampass').run();
+    ).bind('Large Team', 'Team with many members', passwordHash).run();
     teamId = result.meta.last_row_id;
 
     // Add multiple members

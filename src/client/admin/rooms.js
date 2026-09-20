@@ -207,7 +207,7 @@ export function renderRooms() {
                    placeholder="Salle..."
                    list="room-datalist-${t.id}"
                    data-team-id="${t.id}"
-                   onchange="handleRoomChange(${t.id}, this.value)"
+                   data-change="room-change"
                    style="width: 120px; padding: 4px 8px; font-size: var(--text-sm); border: 1px solid var(--border-default); border-radius: var(--radius);">
             <datalist id="room-datalist-${t.id}">
               ${roomOptions}
@@ -217,7 +217,7 @@ export function renderRooms() {
         <td class="actions-col">
           <div class="action-buttons">
             ${hasRoom
-              ? `<button type="button" class="icon-btn danger" onclick="handleClearRoom(${t.id})" title="Retirer de la salle" aria-label="Retirer de la salle"><span class="sf-symbol">@sfs:xmark@</span></button>`
+              ? `<button type="button" class="icon-btn danger" data-action="clear-room" data-team-id="${t.id}" title="Retirer de la salle" aria-label="Retirer de la salle"><span class="sf-symbol">@sfs:xmark@</span></button>`
               : ''}
           </div>
         </td>

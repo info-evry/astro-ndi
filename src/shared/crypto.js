@@ -53,10 +53,12 @@ export async function hashPassword(password, existingSalt = null) {
 
 /**
  * Verify password against stored value
- * Supports three formats (in order of priority):
+ * Supports two formats (in order of priority):
  * 1. New PBKDF2 format: "salt:hash" (contains colon)
  * 2. Legacy SHA-256 format: 64 hex characters
- * 3. Plain text (fallback for unencrypted databases)
+ *
+ * Plain text storage is never accepted; any other stored value format
+ * is treated as invalid and the verification fails closed.
  *
  * @param {string} password - Plain text password to verify
  * @param {string} storedValue - Stored value (hash or plain text)
@@ -82,11 +84,10 @@ export async function verifyPassword(password, storedValue) {
     return legacyHash === storedValue;
   }
 
-  // Format 3: Plain text (DEPRECATED - security risk)
-  // Log warning but allow for migration purposes
-  // [MIGRATION] Remove plain text support after all passwords are migrated
-  console.error('SECURITY WARNING: Plain text password detected - must be migrated immediately');
-  return password === storedValue;
+  // Any other format is not a recognized hash - fail closed rather than
+  // falling back to a plain text comparison.
+  console.error('SECURITY: Unrecognized password hash format - rejecting verification');
+  return false;
 }
 
 /**

@@ -5,8 +5,7 @@
  * 1. Reading baseUrl from DOM data attribute
  * 2. Creating the API client
  * 3. Initializing all modules
- * 4. Setting up event listeners
- * 5. Exposing global functions for onclick handlers
+ * 4. Setting up event listeners (including delegated data-action/data-change handling)
  */
 /* eslint-env browser */
 
@@ -14,8 +13,8 @@
 import { $ } from './utils.js';
 import { toastError } from './toast.js';
 import { createApiClient, setToken } from './api.js';
-import { closeModal, toggleDisclosure } from './modals.js';
 import { initTabs } from './tabs.js';
+import { buildActions, bindDelegation } from './actions.js';
 
 // State management
 import {
@@ -27,26 +26,13 @@ import {
 import {
   renderStats,
   renderTeams,
-  toggleTeam,
-  toggleSelectAll,
-  toggleMemberSelect,
-  sortTeamMembers,
-  editTeam,
-  editMember,
-  confirmDeleteTeam,
-  confirmDeleteMember,
-  deleteTeam,
-  deleteMember,
   deleteSelectedMembers,
   handleTeamSubmit,
   handleMemberSubmit,
-  exportTeam,
-  exportTeamOfficial,
   handleExportOfficial,
   handleExportAll,
   initTeamsSearch,
   initAllParticipants,
-  sortAllParticipants,
   openAddTeamModal,
   openAddMemberModal,
   selectAllParticipants
@@ -54,30 +40,21 @@ import {
 
 import {
   loadAttendanceData,
-  handleCheckIn,
-  handleCheckOut,
-  confirmCheckIn,
   initAttendance
 } from './attendance.js';
 
 import {
   loadPizzaData,
-  handleGivePizza,
-  handleRevokePizza,
   initPizza
 } from './pizza.js';
 
 import {
   loadRoomsData,
-  handleRoomChange,
-  handleClearRoom,
   initRooms
 } from './rooms.js';
 
 import {
   loadArchives,
-  viewArchive,
-  deleteArchive,
   initArchives
 } from './archives.js';
 
@@ -228,59 +205,6 @@ function updateDeleteButton() {
 }
 
 // ============================================================
-// GLOBAL EXPORTS FOR ONCLICK HANDLERS
-// ============================================================
-
-// Modals
-window.closeModal = closeModal;
-window.toggleDisclosure = toggleDisclosure;
-
-// Teams
-window.toggleTeam = toggleTeam;
-window.editTeam = editTeam;
-window.confirmDeleteTeam = (teamId, teamName) =>
-  confirmDeleteTeam(teamId, teamName, (id) => deleteTeam(id, api, loadData));
-window.exportTeam = (teamId, teamName) => exportTeam(teamId, teamName, api);
-window.exportTeamOfficial = (teamId, teamName) => exportTeamOfficial(teamId, teamName, api);
-window.toggleSelectAll = (teamId, checked) => {
-  toggleSelectAll(teamId, checked);
-  updateDeleteButton();
-};
-window.toggleMemberSelect = (memberId, checked) => {
-  toggleMemberSelect(memberId, checked);
-  updateDeleteButton();
-};
-window.sortTeamMembers = sortTeamMembers;
-
-// Members
-window.editMember = editMember;
-window.confirmDeleteMember = (memberId, memberName) =>
-  confirmDeleteMember(memberId, memberName, (id) => deleteMember(id, api, loadData, updateDeleteButton));
-
-// All Participants
-window.sortAllParticipants = sortAllParticipants;
-
-// Attendance
-window.handleCheckIn = (memberId) => handleCheckIn(memberId, api, loadData);
-window.handleCheckOut = (memberId) => handleCheckOut(memberId, api, loadData);
-window.confirmCheckIn = () => confirmCheckIn(api, loadData);
-
-// Pizza
-window.handleGivePizza = (memberId) => handleGivePizza(memberId, api, loadData);
-window.handleRevokePizza = (memberId) => handleRevokePizza(memberId, api, loadData);
-
-// Rooms
-window.handleRoomChange = (teamId, room) => handleRoomChange(teamId, room, api, loadData);
-window.handleClearRoom = (teamId) => handleClearRoom(teamId, api, loadData);
-
-// Archives
-window.viewArchive = (year) => viewArchive(year, api);
-window.deleteArchive = (year) => deleteArchive(year, api, loadData);
-
-// Data loading
-window.loadData = loadData;
-
-// ============================================================
 // MAIN INIT
 // ============================================================
 
@@ -295,6 +219,10 @@ async function init() {
   if (adminToken) {
     setToken(adminToken);
   }
+
+  // Wire up delegated data-action/data-change handlers
+  const { actions, changes } = buildActions({ api, loadData, updateDeleteButton });
+  bindDelegation(actions, changes);
 
   // Set up auth event listeners
   elements.authBtn?.addEventListener('click', handleAuth);

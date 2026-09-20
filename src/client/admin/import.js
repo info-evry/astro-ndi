@@ -138,6 +138,28 @@ export function parseCSVLine(line) {
 }
 
 /**
+ * Render the success status (with optional generated passwords table) into
+ * the status element after a successful import.
+ * @param {HTMLElement} status - Status element
+ * @param {object} stats - Import stats
+ * @param {Array<{team: string, password: string}>} [passwords] - Newly generated team passwords
+ */
+function renderImportSuccess(status, stats, passwords) {
+  let html = `<span class="sf-symbol">@sfs:checkmark@</span> ${stats.membersImported} importés, ${stats.membersSkipped} ignorés, ${stats.teamsCreated} équipes créées`;
+
+  if (passwords?.length) {
+    html += renderImportPasswords(passwords);
+  }
+
+  status.innerHTML = html;
+  status.className = 'import-status success';
+
+  if (passwords?.length) {
+    attachCopyPasswordsListener(status, passwords);
+  }
+}
+
+/**
  * Handle import button click
  * @param {Function} api - API function
  * @param {Function} loadData - Reload callback
@@ -172,8 +194,7 @@ export async function handleImport(api, loadData) {
       toastSuccess(`Import terminé: ${stats.membersImported} membres, ${stats.teamsCreated} équipes créées`);
 
       if (status) {
-        status.innerHTML = `<span class="sf-symbol">@sfs:checkmark@</span> ${stats.membersImported} importés, ${stats.membersSkipped} ignorés, ${stats.teamsCreated} équipes créées`;
-        status.className = 'import-status success';
+        renderImportSuccess(status, stats, result.passwords);
       }
 
       loadData();
@@ -195,6 +216,64 @@ export async function handleImport(api, loadData) {
       importBtn.textContent = 'Importer';
     }
   }
+}
+
+/**
+ * Render a table of newly generated team passwords, plus a "Copier" button
+ * and a one-time-display warning.
+ * @param {Array<{team: string, password: string}>} passwords
+ * @returns {string} HTML fragment
+ */
+function renderImportPasswords(passwords) {
+  const rows = passwords.map(({ team, password }) => `
+    <tr>
+      <td>${escapeHtml(team)}</td>
+      <td><code>${escapeHtml(password)}</code></td>
+    </tr>
+  `).join('');
+
+  return `
+    <div class="import-passwords">
+      <p class="import-passwords-warning">
+        <span class="sf-symbol">@sfs:exclamationmark.triangle@</span>
+        Ces mots de passe ne seront affichés qu'une seule fois. Notez-les ou copiez-les maintenant.
+      </p>
+      <table class="import-passwords-table">
+        <thead>
+          <tr>
+            <th>Équipe</th>
+            <th>Mot de passe</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+      <button type="button" class="btn" data-action="copy-import-passwords">Copier</button>
+    </div>
+  `;
+}
+
+/**
+ * Attach the click listener for the "Copier" button rendered by
+ * renderImportPasswords, copying team/password pairs to the clipboard.
+ * @param {HTMLElement} container - Element containing the rendered button
+ * @param {Array<{team: string, password: string}>} passwords
+ */
+function attachCopyPasswordsListener(container, passwords) {
+  const button = container.querySelector('[data-action="copy-import-passwords"]');
+  if (!button) return;
+
+  button.addEventListener('click', async () => {
+    const text = passwords.map(({ team, password }) => `${team}\t${password}`).join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      toastSuccess('Mots de passe copiés');
+    } catch (error) {
+      console.error('Failed to copy passwords:', error);
+      toastError('Impossible de copier les mots de passe');
+    }
+  });
 }
 
 /**

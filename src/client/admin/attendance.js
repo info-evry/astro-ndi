@@ -242,8 +242,8 @@ export function renderAttendance() {
         <td class="actions-col">
           <div class="action-buttons">
             ${isCheckedIn
-              ? `<button type="button" class="icon-btn danger" onclick="handleCheckOut(${m.id})" title="Annuler la présence" aria-label="Annuler la présence">􀁡</button>`
-              : `<button type="button" class="icon-btn success" onclick="handleCheckIn(${m.id})" title="Valider la présence" aria-label="Valider la présence">􀁣</button>`}
+              ? `<button type="button" class="icon-btn danger" data-action="check-out" data-member-id="${m.id}" title="Annuler la présence" aria-label="Annuler la présence">􀁡</button>`
+              : `<button type="button" class="icon-btn success" data-action="check-in" data-member-id="${m.id}" title="Valider la présence" aria-label="Valider la présence">􀁣</button>`}
           </div>
         </td>
       </tr>

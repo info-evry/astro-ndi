@@ -20,8 +20,8 @@ export function $(id) {
  */
 export function escapeHtml(str) {
   if (!str) return '';
-  // Escape quotes as well: values are interpolated into attributes and
-  // inline onclick="fn('...')" strings, not only into text nodes.
+  // Escape quotes as well: values are interpolated into HTML attributes
+  // (e.g. data-team-name="..."), not only into text nodes.
   return String(str)
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')

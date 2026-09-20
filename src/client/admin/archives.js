@@ -72,10 +72,10 @@ export function renderArchivesList() {
         <p class="archive-card-date">Archivé le ${new Date(archive.archived_at).toLocaleDateString('fr-FR')}</p>
       </div>
       <div class="archive-card-actions">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="viewArchive(${archive.event_year})">
+        <button type="button" class="btn btn-secondary btn-sm" data-action="view-archive" data-year="${archive.event_year}">
           <span class="sf-symbol">@sfs:eye@</span> Consulter
         </button>
-        <button type="button" class="btn btn-danger btn-sm" onclick="deleteArchive(${archive.event_year})" title="Supprimer cette archive (dev uniquement)">
+        <button type="button" class="btn btn-danger btn-sm" data-action="delete-archive" data-year="${archive.event_year}" title="Supprimer cette archive (dev uniquement)">
           <span class="sf-symbol">@sfs:trash@</span> Supprimer
         </button>
       </div>

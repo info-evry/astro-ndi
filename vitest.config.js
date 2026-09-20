@@ -5,13 +5,14 @@ export default defineWorkersConfig({
     globals: true,
     testTimeout: 15_000,
     exclude: ['**/node_modules/**', '**/design/**', '**/knowledge/**'],
+    setupFiles: ['./test/setup.js'],
     poolOptions: {
       workers: {
         main: './dist/_worker.js/index.js',
         wrangler: { configPath: './wrangler.toml' },
         miniflare: {
           d1Databases: ['DB'],
-          kvNamespaces: ['CONFIG'],
+          kvNamespaces: ['CONFIG', 'RATE_LIMIT'],
           bindings: {
             ADMIN_EMAIL: 'test@example.com',
             REPLY_TO_EMAIL: 'reply@example.com',
