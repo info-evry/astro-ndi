@@ -35,6 +35,8 @@ import {
   editMember,
   confirmDeleteTeam,
   confirmDeleteMember,
+  deleteTeam,
+  deleteMember,
   deleteSelectedMembers,
   handleTeamSubmit,
   handleMemberSubmit,
@@ -236,7 +238,8 @@ window.toggleDisclosure = toggleDisclosure;
 // Teams
 window.toggleTeam = toggleTeam;
 window.editTeam = editTeam;
-window.confirmDeleteTeam = (teamId, teamName) => confirmDeleteTeam(teamId, teamName, api, loadData);
+window.confirmDeleteTeam = (teamId, teamName) =>
+  confirmDeleteTeam(teamId, teamName, (id) => deleteTeam(id, api, loadData));
 window.exportTeam = (teamId, teamName) => exportTeam(teamId, teamName, api);
 window.exportTeamOfficial = (teamId, teamName) => exportTeamOfficial(teamId, teamName, api);
 window.toggleSelectAll = (teamId, checked) => {
@@ -251,7 +254,8 @@ window.sortTeamMembers = sortTeamMembers;
 
 // Members
 window.editMember = editMember;
-window.confirmDeleteMember = (memberId, memberName) => confirmDeleteMember(memberId, memberName, api, loadData);
+window.confirmDeleteMember = (memberId, memberName) =>
+  confirmDeleteMember(memberId, memberName, (id) => deleteMember(id, api, loadData, updateDeleteButton));
 
 // All Participants
 window.sortAllParticipants = sortAllParticipants;
@@ -308,7 +312,7 @@ async function init() {
     selectAllParticipants();
     updateDeleteButton();
   });
-  elements.deleteSelectedBtn?.addEventListener('click', () => deleteSelectedMembers(api, loadData));
+  elements.deleteSelectedBtn?.addEventListener('click', () => deleteSelectedMembers(api, loadData, updateDeleteButton));
 
   // Set up forms
   elements.teamForm?.addEventListener('submit', (e) => handleTeamSubmit(e, api, loadData));
