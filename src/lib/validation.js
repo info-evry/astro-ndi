@@ -4,7 +4,7 @@
  */
 
 // Import and re-export common utilities from astro-core
-import { sanitizeString, isValidEmail } from '../../core/src/lib/validation.js';
+import { sanitizeString, isValidEmail } from 'astro-core/validation';
 
 export { sanitizeString, isValidEmail };
 

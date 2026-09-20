@@ -2,7 +2,7 @@
  * Admin export handlers - CSV generation and statistics
  */
 
-import { json, error } from '../../lib/router.js';
+import { json, error } from 'astro-core/router';
 import { generateCSV, createCSVResponse } from '../../lib/csv.js';
 import * as db from '../../lib/db.js';
 import { getCapacitySettings } from '../../database/db.settings.js';

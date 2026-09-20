@@ -1,11 +1,11 @@
 ---
-import '../../design/src/index.css';
-import Head from '../../design/src/components/Head.astro';
+import '@info-evry/astro-design';
+import Head from '@info-evry/astro-design/components/Head.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import MobileNav from '../../design/src/components/MobileNav.astro';
-import associationInfo from '../../knowledge/src/association/info.json';
-import ndiEvent from '../../knowledge/src/ndi/event.json';
+import MobileNav from '@info-evry/astro-design/components/MobileNav.astro';
+import associationInfo from '@info-evry/knowledge/association';
+import ndiEvent from '@info-evry/knowledge/ndi/event';
 
 const mobileNavItems = [
   { href: '#teams', label: 'Équipes', icon: 'person.3' },

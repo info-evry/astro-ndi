@@ -10,12 +10,16 @@ This guide walks you through setting up the NDI registration platform from scrat
 
 ## Step 1: Clone the Repository
 
-```bash
-# Clone with submodules
-git clone --recursive git@github.com:info-evry/astro-ndi.git
-cd astro-ndi
+This project lives as a package inside the maestro Bun workspace and relies on
+sibling workspace packages (`astro-core`, `@info-evry/astro-design`,
+`@info-evry/knowledge`, `astro-payments`) instead of git submodules.
 
-# Install dependencies
+```bash
+# Clone the maestro repo
+git clone git@github.com:info-evry/astro-maestro.git
+cd astro-maestro
+
+# Install dependencies for the whole workspace
 bun install
 ```
 

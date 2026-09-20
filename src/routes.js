@@ -2,8 +2,8 @@
  * Route registration
  */
 
-import { Router } from './lib/router.js';
-import { createRateLimiter, pathPrefix, pathPattern } from './lib/ratelimit.js';
+import { Router } from 'astro-core/router';
+import { createRateLimiter, pathPrefix, pathPattern } from 'astro-core/ratelimit';
 import { getConfig } from './api/config.js';
 import { listTeams, getTeam, getStats } from './api/teams.js';
 import { register } from './api/register.js';

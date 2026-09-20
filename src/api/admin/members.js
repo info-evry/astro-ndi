@@ -2,7 +2,7 @@
  * Admin member CRUD handlers
  */
 
-import { json, error } from '../../lib/router.js';
+import { json, error } from 'astro-core/router';
 import * as db from '../../lib/db.js';
 import { verifyAdmin } from '../../shared/auth.js';
 

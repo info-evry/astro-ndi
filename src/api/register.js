@@ -2,7 +2,7 @@
  * Registration API handler
  */
 
-import { json, error } from '../lib/router.js';
+import { json, error } from 'astro-core/router';
 import * as db from '../lib/db.js';
 import { validateRegistration, sanitizeString } from '../lib/validation.js';
 import { hashPassword, verifyPassword, needsHashUpgrade } from '../shared/crypto.js';

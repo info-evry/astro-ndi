@@ -2,7 +2,7 @@
  * Admin settings API handlers
  */
 
-import { json, error } from '../../lib/router.js';
+import { json, error } from 'astro-core/router';
 import { verifyAdmin } from '../../shared/auth.js';
 import * as settingsDb from '../../database/db.settings.js';
 

@@ -3,7 +3,7 @@
  * Manages yearly event archiving with GDPR compliance
  */
 
-import { json, error } from '../../lib/router.js';
+import { json, error } from 'astro-core/router';
 import { verifyAdmin } from '../../shared/auth.js';
 import * as archivesDb from '../../database/db.archives.js';
 

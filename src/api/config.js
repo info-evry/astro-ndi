@@ -2,7 +2,7 @@
  * Configuration API - serves pizza options and other config
  */
 
-import { json, error } from '../lib/router.js';
+import { json, error } from 'astro-core/router';
 import * as settingsDb from '../database/db.settings.js';
 
 // Default configuration embedded in worker

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Router, json, error, corsHeaders } from '../src/lib/router.js';
+import { Router, json, error, corsHeaders } from 'astro-core/router';
 
 describe('Router', () => {
   it('should match GET routes', async () => {

@@ -28,8 +28,8 @@ Registration platform for the "Nuit de l'Info" event organized by Asso Info Evry
 - **Runtime**: Cloudflare Workers
 - **Database**: Cloudflare D1 (SQLite)
 - **Storage**: Cloudflare KV (configuration)
-- **Design**: Shared design system via git submodule
-- **Content**: Shared knowledge base via git submodule
+- **Design**: Shared design system (`@info-evry/astro-design`) from the maestro Bun workspace
+- **Content**: Shared knowledge base (`@info-evry/knowledge`) from the maestro Bun workspace
 - **Testing**: Vitest with Cloudflare Workers pool
 
 ## Project Structure
@@ -55,8 +55,7 @@ astro-ndi/
 │   │   ├── admin.import.js   # CSV import
 │   │   └── admin.settings.js # Settings management
 │   ├── lib/                  # Utilities
-│   │   ├── router.js         # API router
-│   │   ├── validation.js     # Input validation
+│   │   ├── validation.js     # Input validation (re-exports astro-core/validation)
 │   │   └── db.js             # D1 helpers
 │   ├── shared/               # Shared utilities
 │   │   ├── auth.js           # Admin authentication
@@ -72,9 +71,6 @@ astro-ndi/
 │   ├── schema.sql            # Database schema
 │   ├── seed.sql              # Test data
 │   └── migrate-*.sql         # Migrations
-├── core/                     # Shared code library (submodule)
-├── design/                   # Shared design system (submodule)
-├── knowledge/                # Shared content (submodule)
 ├── test/                     # API tests
 ├── public/                   # Static assets
 └── docs/
@@ -91,14 +87,14 @@ astro-ndi/
 
 ### Installation
 
-```bash
-# Clone the maestro repo (which includes this as a submodule)
-git clone --recurse-submodules https://github.com/info-evry/astro-maestro.git
-cd astro-maestro
+This project is a package in the maestro Bun workspace and depends on the
+shared `astro-core`, `@info-evry/astro-design`, `@info-evry/knowledge`, and
+`astro-payments` packages from that workspace (no git submodules involved).
 
-# Or clone this repo directly for development
-git clone --recursive https://github.com/info-evry/astro-ndi.git
-cd astro-ndi
+```bash
+# Clone the maestro repo, which contains this project as a workspace package
+git clone https://github.com/info-evry/astro-maestro.git
+cd astro-maestro
 bun install
 ```
 
