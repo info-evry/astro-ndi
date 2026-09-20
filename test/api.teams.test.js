@@ -83,7 +83,7 @@ describe('GET /api/teams/:id', () => {
     expect(response.status).toBe(404);
   });
 
-  it('should include members array for specific team', async () => {
+  it('should expose only member count, never PII, for specific team', async () => {
     // Create a team with members
     const createResponse = await SELF.fetch('http://localhost/api/register', {
       method: 'POST',
@@ -119,9 +119,11 @@ describe('GET /api/teams/:id', () => {
     const response = await SELF.fetch(`http://localhost/api/teams/${teamId}`);
     const data = await response.json();
 
-    expect(data.team.members).toBeDefined();
-    expect(data.team.members).toHaveLength(2);
-    expect(data.team.members[0].first_name).toBe('Count1');
+    expect(data.team.member_count).toBe(2);
+    // Public endpoint must not expose member PII or the password hash
+    expect(data.team.members).toBeUndefined();
+    expect(data.team.password_hash).toBeUndefined();
+    expect(JSON.stringify(data)).not.toContain('count1test@example.com');
   });
 });
 

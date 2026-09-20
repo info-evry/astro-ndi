@@ -42,7 +42,20 @@ export async function getTeam(request, env, ctx, params) {
     if (!team) {
       return error('Team not found', 404);
     }
-    return json({ team });
+    // Public endpoint: never expose member PII or the password hash.
+    // Member details are only available through POST /api/teams/:id/view
+    // (password protected) or the admin API.
+    return json({
+      team: {
+        id: team.id,
+        name: team.name,
+        description: team.description,
+        room: team.room ?? null,
+        created_at: team.created_at,
+        member_count: team.members?.length || 0,
+        is_organisation: team.name === 'Organisation'
+      }
+    });
   } catch (error_) {
     console.error('Error fetching team:', error_);
     return error('Failed to fetch team', 500);

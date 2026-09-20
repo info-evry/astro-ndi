@@ -20,9 +20,14 @@ export function $(id) {
  */
 export function escapeHtml(str) {
   if (!str) return '';
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+  // Escape quotes as well: values are interpolated into attributes and
+  // inline onclick="fn('...')" strings, not only into text nodes.
+  return String(str)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
 /**
