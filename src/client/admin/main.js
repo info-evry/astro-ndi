@@ -123,6 +123,19 @@ async function loadData() {
   }
 }
 
+/**
+ * loadData for fire-and-forget callers (buttons, forms, domain modules).
+ * loadData already reports its failures (toast, or back to the login form
+ * on a 401), so here they must not surface as unhandled rejections.
+ */
+async function reloadData() {
+  try {
+    await loadData();
+  } catch {
+    // already handled in loadData
+  }
+}
+
 // ============================================================
 // AUTH HANDLING
 // ============================================================
@@ -175,9 +188,9 @@ function initAuthedModules() {
   if (authedModulesReady) return;
   authedModulesReady = true;
   initSettings(api);
-  initImport(api, loadData);
+  initImport(api, reloadData);
   initAllParticipants();
-  initArchives(api, apiBase, adminToken, loadData);
+  initArchives(api, apiBase, adminToken, reloadData);
 }
 
 async function handleAuth() {
@@ -203,7 +216,7 @@ async function handleAuth() {
 }
 
 function handleRefresh() {
-  loadData();
+  reloadData();
 }
 
 function updateDeleteButton() {
@@ -221,7 +234,7 @@ function updateDeleteButton() {
 
 async function init() {
   // Wire up delegated data-action/data-change handlers
-  const { actions, changes } = buildActions({ api, loadData, updateDeleteButton });
+  const { actions, changes } = buildActions({ api, loadData: reloadData, updateDeleteButton });
   bindDelegation(actions, changes);
 
   // Set up auth event listeners
@@ -237,14 +250,14 @@ async function init() {
   elements.addTeamBtn?.addEventListener('click', openAddTeamModal);
   elements.addMemberBtn?.addEventListener('click', openAddMemberModal);
   elements.selectAllBtn?.addEventListener('click', () => {
-    selectAllParticipants();
-    updateDeleteButton();
+    // selectAllParticipants refreshes the delete button and the toggle label itself
+    selectAllParticipants(updateDeleteButton, elements.selectAllBtn);
   });
-  elements.deleteSelectedBtn?.addEventListener('click', () => deleteSelectedMembers(api, loadData, updateDeleteButton));
+  elements.deleteSelectedBtn?.addEventListener('click', () => deleteSelectedMembers(api, reloadData, updateDeleteButton));
 
   // Set up forms
-  elements.teamForm?.addEventListener('submit', (e) => handleTeamSubmit(e, api, loadData));
-  elements.memberForm?.addEventListener('submit', (e) => handleMemberSubmit(e, api, loadData));
+  elements.teamForm?.addEventListener('submit', (e) => handleTeamSubmit(e, api, reloadData));
+  elements.memberForm?.addEventListener('submit', (e) => handleMemberSubmit(e, api, reloadData));
 
   // Initialize tabs and modals. Disclosure.astro instances self-init via
   // their own inline script (see astro-design/components/Disclosure.astro);

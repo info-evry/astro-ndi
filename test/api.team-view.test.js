@@ -227,7 +227,7 @@ describe('Team View - Error Handling', () => {
       body: 'not valid json'
     });
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(400);
   });
 
   it('should handle missing Content-Type', async () => {

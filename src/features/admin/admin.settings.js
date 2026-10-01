@@ -4,6 +4,7 @@
 
 import { json, error } from 'astro-core/router';
 import { verifyAdmin } from '../../shared/auth.js';
+import { readJsonObject, INVALID_JSON_MESSAGE } from '../../shared/http.js';
 import * as settingsDb from '../../database/db.settings.js';
 
 // Valid setting keys that can be modified
@@ -75,7 +76,10 @@ export async function updateSettings(request, env) {
   }
 
   try {
-    const updates = await request.json();
+    const updates = await readJsonObject(request);
+    if (!updates) {
+      return error(INVALID_JSON_MESSAGE, 400);
+    }
 
     // Validate all keys first
     const invalidKeys = Object.keys(updates).filter(key => !VALID_KEYS.has(key));
@@ -110,11 +114,18 @@ export async function updateSettings(request, env) {
  * Validate a number is within range
  */
 function validateNumber(value, min, max) {
-  const num = Number.parseInt(value, 10);
-  if (Number.isNaN(num) || num < min || num > max) {
+  // Accept integers and plain integer strings only ("10abc", 1.5, [5] and
+  // booleans are rejected rather than silently truncated).
+  let num = Number.NaN;
+  if (typeof value === 'number') {
+    num = value;
+  } else if (typeof value === 'string' && /^\s*-?\d+\s*$/.test(value)) {
+    num = Number.parseInt(value, 10);
+  }
+  if (!Number.isInteger(num) || num < min || num > max) {
     return { valid: false, error: `Must be a number between ${min} and ${max}` };
   }
-  return { valid: true };
+  return { valid: true, value: num };
 }
 
 /**
@@ -125,6 +136,9 @@ function validatePizzas(value) {
     return { valid: false, error: 'Must be an array' };
   }
   for (const [i, pizza] of value.entries()) {
+    if (!pizza || typeof pizza !== 'object') {
+      return { valid: false, error: `Pizza at index ${i} must be an object` };
+    }
     if (!pizza.id || typeof pizza.id !== 'string') {
       return { valid: false, error: `Pizza at index ${i} must have a string 'id'` };
     }
@@ -146,6 +160,9 @@ function validateBacLevels(value) {
     return { valid: false, error: 'Must be an array' };
   }
   for (const [i, level] of value.entries()) {
+    if (!level || typeof level !== 'object') {
+      return { valid: false, error: `BAC level at index ${i} must be an object` };
+    }
     if (typeof level.value !== 'number') {
       return { valid: false, error: `BAC level at index ${i} must have a numeric 'value'` };
     }
@@ -173,7 +190,7 @@ const VALIDATORS = {
   price_non_member: (v) => validateNumber(v, 0, 100_000),
   price_late: (v) => validateNumber(v, 0, 100_000),
   late_cutoff_time: (v) => {
-    if (typeof v !== 'string' || !/^\d{2}:\d{2}$/.test(v)) {
+    if (typeof v !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(v)) {
       return { valid: false, error: 'Must be a time in HH:MM format' };
     }
     return { valid: true };

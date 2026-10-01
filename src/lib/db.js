@@ -2,6 +2,35 @@
  * Database helper functions for D1
  */
 
+// D1 allows at most 100 bound parameters per statement. Batch operations on
+// member IDs are split into statements of at most this many IDs (leaving room
+// for a leading parameter such as a timestamp).
+const MAX_IDS_PER_STATEMENT = 90;
+
+/**
+ * Run an `... WHERE id IN (...)` statement over a list of member IDs,
+ * splitting it into several statements when the list is longer than D1's
+ * bound-parameter limit. All statements run in a single atomic D1 batch.
+ * @param {D1Database} db
+ * @param {number[]} memberIds
+ * @param {(placeholders: string) => string} buildSql - Builds the SQL for one chunk
+ * @param {Array} [leadingParams] - Parameters bound before the IDs (e.g. a timestamp)
+ * @returns {Promise<number>} Total number of rows changed
+ */
+async function runByMemberIds(db, memberIds, buildSql, leadingParams = []) {
+  if (memberIds.length === 0) return 0;
+
+  const statements = [];
+  for (let i = 0; i < memberIds.length; i += MAX_IDS_PER_STATEMENT) {
+    const chunk = memberIds.slice(i, i + MAX_IDS_PER_STATEMENT);
+    const placeholders = chunk.map(() => '?').join(',');
+    statements.push(db.prepare(buildSql(placeholders)).bind(...leadingParams, ...chunk));
+  }
+
+  const results = await db.batch(statements);
+  return results.reduce((total, result) => total + result.meta.changes, 0);
+}
+
 /**
  * Get all teams with member count
  */
@@ -334,14 +363,7 @@ export async function deleteMember(db, memberId) {
  * Delete multiple members by IDs
  */
 export async function deleteMembers(db, memberIds) {
-  if (memberIds.length === 0) return 0;
-
-  const placeholders = memberIds.map(() => '?').join(',');
-  const result = await db.prepare(
-    `DELETE FROM members WHERE id IN (${placeholders})`
-  ).bind(...memberIds).run();
-
-  return result.meta.changes;
+  return runByMemberIds(db, memberIds, (placeholders) => `DELETE FROM members WHERE id IN (${placeholders})`);
 }
 
 /**
@@ -431,25 +453,20 @@ export async function getAttendanceStats(db) {
  * Batch check-in multiple members
  */
 export async function checkInMembers(db, memberIds) {
-  if (memberIds.length === 0) return 0;
-
   const now = new Date().toISOString();
-  const placeholders = memberIds.map(() => '?').join(',');
-  const result = await db.prepare(
-    `UPDATE members SET checked_in = 1, checked_in_at = ? WHERE id IN (${placeholders})`
-  ).bind(now, ...memberIds).run();
-
-  return result.meta.changes;
+  return runByMemberIds(
+    db,
+    memberIds,
+    (placeholders) => `UPDATE members SET checked_in = 1, checked_in_at = ? WHERE id IN (${placeholders})`,
+    [now]
+  );
 }
 
 /**
  * Batch check-out multiple members
  */
 export async function checkOutMembers(db, memberIds) {
-  if (memberIds.length === 0) return 0;
-
-  const placeholders = memberIds.map(() => '?').join(',');
-  const result = await db.prepare(`
+  return runByMemberIds(db, memberIds, (placeholders) => `
     UPDATE members
     SET checked_in = 0,
         checked_in_at = NULL,
@@ -457,9 +474,7 @@ export async function checkOutMembers(db, memberIds) {
         payment_amount = NULL,
         payment_confirmed_at = NULL
     WHERE id IN (${placeholders})
-  `).bind(...memberIds).run();
-
-  return result.meta.changes;
+  `);
 }
 
 // ============ PIZZA DISTRIBUTION TRACKING ============
@@ -578,29 +593,24 @@ export async function revokePizza(db, memberId) {
  * Batch give pizza to multiple members
  */
 export async function givePizzaBatch(db, memberIds) {
-  if (memberIds.length === 0) return 0;
-
   const now = new Date().toISOString();
-  const placeholders = memberIds.map(() => '?').join(',');
-  const result = await db.prepare(
-    `UPDATE members SET pizza_received = 1, pizza_received_at = ? WHERE id IN (${placeholders})`
-  ).bind(now, ...memberIds).run();
-
-  return result.meta.changes;
+  return runByMemberIds(
+    db,
+    memberIds,
+    (placeholders) => `UPDATE members SET pizza_received = 1, pizza_received_at = ? WHERE id IN (${placeholders})`,
+    [now]
+  );
 }
 
 /**
  * Batch revoke pizza from multiple members
  */
 export async function revokePizzaBatch(db, memberIds) {
-  if (memberIds.length === 0) return 0;
-
-  const placeholders = memberIds.map(() => '?').join(',');
-  const result = await db.prepare(
-    `UPDATE members SET pizza_received = 0, pizza_received_at = NULL WHERE id IN (${placeholders})`
-  ).bind(...memberIds).run();
-
-  return result.meta.changes;
+  return runByMemberIds(
+    db,
+    memberIds,
+    (placeholders) => `UPDATE members SET pizza_received = 0, pizza_received_at = NULL WHERE id IN (${placeholders})`
+  );
 }
 
 // ============ PAYMENT TRACKING ============

@@ -4,7 +4,7 @@
 /* eslint-env browser */
 
 import { $, escapeHtml } from '@info-evry/astro-design/scripts/dom';
-import { formatTeamWithRoom } from './format.js';
+import { formatTeamWithRoom, pizzaLabel } from './format.js';
 import { toastSuccess, toastError } from '@info-evry/astro-design/scripts/toast';
 import {
   pizzaData,
@@ -76,7 +76,7 @@ export function renderPizzaStats(stats) {
       return `
         <div class="stat-card stat-card-sm">
           <div class="stat-value">${t.total}</div>
-          <div class="stat-label">${pizzaTypes[t.food_diet] || t.food_diet}</div>
+          <div class="stat-label">${pizzaLabel(pizzaTypes, t.food_diet)}</div>
           <div class="stat-sublabel">${t.received} servis${toServe > 0 ? `, ${toServe} restants` : ''}</div>
         </div>
       `;
@@ -117,7 +117,7 @@ export function renderPizzaStats(stats) {
       return `
         <div class="stat-card stat-card-sm">
           <div class="stat-value">${t.total}</div>
-          <div class="stat-label">${pizzaTypes[t.food_diet] || t.food_diet}</div>
+          <div class="stat-label">${pizzaLabel(pizzaTypes, t.food_diet)}</div>
           <div class="stat-sublabel">${toServe > 0 ? `${toServe} à servir` : 'Tous servis'}</div>
         </div>
       `;
@@ -219,7 +219,7 @@ export function renderPizza() {
       <tr class="member-row ${isPizzaReceived ? 'checked-in' : ''}" data-member-id="${m.id}">
         <td><strong>${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</strong></td>
         <td class="team-col" title="${escapeHtml(teamInfo.full)}">${escapeHtml(teamInfo.truncated)}</td>
-        <td>${pizzaTypes[m.food_diet] || escapeHtml(m.food_diet) || '-'}</td>
+        <td>${pizzaLabel(pizzaTypes, m.food_diet) || '-'}</td>
         <td class="status-col">
           ${isCheckedIn
             ? '<span class="badge badge-success">Présent</span>'

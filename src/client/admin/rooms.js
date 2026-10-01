@@ -5,6 +5,7 @@
 
 import { $, escapeHtml, truncateText } from '@info-evry/astro-design/scripts/dom';
 import { toastSuccess, toastError } from '@info-evry/astro-design/scripts/toast';
+import { pizzaLabel } from './format.js';
 import {
   roomsData,
   setRoomsData,
@@ -72,7 +73,7 @@ export function renderPizzaByRoom(pizzaByRoom) {
         ${room.pizzas.map(p => `
           <div class="stat-card stat-card-sm">
             <div class="stat-value">${p.total}</div>
-            <div class="stat-label">${pizzaTypes[p.food_diet] || p.food_diet}</div>
+            <div class="stat-label">${pizzaLabel(pizzaTypes, p.food_diet)}</div>
             <div class="stat-sublabel">${p.present} présents</div>
           </div>
         `).join('')}

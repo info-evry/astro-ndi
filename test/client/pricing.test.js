@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   calculateTier,
   getTierPrice,
@@ -32,7 +32,7 @@ describe('Client-side Pricing Utilities', () => {
 
     it('returns tier2 when no deadline', () => {
       expect(calculateTier(null)).toBe('tier2');
-      expect(calculateTier(undefined)).toBe('tier2');
+      expect(calculateTier()).toBe('tier2');
     });
 
     it('handles string deadline', () => {

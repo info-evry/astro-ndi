@@ -163,7 +163,7 @@ describe('Payment API - POST /api/payment/checkout', () => {
     const response = await SELF.fetch('http://localhost/api/payment/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ memberId: 99999 })
+      body: JSON.stringify({ memberId: 99_999 })
     });
 
     expect(response.status).toBe(404);
@@ -336,7 +336,7 @@ describe('Payment API - POST /api/payment/delayed', () => {
     const response = await SELF.fetch('http://localhost/api/payment/delayed', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ memberId: 99999 })
+      body: JSON.stringify({ memberId: 99_999 })
     });
 
     expect(response.status).toBe(404);

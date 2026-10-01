@@ -220,7 +220,7 @@ export function renderAttendance() {
         'non_member': '<span class="sf-symbol">@sfs:checkmark@</span> Non-membre',
         'late': '<span class="sf-symbol">@sfs:clock@</span> Retardataire'
       };
-      const tierLabel = tierLabels[m.payment_tier] || m.payment_tier;
+      const tierLabel = Object.hasOwn(tierLabels, m.payment_tier) ? tierLabels[m.payment_tier] : escapeHtml(m.payment_tier);
       const amount = m.payment_amount ? formatCurrency(m.payment_amount) : '';
       paymentBadge = `<span class="badge badge-success">${tierLabel}</span>`;
       if (amount) {

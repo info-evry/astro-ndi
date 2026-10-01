@@ -6,6 +6,7 @@
 import { json, error } from 'astro-core/router';
 import { verifyAdmin } from '../../shared/auth.js';
 import { hashPassword } from '../../shared/crypto.js';
+import { readJsonObject, INVALID_JSON_MESSAGE } from '../../shared/http.js';
 import * as db from '../../lib/db.js';
 
 // Alphabet without ambiguous characters (no 0/O, 1/I/l, etc.) - not a secret,
@@ -28,7 +29,12 @@ function generateTeamPassword() {
 }
 
 /**
- * Parse CSV string into array of objects
+ * Parse CSV string into array of objects.
+ * Lines whose column count does not match the header are not imported; they
+ * are returned in `skippedLines` so they can be reported to the admin.
+ * @param {string} csvText
+ * @returns {{rows: Array<Record<string, string>>, skippedLines: string[]}}
+ * @throws {Error} when there is no header row or no data row
  */
 function parseCSV(csvText) {
   const lines = csvText.trim().split('\n');
@@ -38,11 +44,12 @@ function parseCSV(csvText) {
 
   const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
   const rows = [];
+  const skippedLines = [];
 
   for (let i = 1; i < lines.length; i++) {
     const values = parseCSVLine(lines[i]);
     if (values.length !== headers.length) {
-      console.warn(`Skipping line ${i + 1}: column count mismatch`);
+      skippedLines.push(`Skipped line ${i + 1}: expected ${headers.length} columns, found ${values.length}`);
       continue;
     }
 
@@ -53,7 +60,7 @@ function parseCSV(csvText) {
     rows.push(row);
   }
 
-  return rows;
+  return { rows, skippedLines };
 }
 
 /**
@@ -162,14 +169,23 @@ export async function importCSV(request, env) {
   }
 
   try {
-    const body = await request.json();
+    const body = await readJsonObject(request);
+    if (!body) {
+      return error(INVALID_JSON_MESSAGE, 400);
+    }
     const { csv } = body;
 
     if (!csv || typeof csv !== 'string') {
       return error('CSV data is required', 400);
     }
 
-    const rows = parseCSV(csv);
+    let parsed;
+    try {
+      parsed = parseCSV(csv);
+    } catch (error_) {
+      return error(error_.message, 400);
+    }
+    const { rows, skippedLines } = parsed;
     if (rows.length === 0) {
       return error('No valid rows found in CSV', 400);
     }
@@ -182,7 +198,7 @@ export async function importCSV(request, env) {
 
     const existingTeams = await db.getTeams(env.DB);
     const teamMap = new Map(existingTeams.map(t => [t.name.toLowerCase(), t]));
-    const stats = { teamsCreated: 0, membersImported: 0, membersSkipped: 0, errors: [], createdTeams: [] };
+    const stats = { teamsCreated: 0, membersImported: 0, membersSkipped: skippedLines.length, errors: [...skippedLines], createdTeams: [] };
     const teamGroups = groupRowsByTeam(rows);
 
     for (const [teamName, members] of teamGroups) {
@@ -205,7 +221,7 @@ export async function importCSV(request, env) {
         teamsCreated: stats.teamsCreated,
         membersImported: stats.membersImported,
         membersSkipped: stats.membersSkipped,
-        totalRows: rows.length,
+        totalRows: rows.length + skippedLines.length,
         errors: stats.errors.slice(0, 10)
       },
       passwords: stats.createdTeams

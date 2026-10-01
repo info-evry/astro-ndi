@@ -5,7 +5,8 @@ export default defineConfig({
   test: {
     globals: true,
     testTimeout: 15_000,
-    exclude: ['**/node_modules/**'],
+    // test/dom/** needs a DOM and runs in vitest.dom.config.js (happy-dom)
+    exclude: ['**/node_modules/**', 'test/dom/**'],
     setupFiles: ['./test/setup.js']
   },
   plugins: [

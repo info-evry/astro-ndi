@@ -29,7 +29,7 @@ describe('Formatting Utilities', () => {
 
     it('handles null/undefined', () => {
       expect(escapeHtml(null)).toBe('');
-      expect(escapeHtml(undefined)).toBe('');
+      expect(escapeHtml()).toBe('');
     });
 
     it('converts numbers to strings', () => {
@@ -52,7 +52,7 @@ describe('Formatting Utilities', () => {
 
     it('handles null/undefined', () => {
       expect(truncateText(null)).toBe('');
-      expect(truncateText(undefined)).toBe('');
+      expect(truncateText()).toBe('');
     });
 
     it('uses default max length of 40', () => {
@@ -92,12 +92,12 @@ describe('Formatting Utilities', () => {
     });
 
     it('handles invalid input', () => {
-      expect(formatCurrency(NaN)).toBe('0,00 €');
+      expect(formatCurrency(Number.NaN)).toBe('0,00 €');
       expect(formatCurrency('abc')).toBe('0,00 €');
     });
 
     it('handles large amounts', () => {
-      const result = formatCurrency(100000);
+      const result = formatCurrency(100_000);
       expect(result).toMatch(/1[\s\u202f]?000[,.]00/);
     });
   });
@@ -116,7 +116,7 @@ describe('Formatting Utilities', () => {
 
     it('handles null/undefined', () => {
       expect(formatDate(null)).toBe('-');
-      expect(formatDate(undefined)).toBe('-');
+      expect(formatDate()).toBe('-');
     });
 
     it('handles invalid date', () => {
@@ -169,7 +169,7 @@ describe('Formatting Utilities', () => {
 
     it('handles null/undefined', () => {
       expect(getPaymentTierLabel(null)).toBe('-');
-      expect(getPaymentTierLabel(undefined)).toBe('-');
+      expect(getPaymentTierLabel()).toBe('-');
     });
   });
 

@@ -28,7 +28,7 @@ describe('Validation Utilities', () => {
 
     it('handles null/undefined', () => {
       expect(isValidEmail(null)).toBe(false);
-      expect(isValidEmail(undefined)).toBe(false);
+      expect(isValidEmail()).toBe(false);
       expect(isValidEmail('')).toBe(false);
     });
   });
@@ -53,7 +53,7 @@ describe('Validation Utilities', () => {
 
     it('rejects null/undefined', () => {
       expect(validateTeamName(null).valid).toBe(false);
-      expect(validateTeamName(undefined).valid).toBe(false);
+      expect(validateTeamName().valid).toBe(false);
     });
 
     it('respects custom length limits', () => {
@@ -125,7 +125,7 @@ describe('Validation Utilities', () => {
     describe('price fields', () => {
       it('validates positive prices', () => {
         expect(validateSetting('price_tier1', 5).valid).toBe(true);
-        expect(validateSetting('price_tier2', 7.50).valid).toBe(true);
+        expect(validateSetting('price_tier2', 7.5).valid).toBe(true);
         expect(validateSetting('price_asso_member', 0).valid).toBe(true);
       });
 
@@ -209,7 +209,7 @@ describe('Validation Utilities', () => {
 
     it('handles null/undefined', () => {
       expect(sanitizeString(null)).toBe('');
-      expect(sanitizeString(undefined)).toBe('');
+      expect(sanitizeString()).toBe('');
     });
   });
 
@@ -249,7 +249,7 @@ describe('Validation Utilities', () => {
 
     it('handles null/undefined', () => {
       expect(isDeadlinePassed(null)).toBe(false);
-      expect(isDeadlinePassed(undefined)).toBe(false);
+      expect(isDeadlinePassed()).toBe(false);
     });
   });
 
@@ -271,7 +271,7 @@ describe('Validation Utilities', () => {
 
     it('handles null/undefined', () => {
       expect(isAfterCutoff(null)).toBe(false);
-      expect(isAfterCutoff(undefined)).toBe(false);
+      expect(isAfterCutoff()).toBe(false);
     });
   });
 });

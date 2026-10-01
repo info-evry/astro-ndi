@@ -479,7 +479,7 @@ describe('Input Validation Edge Cases', () => {
       body: '{not valid json'
     });
 
-    expect([400, 500]).toContain(response.status);
+    expect(response.status).toBe(400);
   });
 
   it('should reject empty members array', async () => {

@@ -6,6 +6,8 @@ import { json, error } from 'astro-core/router';
 import * as db from '../lib/db.js';
 import { validateRegistration, sanitizeString } from '../lib/validation.js';
 import { hashPassword, verifyPassword, needsHashUpgrade } from '../shared/crypto.js';
+import { readJsonObject, INVALID_JSON_MESSAGE } from '../shared/http.js';
+import { getCapacitySettings } from '../database/db.settings.js';
 
 /**
  * Check total capacity before registration
@@ -100,14 +102,29 @@ async function insertMembers(database, teamId, members) {
 }
 
 /**
+ * Best-effort removal of a team created during a registration that then failed
+ */
+async function removeEmptyTeam(database, teamId) {
+  try {
+    await db.deleteTeam(database, teamId);
+  } catch (error_) {
+    console.error('Failed to remove team after a failed registration:', error_);
+  }
+}
+
+/**
  * POST /api/register - Register team members
  */
 export async function register(request, env) {
   try {
-    const data = await request.json();
-    const maxTeamSize = Number.parseInt(env.MAX_TEAM_SIZE, 10) || 15;
-    const maxTotal = Number.parseInt(env.MAX_TOTAL_PARTICIPANTS, 10) || 200;
-    const minTeamSize = Number.parseInt(env.MIN_TEAM_SIZE, 10) || 2;
+    const data = await readJsonObject(request);
+    if (!data) {
+      return error(INVALID_JSON_MESSAGE, 400);
+    }
+
+    // Capacity limits: admin-edited D1 settings take precedence over the
+    // environment defaults (same source as GET /api/config and /api/teams).
+    const { maxTeamSize, maxTotalParticipants: maxTotal, minTeamSize } = await getCapacitySettings(env.DB, env);
 
     // Validate input
     const validation = validateRegistration(data, { maxTeamSize, minTeamSize });
@@ -147,6 +164,11 @@ export async function register(request, env) {
     try {
       addedMembers = await insertMembers(env.DB, teamId, validation.members);
     } catch (error_) {
+      // Do not leave an empty team behind (it would also block a retry with
+      // the same team name).
+      if (isNewTeam) {
+        await removeEmptyTeam(env.DB, teamId);
+      }
       const errMsg = error_.message?.toLowerCase() || '';
       const isConstraintError = errMsg.includes('unique constraint') ||
           errMsg.includes('duplicate') ||

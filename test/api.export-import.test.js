@@ -570,8 +570,8 @@ describe('CSV Import - Validation', () => {
       body: JSON.stringify({ csv })
     });
 
-    // CSV with only headers and no data rows should be rejected
-    expect([400, 500]).toContain(response.status);
+    // CSV with only headers and no data rows is a client error
+    expect(response.status).toBe(400);
   });
 });
 

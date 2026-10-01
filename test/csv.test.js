@@ -11,7 +11,7 @@ describe('escapeCSV', () => {
   });
 
   it('should return empty string for undefined', () => {
-    expect(escapeCSV(undefined)).toBe('');
+    expect(escapeCSV()).toBe('');
   });
 
   it('should convert numbers to strings', () => {

@@ -5,6 +5,7 @@
 import { json, error } from 'astro-core/router';
 import * as db from '../lib/db.js';
 import { hashPassword, verifyPassword, needsHashUpgrade } from '../shared/crypto.js';
+import { readJsonObject, INVALID_JSON_MESSAGE } from '../shared/http.js';
 
 /**
  * POST /api/teams/:id/view - View team members with password
@@ -12,7 +13,11 @@ import { hashPassword, verifyPassword, needsHashUpgrade } from '../shared/crypto
 export async function viewTeamMembers(request, env, ctx, params) {
   try {
     const teamId = Number.parseInt(params.id, 10);
-    const { password } = await request.json();
+    const body = await readJsonObject(request);
+    if (!body) {
+      return error(INVALID_JSON_MESSAGE, 400);
+    }
+    const { password } = body;
 
     if (!password) {
       return error('Password is required', 400);

@@ -201,7 +201,7 @@ export async function getMembersWithPaymentInfo(db) {
     SELECT
       m.*,
       t.name as team_name,
-      t.room_id
+      t.room as team_room
     FROM members m
     JOIN teams t ON m.team_id = t.id
     ORDER BY t.name, m.last_name, m.first_name

@@ -22,6 +22,10 @@ export function validateTeamName(name) {
  * Validate member data
  */
 export function validateMember(member) {
+  if (!member || typeof member !== 'object' || Array.isArray(member)) {
+    return { valid: false, errors: ['Invalid member data'] };
+  }
+
   const errors = [];
 
   const firstName = sanitizeString(member.firstName, 128);
@@ -105,7 +109,7 @@ export function validateRegistration(data, config) {
     errors.push(`Maximum ${maxTeamSize} members allowed`);
   }
 
-  if (data.createNewTeam && !data.members.some(m => m.isLeader)) {
+  if (data.createNewTeam && !data.members.some(m => m?.isLeader)) {
     errors.push('New team must have at least one leader');
   }
 

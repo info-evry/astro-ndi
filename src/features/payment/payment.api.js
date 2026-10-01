@@ -10,6 +10,7 @@ import * as settingsDb from '../../database/db.settings.js';
 import * as db from '../../lib/db.js';
 import { verifyAdmin } from '../../shared/auth.js';
 import { verifyPassword } from '../../shared/crypto.js';
+import { readJsonObject, INVALID_JSON_MESSAGE } from '../../shared/http.js';
 import {
   SumUpClient,
   generateCheckoutReference,
@@ -50,11 +51,17 @@ async function authorizeMemberAction(request, env, member, body) {
  */
 export async function createCheckout(request, env) {
   try {
-    const body = await request.json();
+    const body = await readJsonObject(request);
+    if (!body) {
+      return error(INVALID_JSON_MESSAGE, 400);
+    }
     const { memberId } = body;
 
     if (!memberId) {
       return error('memberId is required', 400);
+    }
+    if (typeof memberId !== 'number' && typeof memberId !== 'string') {
+      return error('memberId must be a number', 400);
     }
 
     // Verify member exists and payment is pending
@@ -152,11 +159,17 @@ export async function createCheckout(request, env) {
  */
 export async function verifyPayment(request, env) {
   try {
-    const body = await request.json();
+    const body = await readJsonObject(request);
+    if (!body) {
+      return error(INVALID_JSON_MESSAGE, 400);
+    }
     const { checkoutId } = body;
 
     if (!checkoutId) {
       return error('checkoutId is required', 400);
+    }
+    if (typeof checkoutId !== 'string') {
+      return error('checkoutId must be a string', 400);
     }
 
     // Find member by checkout ID
@@ -250,11 +263,17 @@ export async function verifyPayment(request, env) {
  */
 export async function markPaymentDelayed(request, env) {
   try {
-    const body = await request.json();
+    const body = await readJsonObject(request);
+    if (!body) {
+      return error(INVALID_JSON_MESSAGE, 400);
+    }
     const { memberId } = body;
 
     if (!memberId) {
       return error('memberId is required', 400);
+    }
+    if (typeof memberId !== 'number' && typeof memberId !== 'string') {
+      return error('memberId must be a number', 400);
     }
 
     // Verify member exists
