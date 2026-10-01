@@ -5,6 +5,7 @@ import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { env } from 'cloudflare:test';
 import {
   detectEventYear,
+  defaultEventYear,
   archiveExists,
   getArchives,
   getArchiveByYear,
@@ -47,34 +48,39 @@ beforeEach(async () => {
   );
 });
 
-describe('detectEventYear', () => {
-  it('should return current year when no settings or data', async () => {
-    const year = await detectEventYear(env.DB);
-    expect(year).toBe(new Date().getFullYear());
+describe('defaultEventYear / detectEventYear', () => {
+  const at = (y, m, d) => new Date(y, m - 1, d, 12, 0, 0);
+
+  it('is the previous edition until NDI day, the current one from NDI day on', () => {
+    // first Thursday of December: 2025-12-04, 2026-12-03, 2028-12-07
+    expect(defaultEventYear(at(2025, 12, 3))).toBe(2024);
+    expect(defaultEventYear(at(2025, 12, 4))).toBe(2025);
+    expect(defaultEventYear(at(2026, 9, 30))).toBe(2025);
+    expect(defaultEventYear(at(2026, 12, 2))).toBe(2025);
+    expect(defaultEventYear(at(2026, 12, 3))).toBe(2026);
+    expect(defaultEventYear(at(2027, 1, 15))).toBe(2026);
+    expect(defaultEventYear(at(2028, 12, 6))).toBe(2027);
+    expect(defaultEventYear(at(2028, 12, 7))).toBe(2028);
   });
 
-  it('should return event_year from settings when set', async () => {
+  it('uses the NDI-based default when no setting is configured', async () => {
+    expect(await detectEventYear(env.DB, at(2026, 9, 30))).toBe(2025);
+  });
+
+  it('prefers the event_year setting when set', async () => {
     await env.DB.exec(`INSERT INTO settings (key, value) VALUES ('event_year', '2024')`);
-
-    const year = await detectEventYear(env.DB);
-    expect(year).toBe(2024);
+    expect(await detectEventYear(env.DB, at(2026, 9, 30))).toBe(2024);
   });
 
-  it('should infer year from member registrations when no setting', async () => {
-    // Create a team and member with specific date
-    await env.DB.exec(`INSERT INTO teams (name) VALUES ('Test Team')`);
-    await env.DB.exec(`INSERT INTO members (team_id, first_name, last_name, email, created_at) VALUES (1, 'Test', 'User', 'test@test.com', '2023-11-15 10:00:00')`);
-
-    const year = await detectEventYear(env.DB);
-    expect(year).toBe(2023);
+  it('ignores registration dates (regression: surviving Organisation members labelled the archive 2024)', async () => {
+    await env.DB.exec(`INSERT INTO teams (name) VALUES ('Organisation')`);
+    await env.DB.exec(`INSERT INTO members (team_id, first_name, last_name, email, created_at) VALUES (1, 'Old', 'Member', 'o@test.com', '2024-03-15 10:00:00')`);
+    expect(await detectEventYear(env.DB, at(2026, 9, 30))).toBe(2025);
   });
 
-  it('should handle January registrations as previous year event', async () => {
-    await env.DB.exec(`INSERT INTO teams (name) VALUES ('Test Team')`);
-    await env.DB.exec(`INSERT INTO members (team_id, first_name, last_name, email, created_at) VALUES (1, 'Test', 'User', 'test@test.com', '2024-01-05 10:00:00')`);
-
-    const year = await detectEventYear(env.DB);
-    expect(year).toBe(2023);
+  it('ignores a corrupt setting', async () => {
+    await env.DB.exec(`INSERT INTO settings (key, value) VALUES ('event_year', 'abc')`);
+    expect(await detectEventYear(env.DB, at(2026, 12, 3))).toBe(2026);
   });
 });
 

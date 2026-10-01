@@ -206,16 +206,27 @@ export async function exportArchiveJson(api) {
  */
 export async function createArchive(api, loadResetSafetyCheck) {
   const yearEl = $('current-event-year');
-  const year = yearEl ? yearEl.textContent : new Date().getFullYear();
+  const suggested = Number.parseInt(yearEl?.textContent ?? '', 10) || new Date().getFullYear() - 1;
 
-  if (!confirm(`Créer une archive pour l'édition ${year} ?\n\nCette action sauvegardera toutes les données actuelles (équipes, participants, statistiques).`)) {
+  // The edition year labels the archive for good (and cannot be changed
+  // afterwards): make the organiser confirm it instead of trusting detection.
+  const answer = prompt(
+    `Année de l'édition à archiver ?\n\nCette action sauvegardera toutes les données actuelles (équipes, participants, statistiques) sous cette édition.`,
+    String(suggested)
+  );
+  if (answer === null) {
+    return;
+  }
+  const year = Number.parseInt(answer.trim(), 10);
+  if (!/^\d{4}$/.test(answer.trim()) || year < 2000 || year > 2100) {
+    toastError('Année invalide : indiquez une année à 4 chiffres (ex. 2025)');
     return;
   }
 
   try {
     await api('/admin/archives', {
       method: 'POST',
-      body: JSON.stringify({ year: Number.parseInt(year) })
+      body: JSON.stringify({ year })
     });
 
     toastSuccess(`Archive ${year} créée avec succès`);

@@ -72,3 +72,30 @@ describe('resetData', () => {
     expect(toasts().join(' ')).toContain('SUPPRIMER');
   });
 });
+
+describe('createArchive', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="toast-container"></div><span id="current-event-year">2025</span>';
+  });
+
+  it('proposes the detected year, lets the organiser change it and sends it', async () => {
+    const prompt = vi.fn().mockReturnValue(' 2025 ');
+    vi.stubGlobal('prompt', prompt);
+    const api = vi.fn().mockResolvedValue({ success: true });
+    await archives.createArchive(api, vi.fn().mockResolvedValue());
+    expect(prompt.mock.calls[0][1]).toBe('2025');
+    const postCall = api.mock.calls.find(([endpoint, opts]) => endpoint === '/admin/archives' && opts?.method === 'POST');
+    expect(JSON.parse(postCall[1].body)).toEqual({ year: 2025 });
+  });
+
+  it('does nothing when cancelled and rejects invalid years', async () => {
+    const api = vi.fn();
+    vi.stubGlobal('prompt', () => null);
+    await archives.createArchive(api, vi.fn());
+    for (const bad of ['', 'abc', '25', '1999', '2101', '20x5', '2025.5']) {
+      vi.stubGlobal('prompt', () => bad);
+      await archives.createArchive(api, vi.fn());
+    }
+    expect(api).not.toHaveBeenCalled();
+  });
+});

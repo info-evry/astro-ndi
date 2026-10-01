@@ -24,56 +24,38 @@ export function parseJsonColumn(text, fallback) {
 }
 
 /**
- * Detect the current event year
- * Uses admin setting if available, otherwise infers from registration dates
+ * Edition year assumed for the data currently in the database when the admin
+ * has not set `event_year`: the year of the most recent Nuit de l'Info that
+ * has started (first Thursday of December). Before this year's NDI the data
+ * on screen is last year's; from NDI day on it is this year's.
+ *
+ * Registration dates are deliberately NOT used: once old teams are deleted
+ * the surviving rows (e.g. the Organisation team) carry unrelated dates and
+ * produced a wrongly labelled archive ("2024" in September 2026).
+ * @param {Date} [now]
+ * @returns {number}
+ */
+export function defaultEventYear(now = new Date()) {
+  const year = now.getFullYear();
+  const december1 = new Date(year, 11, 1);
+  const firstThursday = 1 + ((4 - december1.getDay() + 7) % 7);
+  return now >= new Date(year, 11, firstThursday) ? year : year - 1;
+}
+
+/**
+ * Detect the current event year: the admin's `event_year` setting when set,
+ * otherwise {@link defaultEventYear}.
  * @param {D1Database} db
+ * @param {Date} [now]
  * @returns {Promise<number>}
  */
-export async function detectEventYear(db) {
-  // First, check if admin has set the event year
+export async function detectEventYear(db, now = new Date()) {
   const settingYear = await getSetting(db, 'event_year');
   const configuredYear = Number.parseInt(settingYear, 10);
   if (Number.isFinite(configuredYear)) {
     return configuredYear;
   }
-
-  // Get current year as default
-  const currentYear = new Date().getFullYear();
-
-  // Check if there's any registration data to infer from
-  try {
-    const countResult = await db.prepare('SELECT COUNT(*) as count FROM members').first();
-    if (!countResult || countResult.count === 0) {
-      // No registrations - return current year
-      return currentYear;
-    }
-
-    // Infer from registration dates
-    const result = await db.prepare(`
-      SELECT
-        strftime('%Y', created_at) as year,
-        strftime('%m', created_at) as month,
-        COUNT(*) as count
-      FROM members
-      GROUP BY year, month
-      ORDER BY count DESC
-      LIMIT 1
-    `).first();
-
-    if (!result || !result.year) {
-      return currentYear;
-    }
-
-    const year = Number.parseInt(result.year, 10);
-    const month = Number.parseInt(result.month, 10);
-
-    // NDI events typically occur in December
-    // If most registrations are in January, likely for previous year's event
-    // Otherwise, use the registration year
-    return month === 1 ? year - 1 : year;
-  } catch {
-    return currentYear;
-  }
+  return defaultEventYear(now);
 }
 
 /**
