@@ -3,6 +3,8 @@
  * Handles online payment tracking and checkout management
  */
 
+import { PAYMENT_STATUSES } from '../shared/constants.js';
+
 /**
  * Update member payment information
  * @param {D1Database} db
@@ -86,11 +88,14 @@ export async function getPendingPayments(db) {
 }
 
 /**
- * Get payment statistics
+ * Count and revenue per online payment STATUS (`payment_status`).
+ *
+ * Not to be confused with `getTierStats` (lib/db.js), which groups the
+ * check-in payment TIER (`payment_tier`).
  * @param {D1Database} db
- * @returns {Promise<object>}
+ * @returns {Promise<Record<string, {count: number, amount: number}>>}
  */
-export async function getPaymentStats(db) {
+export async function getPaymentStatusStats(db) {
   const result = await db.prepare(`
     SELECT
       payment_status,
@@ -100,16 +105,12 @@ export async function getPaymentStats(db) {
     GROUP BY payment_status
   `).all();
 
-  const stats = {
-    unpaid: { count: 0, amount: 0 },
-    pending: { count: 0, amount: 0 },
-    paid: { count: 0, amount: 0 },
-    delayed: { count: 0, amount: 0 },
-    refunded: { count: 0, amount: 0 }
-  };
+  const stats = Object.fromEntries(
+    PAYMENT_STATUSES.map(status => [status, { count: 0, amount: 0 }])
+  );
 
   for (const row of result.results) {
-    if (row.payment_status && stats[row.payment_status]) {
+    if (row.payment_status && Object.hasOwn(stats, row.payment_status)) {
       stats[row.payment_status] = {
         count: row.count,
         amount: row.total_amount || 0
@@ -188,24 +189,6 @@ export async function getAllPaymentEvents(db, limit = 100) {
     ORDER BY pe.created_at DESC
     LIMIT ?
   `).bind(limit).all();
-  return result.results;
-}
-
-/**
- * Get members with payment info for attendance
- * @param {D1Database} db
- * @returns {Promise<Array>}
- */
-export async function getMembersWithPaymentInfo(db) {
-  const result = await db.prepare(`
-    SELECT
-      m.*,
-      t.name as team_name,
-      t.room as team_room
-    FROM members m
-    JOIN teams t ON m.team_id = t.id
-    ORDER BY t.name, m.last_name, m.first_name
-  `).all();
   return result.results;
 }
 

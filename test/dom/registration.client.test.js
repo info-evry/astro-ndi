@@ -74,13 +74,14 @@ function mockFetch(responder) {
 }
 
 describe('registration api client', () => {
-  it('prefixes the base URL (trailing slash removed) and sends JSON', async () => {
+  it('prefixes the base URL (trailing slash removed) and asks for JSON', async () => {
     const fetchMock = mockFetch(() => ({ body: { config: { pizzas: [] } } }));
     api.initApi('/nuit-de-linfo/');
 
     expect(await api.loadConfig()).toEqual({ pizzas: [] });
     expect(fetchMock.mock.calls[0][0]).toBe('/nuit-de-linfo/api/config');
-    expect(fetchMock.mock.calls[0][1].headers['Content-Type']).toBe('application/json');
+    expect(fetchMock.mock.calls[0][1].method).toBe('GET');
+    expect(fetchMock.mock.calls[0][1].headers.Accept).toBe('application/json');
   });
 
   it('unwraps teams, stats and pricing', async () => {
@@ -108,13 +109,35 @@ describe('registration api client', () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('/base/api/register');
     expect(init.method).toBe('POST');
+    expect(init.headers['Content-Type']).toBe('application/json');
     expect(JSON.parse(init.body)).toEqual({ teamName: 'x' });
+  });
+
+  it('errors are ApiErrors carrying the HTTP status and the server code', async () => {
+    mockFetch(() => ({ status: 409, body: { error: "Ce nom d'équipe existe déjà", code: 'conflict' } }));
+    api.initApi('');
+
+    const error = await api.submitRegistration({}).catch(error_ => error_);
+    expect(error.name).toBe('ApiError');
+    expect(error.message).toBe("Ce nom d'équipe existe déjà");
+    expect(error.status).toBe(409);
+    expect(error.code).toBe('conflict');
+  });
+
+  it('an HTML error page (502) is a readable French message, not a SyntaxError', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('<html>Bad gateway</html>', { status: 502 })));
+    api.initApi('');
+
+    const error = await api.loadTeams().catch(error_ => error_);
+    expect(error.name).toBe('ApiError');
+    expect(error.message).toContain('indisponible');
+    expect(error.status).toBe(502);
   });
 
   it('falls back to a generic message when the error body has none', async () => {
     mockFetch(() => ({ status: 500, body: {} }));
     api.initApi('');
-    await expect(api.loadTeams()).rejects.toThrow('Request failed');
+    await expect(api.loadTeams()).rejects.toThrow('Une erreur est survenue');
   });
 
   it('viewTeamMembers posts the password to the team view endpoint', async () => {

@@ -5,6 +5,7 @@
 
 import { $, escapeHtml } from '@info-evry/astro-design/scripts/dom';
 import { toastSuccess, toastError } from '@info-evry/astro-design/scripts/toast';
+import { downloadFromApi } from '@info-evry/astro-design/scripts/download';
 import {
   archivesData,
   setArchivesData,
@@ -184,25 +185,14 @@ export function closeArchiveDetail() {
 }
 
 /**
- * Export archive as JSON
- * @param {string} apiBase - API base URL
- * @param {string} adminToken - Admin token
+ * Export archive as JSON, through the admin API client (always the live token)
+ * @param {Function} api - API function
  */
-export async function exportArchiveJson(apiBase, adminToken) {
+export async function exportArchiveJson(api) {
   if (!selectedArchive) return;
   try {
-    const response = await fetch(`${apiBase}/api/admin/archives/${selectedArchive.event_year}/export?format=json`, {
-      headers: { 'Authorization': `Bearer ${adminToken}` }
-    });
-    const data = await response.json();
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `ndi-${selectedArchive.event_year}-archive.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const year = selectedArchive.event_year;
+    await downloadFromApi(api, `/admin/archives/${year}/export`, `ndi-${year}-archive.json`);
     toastSuccess('Export JSON téléchargé');
   } catch {
     toastError('Erreur lors de l\'export');
@@ -232,9 +222,10 @@ export async function createArchive(api, loadResetSafetyCheck) {
     await loadArchives(api);
     await loadResetSafetyCheck();
   } catch (error) {
-    if (error.message.includes('already exists')) {
+    // The admin api client only carries the HTTP status: 409 = already archived, 400 = nothing to archive
+    if (error.status === 409) {
       toastError(`Une archive pour ${year} existe déjà`);
-    } else if (error.message.includes('No data')) {
+    } else if (error.status === 400) {
       toastError('Aucune donnée à archiver');
     } else {
       toastError('Erreur lors de la création de l\'archive');
@@ -259,9 +250,9 @@ export async function deleteArchive(year, api, loadResetSafetyCheck) {
     await loadArchives(api);
     await loadResetSafetyCheck();
   } catch (error) {
-    if (error.message.includes('development')) {
+    if (error.status === 403) {
       toastError('La suppression n\'est autorisée qu\'en environnement de développement');
-    } else if (error.message.includes('not found')) {
+    } else if (error.status === 404) {
       toastError('Archive introuvable');
     } else {
       toastError('Erreur lors de la suppression de l\'archive');
@@ -390,13 +381,24 @@ export async function resetData(api, loadData, loadSafetyCheck) {
   }
 
   try {
-    await api('/admin/reset', { method: 'POST' });
+    // The server requires the typed confirmation in the body, and answers 200
+    // with { warning: 'no_archive' } (nothing deleted) when the current year
+    // has not been archived yet.
+    const result = await api('/admin/reset', {
+      method: 'POST',
+      body: JSON.stringify({ confirmation: confirmText })
+    });
+    if (result?.warning === 'no_archive') {
+      toastError('Créez d\'abord une archive avant de réinitialiser');
+      await loadSafetyCheck();
+      return;
+    }
     toastSuccess('Données réinitialisées avec succès');
     await loadData();
     await loadSafetyCheck();
   } catch (error) {
-    if (error.message.includes('archive')) {
-      toastError('Créez d\'abord une archive avant de réinitialiser');
+    if (error?.code === 'confirmation_required') {
+      toastError('Confirmation invalide : tapez exactement "SUPPRIMER"');
     } else {
       toastError('Erreur lors de la réinitialisation');
     }
@@ -405,12 +407,10 @@ export async function resetData(api, loadData, loadSafetyCheck) {
 
 /**
  * Initialize archives module
- * @param {Function} api - API function
- * @param {string} apiBase - API base URL
- * @param {string} adminToken - Admin token
+ * @param {Function} api - API function (carries the live admin token)
  * @param {Function} loadData - Reload callback
  */
-export function initArchives(api, apiBase, adminToken, loadData) {
+export function initArchives(api, loadData) {
   // Refresh button
   const refreshBtn = $('refresh-archives-btn');
   if (refreshBtn) {
@@ -426,7 +426,7 @@ export function initArchives(api, apiBase, adminToken, loadData) {
   // Export buttons
   const exportJsonBtn = $('export-archive-json-btn');
   if (exportJsonBtn) {
-    exportJsonBtn.addEventListener('click', () => exportArchiveJson(apiBase, adminToken));
+    exportJsonBtn.addEventListener('click', () => exportArchiveJson(api));
   }
 
   // Create archive button

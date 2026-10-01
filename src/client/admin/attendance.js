@@ -7,6 +7,7 @@ import { $, escapeHtml, formatCurrency } from '@info-evry/astro-design/scripts/d
 import { formatTeamWithRoom } from './format.js';
 import { toastSuccess, toastError } from '@info-evry/astro-design/scripts/toast';
 import { openModal, closeModal } from '@info-evry/astro-design/scripts/modal';
+import { DEFAULT_LATE_CUTOFF_TIME, DEFAULT_PRICES, PAYMENT_TIER } from '../../shared/constants.js';
 import {
   attendanceData,
   setAttendanceData,
@@ -18,10 +19,10 @@ import {
 
 // Pricing settings (loaded from settings)
 let pricingSettings = {
-  priceAssoMember: 500,
-  priceNonMember: 800,
-  priceLate: 1000,
-  lateCutoffTime: '19:00'
+  priceAssoMember: DEFAULT_PRICES.assoMember,
+  priceNonMember: DEFAULT_PRICES.nonMember,
+  priceLate: DEFAULT_PRICES.late,
+  lateCutoffTime: DEFAULT_LATE_CUTOFF_TIME
 };
 
 // Sort state
@@ -277,8 +278,8 @@ export async function handleCheckIn(memberId, api, loadData) {
       await api(`/admin/attendance/check-in/${memberId}`, {
         method: 'POST',
         body: JSON.stringify({
-          paymentTier: member.registration_tier === 'tier1' ? 'online_tier1' : 'online_tier2',
-          paymentAmount: member.payment_amount,
+          paymentTier: member.registration_tier === 'tier1' ? PAYMENT_TIER.ONLINE_TIER1 : PAYMENT_TIER.ONLINE_TIER2,
+          paymentAmount: member.payment_amount ?? 0,
           skipPayment: true
         })
       });
@@ -336,19 +337,19 @@ export async function confirmCheckIn(api, loadData) {
   let amount;
 
   switch (tier) {
-    case 'asso_member': {
+    case PAYMENT_TIER.ASSO_MEMBER: {
       amount = pricingSettings.priceAssoMember;
       break;
     }
-    case 'non_member': {
+    case PAYMENT_TIER.NON_MEMBER: {
       amount = pricingSettings.priceNonMember;
       break;
     }
-    case 'late': {
+    case PAYMENT_TIER.LATE: {
       amount = pricingSettings.priceLate;
       break;
     }
-    case 'organisation': {
+    case PAYMENT_TIER.ORGANISATION: {
       amount = 0;
       break;
     }

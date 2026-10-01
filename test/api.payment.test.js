@@ -182,7 +182,7 @@ describe('Payment API - POST /api/payment/checkout', () => {
 
     expect(response.status).toBe(400);
     const data = await response.json();
-    expect(data.error).toContain('disabled');
+    expect(data.code).toBe('payment_disabled');
   });
 
   it('rejects checkout for already paid member', async () => {
@@ -203,7 +203,7 @@ describe('Payment API - POST /api/payment/checkout', () => {
 
     expect(response.status).toBe(400);
     const data = await response.json();
-    expect(data.error).toContain('status');
+    expect(data.code).toBe('invalid_payment_status');
   });
 
   it('rejects checkout when SumUp API key is missing', async () => {
@@ -220,7 +220,8 @@ describe('Payment API - POST /api/payment/checkout', () => {
 
     expect(response.status).toBe(500);
     const data = await response.json();
-    expect(data.error).toContain('API key');
+    expect(data.code).toBe('internal_error');
+    expect(data.error).not.toContain('SumUp');
   });
 
   it('rejects checkout without a team password or admin token', async () => {

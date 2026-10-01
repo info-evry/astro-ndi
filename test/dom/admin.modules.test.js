@@ -1,4 +1,4 @@
-/* global Element, document */
+/* global Element, HTMLAnchorElement, document */
 /**
  * Attendance, pizza, rooms, archives and settings modules: rendering,
  * escaping of attacker-controlled text (food choices come from the public
@@ -469,8 +469,8 @@ describe('archives module', () => {
     expect(byId('archive-detail').classList.contains('hidden')).toBe(false);
   });
 
-  it('deleteArchive asks for confirmation first and explains the dev-only restriction', async () => {
-    const api = vi.fn().mockRejectedValue(new Error('Archive deletion is only allowed in development environment'));
+  it('deleteArchive asks for confirmation first and explains the dev-only restriction (403)', async () => {
+    const api = vi.fn().mockRejectedValue(Object.assign(new Error('Accès interdit'), { status: 403 }));
     const reload = vi.fn();
 
     vi.stubGlobal('confirm', vi.fn(() => false));
@@ -481,6 +481,39 @@ describe('archives module', () => {
     await archives.deleteArchive(2024, api, reload);
     expect(api).toHaveBeenCalledWith('/admin/archives/2024', { method: 'DELETE' });
     expect(document.querySelector('.toast.error').textContent).toContain('environnement de développement');
+  });
+
+  it('createArchive and deleteArchive tell apart the HTTP statuses of the server', async () => {
+    vi.stubGlobal('confirm', vi.fn(() => true));
+    const fail = (status) => vi.fn().mockRejectedValue(Object.assign(new Error('x'), { status }));
+    const lastToast = () => [...document.querySelectorAll('.toast.error')].at(-1).textContent;
+
+    await archives.createArchive(fail(409), vi.fn());
+    expect(lastToast()).toContain('existe déjà');
+    await archives.createArchive(fail(400), vi.fn());
+    expect(lastToast()).toContain('Aucune donnée');
+    await archives.createArchive(fail(500), vi.fn());
+    expect(lastToast()).toContain('Erreur lors de la création');
+
+    await archives.deleteArchive(2024, fail(404), vi.fn());
+    expect(lastToast()).toContain('Archive introuvable');
+  });
+
+  it('exportArchiveJson downloads through the api client, so it always uses the live token', async () => {
+    URL.createObjectURL = vi.fn(() => 'blob:x');
+    URL.revokeObjectURL = vi.fn();
+    const clicked = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    const api = vi.fn().mockResolvedValue({ filename: 'ndi-2024-archive.json', export: { teams: [] } });
+
+    await archives.exportArchiveJson(api); // nothing selected yet
+    expect(api).not.toHaveBeenCalled();
+
+    state.setSelectedArchive({ ...archive(), teams_json: '[]', members_json: '[]' });
+    await archives.exportArchiveJson(api);
+
+    expect(api).toHaveBeenCalledWith('/admin/archives/2024/export');
+    expect(clicked).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('.toast.success').textContent).toContain('Export JSON');
   });
 
   it('shows an error placeholder when loading the list fails', async () => {

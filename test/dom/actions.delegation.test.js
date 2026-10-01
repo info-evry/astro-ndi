@@ -1,8 +1,8 @@
 /* global Blob, Element, Event, HTMLAnchorElement, MouseEvent, document, window */
 /**
- * Delegated click / change dispatch (actions.js): bindDelegation semantics,
- * the data-action contract between rendered markup and the handler map,
- * and end-to-end flows through the real handlers.
+ * Delegated click / change dispatch: the design system's bindDelegation fed
+ * with the maps built by actions.js, the data-action contract between rendered
+ * markup and the handler map, and end-to-end flows through the real handlers.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MODALS_HTML, XSS_PAYLOAD, QUOTE_PAYLOAD, sampleTeams, trackDocumentListeners, flush } from './helpers.js';
@@ -16,6 +16,7 @@ beforeEach(async () => {
   document.body.innerHTML = '';
   mods = {
     actions: await import('../../src/client/admin/actions.js'),
+    delegation: await import('@info-evry/astro-design/scripts/delegation'),
     reg: await import('../../src/client/admin/registrations.js'),
     state: await import('../../src/client/admin/state.js'),
     modal: await import('@info-evry/astro-design/scripts/modal'),
@@ -38,7 +39,7 @@ describe('bindDelegation', () => {
   it('dispatches a click on the closest [data-action] ancestor, with the element and the event', () => {
     const handler = vi.fn();
     document.body.innerHTML = '<button data-action="go" data-id="5"><span><i id="inner">icon</i></span></button>';
-    mods.actions.bindDelegation({ go: handler }, {});
+    mods.delegation.bindDelegation({ go: handler }, {});
 
     click(document.getElementById('inner'));
 
@@ -50,7 +51,7 @@ describe('bindDelegation', () => {
 
   it('prevents the default action of handled clicks only', () => {
     document.body.innerHTML = '<a href="#x" data-action="known">k</a><a href="#y" data-action="unknown">u</a><a href="#z">plain</a>';
-    mods.actions.bindDelegation({ known: vi.fn() }, {});
+    mods.delegation.bindDelegation({ known: vi.fn() }, {});
     const [known, unknown, plain] = document.querySelectorAll('a');
 
     expect(click(known)).toBe(false);
@@ -60,7 +61,7 @@ describe('bindDelegation', () => {
 
   it('ignores clicks outside any data-action and unknown actions without throwing', () => {
     document.body.innerHTML = '<div id="plain">x</div><button data-action="nope">n</button>';
-    mods.actions.bindDelegation({}, {});
+    mods.delegation.bindDelegation({}, {});
 
     expect(() => click(document.getElementById('plain'))).not.toThrow();
     expect(() => click(document.querySelector('button'))).not.toThrow();
@@ -70,7 +71,7 @@ describe('bindDelegation', () => {
     const outer = vi.fn();
     const inner = vi.fn();
     document.body.innerHTML = '<div data-action="outer"><button data-action="inner" id="b">b</button></div>';
-    mods.actions.bindDelegation({ outer, inner }, {});
+    mods.delegation.bindDelegation({ outer, inner }, {});
 
     click(document.getElementById('b'));
     expect(inner).toHaveBeenCalledTimes(1);
@@ -81,7 +82,7 @@ describe('bindDelegation', () => {
     const windowListener = vi.fn();
     window.addEventListener('click', windowListener);
     document.body.innerHTML = '<button data-action="go" data-stop id="stop">s</button><button data-action="go" id="free">f</button>';
-    mods.actions.bindDelegation({ go: vi.fn() }, {});
+    mods.delegation.bindDelegation({ go: vi.fn() }, {});
 
     click(document.getElementById('free'));
     expect(windowListener).toHaveBeenCalledTimes(1);
@@ -100,7 +101,7 @@ describe('bindDelegation', () => {
           <div data-action="stop-propagation"><button type="button" id="header-button">Refresh</button></div>
         </div>
       </div>`;
-    mods.actions.bindDelegation(actions, {});
+    mods.delegation.bindDelegation(actions, {});
     const group = document.getElementById('group');
 
     click(document.getElementById('header-button'));
@@ -115,7 +116,7 @@ describe('bindDelegation', () => {
   it('dispatches change events to the closest [data-change] element', () => {
     const handler = vi.fn();
     document.body.innerHTML = '<label data-change="pick"><input id="field" type="checkbox"></label><input id="other">';
-    mods.actions.bindDelegation({}, { pick: handler });
+    mods.delegation.bindDelegation({}, { pick: handler });
 
     change(document.getElementById('field'));
     expect(handler).toHaveBeenCalledTimes(1);
@@ -126,9 +127,22 @@ describe('bindDelegation', () => {
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
+  it('never dispatches inherited names (constructor, __proto__) and reports handler failures to onError', async () => {
+    const onError = vi.fn();
+    document.body.innerHTML = '<button data-action="constructor" id="c">c</button><button data-action="boom" id="b">b</button>';
+    mods.delegation.bindDelegation({ boom: () => { throw new Error('handler failed'); } }, {}, { onError });
+
+    expect(() => click(document.getElementById('c'))).not.toThrow();
+    expect(onError).not.toHaveBeenCalled();
+
+    click(document.getElementById('b'));
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0][0].message).toBe('handler failed');
+  });
+
   it('survives a change with an unknown handler name', () => {
     document.body.innerHTML = '<input id="x" data-change="missing">';
-    mods.actions.bindDelegation({}, {});
+    mods.delegation.bindDelegation({}, {});
     expect(() => change(document.getElementById('x'))).not.toThrow();
   });
 });
@@ -194,7 +208,7 @@ describe('end-to-end through the real handlers', () => {
     updateDeleteButton = vi.fn();
     mods.modal.initModals();
     const { actions, changes } = mods.actions.buildActions({ api, loadData, updateDeleteButton });
-    mods.actions.bindDelegation(actions, changes);
+    mods.delegation.bindDelegation(actions, changes);
     mods.reg.renderTeams(sampleTeams(), container());
   });
 

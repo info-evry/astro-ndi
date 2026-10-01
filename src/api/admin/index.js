@@ -9,10 +9,10 @@
  * - attendance.js: Check-in/check-out operations
  * - pizza.js: Pizza distribution
  * - rooms.js: Room assignments
+ * - archives.js: Yearly archives and data reset
+ *
+ * Every handler is wrapped with `adminOnly` (astro-core/auth).
  */
-
-// Auth re-export for backward compatibility
-export { verifyAdmin } from '../../shared/auth.js';
 
 // Exports and statistics
 export {

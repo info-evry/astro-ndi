@@ -4,6 +4,24 @@
  */
 
 import { getSetting } from './db.settings.js';
+import { ORGANISATION_TEAM_NAME } from '../shared/constants.js';
+
+/**
+ * JSON.parse that never throws: a corrupt column must not take the whole
+ * endpoint down.
+ * @param {string|null|undefined} text
+ * @param {*} fallback - Returned for an empty or unparsable value
+ * @returns {*}
+ */
+export function parseJsonColumn(text, fallback) {
+  if (!text) return fallback;
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    console.error('Corrupt JSON column in archives:', error);
+    return fallback;
+  }
+}
 
 /**
  * Detect the current event year
@@ -14,8 +32,9 @@ import { getSetting } from './db.settings.js';
 export async function detectEventYear(db) {
   // First, check if admin has set the event year
   const settingYear = await getSetting(db, 'event_year');
-  if (settingYear) {
-    return Number.parseInt(settingYear, 10);
+  const configuredYear = Number.parseInt(settingYear, 10);
+  if (Number.isFinite(configuredYear)) {
+    return configuredYear;
   }
 
   // Get current year as default
@@ -106,13 +125,13 @@ export async function getArchiveByYear(db, year) {
 
   if (!archive) return null;
 
-  // Parse JSON fields
+  // Parse JSON fields (a corrupt column degrades to an empty value)
   return {
     ...archive,
-    teams: JSON.parse(archive.teams_json),
-    members: JSON.parse(archive.members_json),
-    payment_events: archive.payment_events_json ? JSON.parse(archive.payment_events_json) : [],
-    stats: JSON.parse(archive.stats_json)
+    teams: parseJsonColumn(archive.teams_json, []),
+    members: parseJsonColumn(archive.members_json, []),
+    payment_events: parseJsonColumn(archive.payment_events_json, []),
+    stats: parseJsonColumn(archive.stats_json, null)
   };
 }
 
@@ -433,14 +452,13 @@ export async function checkAndApplyExpiration(db, year) {
     return { expired: false, updated: false };
   }
 
-  // Apply anonymization
-  const members = JSON.parse(archive.members_json);
-  const anonymizedMembers = anonymizeMembers(members);
+  // Apply anonymization. A column that cannot be parsed cannot be anonymised
+  // entry by entry, so it is emptied: personal data is never kept past expiry.
+  const members = parseJsonColumn(archive.members_json, []);
+  const anonymizedMembers = anonymizeMembers(Array.isArray(members) ? members : []);
 
-  const paymentEvents = archive.payment_events_json 
-    ? JSON.parse(archive.payment_events_json) 
-    : [];
-  const anonymizedEvents = anonymizePaymentEvents(paymentEvents);
+  const paymentEvents = parseJsonColumn(archive.payment_events_json, []);
+  const anonymizedEvents = anonymizePaymentEvents(Array.isArray(paymentEvents) ? paymentEvents : []);
 
   // Update archive with anonymized data
   await db.prepare(`
@@ -479,16 +497,20 @@ export async function checkAllExpirations(db) {
 }
 
 /**
- * Reset all event data (teams, members, payments)
- * Does NOT affect archives
+ * Reset all event data (teams, members, payments), in one atomic batch.
+ * Does NOT affect archives, and keeps the Organisation team (the permanent
+ * team of the organisers); only its members are removed.
  * @param {D1Database} db
- * @returns {Promise<{teams: number, members: number, payments: number}>}
+ * @returns {Promise<{teams: number, members: number, payments: number}>} rows
+ *   deleted (the kept Organisation team is not counted)
  */
 export async function resetAllData(db) {
   // Delete in order to respect foreign keys
-  const paymentsResult = await db.prepare('DELETE FROM payment_events').run();
-  const membersResult = await db.prepare('DELETE FROM members').run();
-  const teamsResult = await db.prepare('DELETE FROM teams').run();
+  const [paymentsResult, membersResult, teamsResult] = await db.batch([
+    db.prepare('DELETE FROM payment_events'),
+    db.prepare('DELETE FROM members'),
+    db.prepare('DELETE FROM teams WHERE name != ?').bind(ORGANISATION_TEAM_NAME)
+  ]);
 
   return {
     teams: teamsResult.meta.changes,
@@ -498,12 +520,14 @@ export async function resetAllData(db) {
 }
 
 /**
- * Get data counts for reset confirmation
+ * Get data counts for reset confirmation. The permanent Organisation team is
+ * not event data and is not counted.
  * @param {D1Database} db
  * @returns {Promise<{teams: number, members: number, payments: number}>}
  */
 export async function getDataCounts(db) {
-  const teamsCount = await db.prepare('SELECT COUNT(*) as count FROM teams').first();
+  const teamsCount = await db.prepare('SELECT COUNT(*) as count FROM teams WHERE name != ?')
+    .bind(ORGANISATION_TEAM_NAME).first();
   const membersCount = await db.prepare('SELECT COUNT(*) as count FROM members').first();
 
   let paymentsCount = { count: 0 };

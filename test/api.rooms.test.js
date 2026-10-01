@@ -240,7 +240,8 @@ describe('PUT /api/admin/rooms/:teamId', () => {
 
     expect(response.status).toBe(400);
     const data = await response.json();
-    expect(data.error).toContain('50 characters');
+    expect(data.code).toBe('invalid_room');
+    expect(data.error).toContain('50');
   });
 
   it('should update stats after room assignment', async () => {
@@ -348,7 +349,7 @@ describe('POST /api/admin/rooms/batch', () => {
 
     expect(response.status).toBe(400);
     const data = await response.json();
-    expect(data.error).toContain('teamId');
+    expect(data.code).toBe('invalid_id');
   });
 
   it('should allow clearing rooms in batch', async () => {

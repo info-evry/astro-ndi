@@ -71,7 +71,7 @@ describe('Team password storage', () => {
     for (const teamPassword of [undefined, '', '   ', 12_345, null, ['a'], { a: 1 }]) {
       const response = await register(newTeamBody({ teamPassword }));
       expect(response.status).toBe(400);
-      expect((await response.json()).error).toBe('Team password is required');
+      expect((await response.json()).code).toBe('password_required');
     }
     expect(await countRows('teams')).toBe(0);
   });
@@ -165,7 +165,8 @@ describe('Joining an existing team', () => {
 
   it('does not reveal whether a team exists through the error for non-numeric ids', async () => {
     const response = await register({ createNewTeam: false, teamId: 'abc', teamPassword: 'pw', members: [memberPayload()] });
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(400);
+    expect((await response.json()).code).toBe('invalid_id');
   });
 
   it('is all-or-nothing: one already registered member rejects the whole batch', async () => {
@@ -180,8 +181,8 @@ describe('Joining an existing team', () => {
       members: [fresh, memberPayload({ firstName: taken.first_name, lastName: taken.last_name })]
     });
 
-    expect(response.status).toBe(400);
-    expect((await response.json()).error).toContain('already registered');
+    expect(response.status).toBe(409);
+    expect((await response.json()).code).toBe('conflict');
     expect(await countRows('members', 'WHERE first_name = ?', fresh.firstName)).toBe(0);
   });
 });
@@ -205,7 +206,7 @@ describe('Capacity limits', () => {
       createNewTeam: false, teamId: team.id, teamPassword: 'full-pw', members: [memberPayload(), memberPayload()]
     });
     expect(overflow.status).toBe(400);
-    expect((await overflow.json()).error).toContain('Only 1 spots available');
+    expect((await overflow.json()).code).toBe('team_full');
 
     const fits = await register({ createNewTeam: false, teamId: team.id, teamPassword: 'full-pw', members: [memberPayload()] });
     expect(fits.status).toBe(200);
@@ -221,7 +222,9 @@ describe('Capacity limits', () => {
 
     const overflow = await register(newTeamBody({ members: [memberPayload({ isLeader: true }), memberPayload()] }));
     expect(overflow.status).toBe(400);
-    expect((await overflow.json()).error).toContain('Only 1 spots available');
+    const body = await overflow.json();
+    expect(body.code).toBe('capacity_exceeded');
+    expect(body.error).toContain('1 place');
     expect(await countRows('teams')).toBe(1);
 
     const last = await register(newTeamBody());
@@ -250,7 +253,7 @@ describe('Capacity limits', () => {
 
     const overflow = await register(newTeamBody({ members: [memberPayload({ isLeader: true }), memberPayload()] }));
     expect(overflow.status).toBe(400);
-    expect((await overflow.json()).error).toContain('Only 1 spots available');
+    expect((await overflow.json()).code).toBe('capacity_exceeded');
 
     expect((await register(newTeamBody())).status).toBe(200);
   });
@@ -284,7 +287,7 @@ describe('Duplicates', () => {
       members: [memberPayload({ firstName: taken.first_name, lastName: taken.last_name, isLeader: true })]
     }));
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(409);
     expect(await countRows('teams', 'WHERE name = ?', teamName)).toBe(0);
 
     // the same team name can be used for a corrected retry
@@ -295,13 +298,13 @@ describe('Duplicates', () => {
   it('rejects a team name that already exists', async () => {
     const existing = await seedTeam();
     const response = await register(newTeamBody({ teamName: existing.name }));
-    expect(response.status).toBe(400);
-    expect((await response.json()).error).toBe('Team name already exists');
+    expect(response.status).toBe(409);
+    expect((await response.json()).code).toBe('conflict');
   });
 });
 
 describe('Field length caps', () => {
-  it('truncates team name (128), description (256) and member names (128)', async () => {
+  it('truncates team name (128), description (256) and member names (100)', async () => {
     const response = await register(newTeamBody({
       teamName: 'N'.repeat(300),
       teamDescription: 'D'.repeat(600),
@@ -315,15 +318,24 @@ describe('Field length caps', () => {
     expect(row.description).toHaveLength(256);
 
     const member = await env.DB.prepare('SELECT first_name, last_name FROM members WHERE team_id = ?').bind(team.id).first();
-    expect(member.first_name).toHaveLength(128);
-    expect(member.last_name).toHaveLength(128);
+    expect(member.first_name).toHaveLength(100);
+    expect(member.last_name).toHaveLength(100);
   });
 
-  it('truncates the food choice to 64 characters', async () => {
-    const response = await register(newTeamBody({ members: [memberPayload({ isLeader: true, foodDiet: 'f'.repeat(200) })] }));
-    const { team } = await response.json();
-    const member = await env.DB.prepare('SELECT food_diet FROM members WHERE team_id = ?').bind(team.id).first();
-    expect(member.food_diet).toHaveLength(64);
+  it('rejects a food choice that is not a configured pizza (and an over-long one)', async () => {
+    for (const foodDiet of ['f'.repeat(200), 'not-a-pizza', 12, ['reine']]) {
+      const response = await register(newTeamBody({ members: [memberPayload({ isLeader: true, foodDiet })] }));
+      expect(response.status).toBe(400);
+      expect((await response.json()).error).toContain('Invalid food choice');
+    }
+    expect(await countRows('teams')).toBe(0);
+  });
+
+  it('accepts the configured pizza ids and every "no pizza" value', async () => {
+    for (const foodDiet of ['reine', 'none', '', '0-rien']) {
+      const response = await register(newTeamBody({ members: [memberPayload({ isLeader: true, foodDiet })] }));
+      expect(response.status).toBe(200);
+    }
   });
 
   it('rejects emails over 254 characters and out-of-range BAC levels', async () => {

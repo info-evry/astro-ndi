@@ -2,22 +2,66 @@
  * Admin attendance handlers - check-in/check-out operations
  */
 
-import { json, error } from 'astro-core/router';
+import { json } from 'astro-core/router';
+import { adminOnly } from 'astro-core/auth';
+import { parsePositiveId } from 'astro-core/ids';
+import { badRequest, invalidId, notFound, serverError } from 'astro-core/http';
 import * as db from '../../lib/db.js';
-import { verifyAdmin } from '../../shared/auth.js';
+import { MAX_PAYMENT_AMOUNT_CENTS, isPaymentTier } from '../../shared/constants.js';
+import { readIdList, readOptionalBody } from '../../shared/http.js';
+
+const MSG_MEMBER_NOT_FOUND = 'Membre introuvable';
+
+/**
+ * Parse a payment amount in cents: a non-negative integer (number or digit
+ * string) not above MAX_PAYMENT_AMOUNT_CENTS. `null` when invalid.
+ * @param {unknown} value
+ * @returns {number|null}
+ */
+function parsePaymentAmount(value) {
+  let amount = Number.NaN;
+  if (typeof value === 'number') {
+    amount = value;
+  } else if (typeof value === 'string' && /^\d{1,9}$/.test(value)) {
+    amount = Number(value);
+  }
+  return Number.isSafeInteger(amount) && amount >= 0 && amount <= MAX_PAYMENT_AMOUNT_CENTS ? amount : null;
+}
+
+/**
+ * Extract the optional payment info of a check-in body.
+ * Resolves `{ payment: null }` when the body carries none, `{ payment }` with
+ * a validated tier and amount, or `{ response }` (400) when it is invalid.
+ * @param {Record<string, any>|null} body
+ */
+function parseCheckInPayment(body) {
+  const hasTier = body && body.paymentTier !== undefined && body.paymentTier !== null && body.paymentTier !== '';
+  const hasAmount = body && body.paymentAmount !== undefined && body.paymentAmount !== null;
+  if (!hasTier && !hasAmount) return { payment: null };
+
+  if (!isPaymentTier(body.paymentTier)) {
+    return { response: badRequest('Type de paiement invalide', 'invalid_payment_tier') };
+  }
+  const amount = parsePaymentAmount(body.paymentAmount);
+  if (amount === null) {
+    return {
+      response: badRequest(
+        `Montant invalide (entier entre 0 et ${MAX_PAYMENT_AMOUNT_CENTS} centimes)`,
+        'invalid_payment_amount'
+      )
+    };
+  }
+  return { payment: { tier: body.paymentTier, amount } };
+}
 
 /**
  * GET /api/admin/attendance - Get all members with attendance status
  */
-export async function getAttendance(request, env) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const getAttendance = adminOnly(async (request, env) => {
   try {
     const members = await db.getAllMembersWithPayment(env.DB);
     const stats = await db.getAttendanceStats(env.DB);
-    const paymentStats = await db.getPaymentStats(env.DB);
+    const paymentStats = await db.getTierStats(env.DB);
 
     return json({
       members,
@@ -39,50 +83,36 @@ export async function getAttendance(request, env) {
       }
     });
   } catch (error_) {
-    console.error('Error fetching attendance:', error_);
-    return error('Failed to fetch attendance', 500);
+    return serverError('Error fetching attendance:', error_);
   }
-}
+});
 
 /**
  * POST /api/admin/attendance/check-in/:id - Check in a member
- * Optionally accepts { paymentTier, paymentAmount } in body for paid check-in
+ * Optionally accepts { paymentTier, paymentAmount } in body for paid check-in.
+ * An absent body is a plain check-in; a body that is present but malformed,
+ * or whose payment info is invalid, is a 400.
  */
-export async function checkInMember(request, env, ctx, params) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const checkInMember = adminOnly(async (request, env, ctx, params) => {
   try {
-    const memberId = Number.parseInt(params.id, 10);
+    const memberId = parsePositiveId(params.id);
+    if (memberId === null) return invalidId();
+
+    const { data: body, response } = await readOptionalBody(request);
+    if (response) return response;
+
+    const { payment, response: paymentResponse } = parseCheckInPayment(body);
+    if (paymentResponse) return paymentResponse;
 
     const member = await db.getMemberById(env.DB, memberId);
-    if (!member) {
-      return error('Member not found', 404);
-    }
-
-    // Check for payment info in request body
-    let paymentTier = null;
-    let paymentAmount = null;
-
-    try {
-      const body = await request.json();
-      if (body.paymentTier && body.paymentAmount !== undefined) {
-        paymentTier = body.paymentTier;
-        paymentAmount = Number.parseInt(body.paymentAmount, 10);
-      }
-    } catch {
-      // No body or invalid JSON - proceed without payment info
-    }
+    if (!member) return notFound(MSG_MEMBER_NOT_FOUND);
 
     // Check in with or without payment
-    const success = paymentTier && paymentAmount !== null
-      ? await db.checkInWithPayment(env.DB, memberId, paymentTier, paymentAmount)
+    const success = payment
+      ? await db.checkInWithPayment(env.DB, memberId, payment.tier, payment.amount)
       : await db.checkInMember(env.DB, memberId);
 
-    if (!success) {
-      return error('Failed to check in member', 500);
-    }
+    if (!success) return notFound(MSG_MEMBER_NOT_FOUND); // deleted in the meantime
 
     const updated = await db.getMemberById(env.DB, memberId);
 
@@ -98,31 +128,23 @@ export async function checkInMember(request, env, ctx, params) {
       }
     });
   } catch (error_) {
-    console.error('Error checking in member:', error_);
-    return error('Failed to check in member', 500);
+    return serverError('Error checking in member:', error_);
   }
-}
+});
 
 /**
  * POST /api/admin/attendance/check-out/:id - Check out a member (revoke attendance)
  */
-export async function checkOutMember(request, env, ctx, params) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const checkOutMember = adminOnly(async (request, env, ctx, params) => {
   try {
-    const memberId = Number.parseInt(params.id, 10);
+    const memberId = parsePositiveId(params.id);
+    if (memberId === null) return invalidId();
 
     const member = await db.getMemberById(env.DB, memberId);
-    if (!member) {
-      return error('Member not found', 404);
-    }
+    if (!member) return notFound(MSG_MEMBER_NOT_FOUND);
 
     const success = await db.checkOutMember(env.DB, memberId);
-    if (!success) {
-      return error('Failed to check out member', 500);
-    }
+    if (!success) return notFound(MSG_MEMBER_NOT_FOUND); // deleted in the meantime
 
     return json({
       success: true,
@@ -136,55 +158,38 @@ export async function checkOutMember(request, env, ctx, params) {
       }
     });
   } catch (error_) {
-    console.error('Error checking out member:', error_);
-    return error('Failed to check out member', 500);
+    return serverError('Error checking out member:', error_);
   }
-}
+});
 
 /**
  * POST /api/admin/attendance/check-in-batch - Batch check in multiple members
  */
-export async function checkInMembersBatch(request, env) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const checkInMembersBatch = adminOnly(async (request, env) => {
   try {
-    const { memberIds } = await request.json();
+    const { ids, response } = await readIdList(request, 'memberIds');
+    if (response) return response;
 
-    if (!Array.isArray(memberIds) || memberIds.length === 0) {
-      return error('memberIds array is required', 400);
-    }
-
-    const count = await db.checkInMembers(env.DB, memberIds.map(id => Number.parseInt(id, 10)));
+    const count = await db.checkInMembers(env.DB, ids);
 
     return json({ success: true, checked_in: count });
   } catch (error_) {
-    console.error('Error batch checking in:', error_);
-    return error('Failed to check in members', 500);
+    return serverError('Error batch checking in:', error_);
   }
-}
+});
 
 /**
  * POST /api/admin/attendance/check-out-batch - Batch check out multiple members
  */
-export async function checkOutMembersBatch(request, env) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const checkOutMembersBatch = adminOnly(async (request, env) => {
   try {
-    const { memberIds } = await request.json();
+    const { ids, response } = await readIdList(request, 'memberIds');
+    if (response) return response;
 
-    if (!Array.isArray(memberIds) || memberIds.length === 0) {
-      return error('memberIds array is required', 400);
-    }
-
-    const count = await db.checkOutMembers(env.DB, memberIds.map(id => Number.parseInt(id, 10)));
+    const count = await db.checkOutMembers(env.DB, ids);
 
     return json({ success: true, checked_out: count });
   } catch (error_) {
-    console.error('Error batch checking out:', error_);
-    return error('Failed to check out members', 500);
+    return serverError('Error batch checking out:', error_);
   }
-}
+});

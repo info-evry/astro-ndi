@@ -299,7 +299,8 @@ describe('deleteSelectedMembers', () => {
     expect(document.getElementById('confirm-message').textContent).toContain('2 membre(s)');
     expect(api).not.toHaveBeenCalled();
 
-    await document.getElementById('confirm-delete-btn').onclick();
+    document.getElementById('confirm-delete-btn').click();
+    await flush();
     expect(api).toHaveBeenCalledWith('/admin/members/delete-batch', {
       method: 'POST',
       body: JSON.stringify({ memberIds: [11, 12] })
@@ -315,10 +316,13 @@ describe('deleteSelectedMembers', () => {
     const api = vi.fn().mockRejectedValue(new Error('boom'));
 
     await reg.deleteSelectedMembers(api, vi.fn(), vi.fn());
-    await document.getElementById('confirm-delete-btn').onclick();
+    document.getElementById('confirm-delete-btn').click();
+    await flush();
 
     expect(state.selectedMembers.has(11)).toBe(true);
-    expect(document.querySelector('.toast.error').textContent).toBe('Erreur: boom');
+    expect(document.querySelector('.toast.error').textContent).toBe('boom');
+    // the confirm modal stays open so the admin can retry or cancel
+    expect(document.getElementById('confirm-modal').classList.contains('hidden')).toBe(false);
   });
 });
 
@@ -441,7 +445,20 @@ describe('form handlers', () => {
     });
   });
 
-  it('deleteTeam and deleteMember call the API, close the modal and reload', async () => {
+  it('handleMemberSubmit sends null for an empty team / BAC field instead of NaN', async () => {
+    const api = vi.fn().mockResolvedValue({});
+    reg.openAddMemberModal();
+    document.getElementById('member-form-team').innerHTML = '';
+    document.getElementById('member-form-firstname').value = 'No';
+    document.getElementById('member-form-lastname').value = 'Team';
+    document.getElementById('member-form-email').value = 'no@team.fr';
+    document.getElementById('member-form-bac').value = '';
+
+    await reg.handleMemberSubmit(new Event('submit', { cancelable: true }), api, vi.fn());
+    expect(JSON.parse(api.mock.calls[0][1].body)).toMatchObject({ teamId: null, bacLevel: null });
+  });
+
+  it('deleteTeam and deleteMember call the API and reload', async () => {
     const api = vi.fn().mockResolvedValue({});
     const loadData = vi.fn();
     const update = vi.fn();
@@ -455,6 +472,54 @@ describe('form handlers', () => {
     expect(state.selectedMembers.has(11)).toBe(false);
     expect(update).toHaveBeenCalled();
     expect(loadData).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('delete confirmation flow (shared confirm modal)', () => {
+  beforeEach(async () => {
+    reg.renderTeams(sampleTeams(), container());
+    (await import('@info-evry/astro-design/scripts/modal')).initModals();
+  });
+
+  const confirmButton = () => document.getElementById('confirm-delete-btn');
+  const modalHidden = () => document.getElementById('confirm-modal').classList.contains('hidden');
+
+  it('closes the modal after a successful delete', async () => {
+    const api = vi.fn().mockResolvedValue({});
+    reg.confirmDeleteTeam(1, 'Alpha', (id) => reg.deleteTeam(id, api, vi.fn()));
+    expect(modalHidden()).toBe(false);
+
+    confirmButton().click();
+    await flush();
+
+    expect(api).toHaveBeenCalledWith('/admin/teams/1', { method: 'DELETE' });
+    expect(modalHidden()).toBe(true);
+    expect(document.querySelector('.toast.success').textContent).toBe('Équipe supprimée');
+  });
+
+  it('keeps the modal open and shows the server message when the delete fails', async () => {
+    const api = vi.fn().mockRejectedValue(new Error("Impossible de supprimer l'équipe Organisation"));
+    reg.confirmDeleteTeam(2, 'Organisation', (id) => reg.deleteTeam(id, api, vi.fn()));
+
+    confirmButton().click();
+    await flush();
+
+    expect(modalHidden()).toBe(false);
+    expect(document.querySelector('.toast.error').textContent).toBe("Impossible de supprimer l'équipe Organisation");
+  });
+
+  it('does not rebind the button with onclick: only one listener runs per click', async () => {
+    const first = vi.fn().mockResolvedValue();
+    const second = vi.fn().mockResolvedValue();
+    reg.confirmDeleteMember(1, 'A', first);
+    reg.confirmDeleteMember(2, 'B', second);
+
+    expect(confirmButton().onclick).toBeNull();
+    confirmButton().click();
+    await flush();
+
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledTimes(1);
   });
 });
 

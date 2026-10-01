@@ -87,9 +87,9 @@ describe('POST /api/register - New Team Creation', () => {
       })
     });
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(409);
     const data = await response.json();
-    expect(data.error).toContain('already exists');
+    expect(data.code).toBe('conflict');
   });
 
   it('should reject registration without password', async () => {
@@ -115,7 +115,7 @@ describe('POST /api/register - New Team Creation', () => {
 
     expect(response.status).toBe(400);
     const data = await response.json();
-    expect(data.error).toContain('password');
+    expect(data.code).toBe('password_required');
   });
 
   it('should reject new team without leader', async () => {
@@ -372,9 +372,9 @@ describe('POST /api/register - Member Validation', () => {
       })
     });
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(409);
     const data = await response.json();
-    expect(data.error).toContain('already registered');
+    expect(data.code).toBe('conflict');
   });
 
   it('should register multiple members at once', async () => {
@@ -442,7 +442,7 @@ describe('Input Validation Edge Cases', () => {
       })
     });
 
-    expect([200, 400]).toContain(response.status);
+    expect([200, 400, 409]).toContain(response.status);
   });
 
   it('should handle special characters in names', async () => {

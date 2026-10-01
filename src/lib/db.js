@@ -1,35 +1,24 @@
 /**
  * Database helper functions for D1
+ *
+ * The Organisation team (ORGANISATION_TEAM_NAME) is bound as a query
+ * parameter wherever a statement excludes it.
  */
 
-// D1 allows at most 100 bound parameters per statement. Batch operations on
-// member IDs are split into statements of at most this many IDs (leaving room
-// for a leading parameter such as a timestamp).
-const MAX_IDS_PER_STATEMENT = 90;
+import { runByIds } from 'astro-core/d1';
+import { ORGANISATION_TEAM_NAME, PAYMENT_TIER, isNoPizza } from '../shared/constants.js';
 
-/**
- * Run an `... WHERE id IN (...)` statement over a list of member IDs,
- * splitting it into several statements when the list is longer than D1's
- * bound-parameter limit. All statements run in a single atomic D1 batch.
- * @param {D1Database} db
- * @param {number[]} memberIds
- * @param {(placeholders: string) => string} buildSql - Builds the SQL for one chunk
- * @param {Array} [leadingParams] - Parameters bound before the IDs (e.g. a timestamp)
- * @returns {Promise<number>} Total number of rows changed
- */
-async function runByMemberIds(db, memberIds, buildSql, leadingParams = []) {
-  if (memberIds.length === 0) return 0;
+const NOW_ISO = () => new Date().toISOString();
 
-  const statements = [];
-  for (let i = 0; i < memberIds.length; i += MAX_IDS_PER_STATEMENT) {
-    const chunk = memberIds.slice(i, i + MAX_IDS_PER_STATEMENT);
-    const placeholders = chunk.map(() => '?').join(',');
-    statements.push(db.prepare(buildSql(placeholders)).bind(...leadingParams, ...chunk));
-  }
+// Cleared by check-out, shared by the single and the batch statements.
+const CLEAR_ATTENDANCE_SQL = `
+  checked_in = 0,
+  checked_in_at = NULL,
+  payment_tier = NULL,
+  payment_amount = NULL,
+  payment_confirmed_at = NULL`;
 
-  const results = await db.batch(statements);
-  return results.reduce((total, result) => total + result.meta.changes, 0);
-}
+// ============ TEAMS ============
 
 /**
  * Get all teams with member count
@@ -73,7 +62,7 @@ export async function getTeamById(db, id) {
 export async function getAllTeamsWithMembers(db) {
   // Fetch all teams
   const teamsResult = await db.prepare(
-    'SELECT id, name, description, room, password_hash, created_at FROM teams ORDER BY created_at DESC'
+    'SELECT id, name, description, room, created_at FROM teams ORDER BY created_at DESC'
   ).all();
 
   const teams = teamsResult.results || [];
@@ -123,58 +112,17 @@ export async function createTeam(db, name, description = '', passwordHash = '') 
 }
 
 /**
- * Verify team password
- */
-export async function verifyTeamPassword(db, teamId, passwordHash) {
-  const team = await db.prepare(
-    'SELECT password_hash FROM teams WHERE id = ?'
-  ).bind(teamId).first();
-
-  if (!team) return false;
-  return team.password_hash === passwordHash;
-}
-
-/**
- * Add member to team
- */
-export async function addMember(db, teamId, member) {
-  const { firstName, lastName, email, bacLevel = 0, isLeader = false, foodDiet = '' } = member;
-
-  const result = await db.prepare(`
-    INSERT INTO members (team_id, first_name, last_name, email, bac_level, is_leader, food_diet)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).bind(teamId, firstName, lastName, email, bacLevel, isLeader ? 1 : 0, foodDiet).run();
-
-  return { id: result.meta.last_row_id, ...member };
-}
-
-/**
- * Check if member exists (by first + last name)
- */
-export async function memberExists(db, firstName, lastName) {
-  const result = await db.prepare(
-    'SELECT id FROM members WHERE first_name = ? AND last_name = ?'
-  ).bind(firstName, lastName).first();
-  return !!result;
-}
-
-/**
- * Get total participant count
- */
-export async function getTotalParticipants(db) {
-  const result = await db.prepare('SELECT COUNT(*) as count FROM members').first();
-  return result?.count || 0;
-}
-
-/**
- * Get participant count excluding Organisation team
+ * Get participant count excluding the Organisation team.
+ *
+ * This is THE capacity figure: the registration capacity check, the public
+ * `available_spots` and the admin statistics all use it.
  */
 export async function getParticipantsExcludingOrg(db) {
   const result = await db.prepare(`
     SELECT COUNT(*) as count FROM members m
     JOIN teams t ON m.team_id = t.id
-    WHERE t.name != 'Organisation'
-  `).first();
+    WHERE t.name != ?
+  `).bind(ORGANISATION_TEAM_NAME).first();
   return result?.count || 0;
 }
 
@@ -191,10 +139,10 @@ export async function getTeamsExcludingOrg(db) {
       COUNT(m.id) as member_count
     FROM teams t
     LEFT JOIN members m ON t.id = m.team_id
-    WHERE t.name != 'Organisation'
+    WHERE t.name != ?
     GROUP BY t.id
     ORDER BY t.created_at DESC
-  `).all();
+  `).bind(ORGANISATION_TEAM_NAME).all();
   return result.results;
 }
 
@@ -232,12 +180,15 @@ export async function getAllMembers(db) {
 }
 
 /**
- * Get members by team ID
+ * Get BAC level distribution
  */
-export async function getMembersByTeam(db, teamId) {
-  const result = await db.prepare(
-    'SELECT * FROM members WHERE team_id = ? ORDER BY last_name, first_name'
-  ).bind(teamId).all();
+export async function getBacLevelStats(db) {
+  const result = await db.prepare(`
+    SELECT bac_level, COUNT(*) as count
+    FROM members
+    GROUP BY bac_level
+    ORDER BY bac_level
+  `).all();
   return result.results;
 }
 
@@ -288,14 +239,14 @@ export async function updateTeam(db, teamId, updates) {
 }
 
 /**
- * Delete a team and all its members
+ * Delete a team and all its members (one atomic batch)
  */
 export async function deleteTeam(db, teamId) {
-  // Delete members first (due to foreign key)
-  await db.prepare('DELETE FROM members WHERE team_id = ?').bind(teamId).run();
-  // Delete team
-  const result = await db.prepare('DELETE FROM teams WHERE id = ?').bind(teamId).run();
-  return result.meta.changes > 0;
+  const [, teamResult] = await db.batch([
+    db.prepare('DELETE FROM members WHERE team_id = ?').bind(teamId),
+    db.prepare('DELETE FROM teams WHERE id = ?').bind(teamId)
+  ]);
+  return teamResult.meta.changes > 0;
 }
 
 /**
@@ -362,8 +313,8 @@ export async function deleteMember(db, memberId) {
 /**
  * Delete multiple members by IDs
  */
-export async function deleteMembers(db, memberIds) {
-  return runByMemberIds(db, memberIds, (placeholders) => `DELETE FROM members WHERE id IN (${placeholders})`);
+export function deleteMembers(db, memberIds) {
+  return runByIds(db, memberIds, (placeholders) => `DELETE FROM members WHERE id IN (${placeholders})`);
 }
 
 /**
@@ -383,39 +334,12 @@ export async function addMemberAdmin(db, teamId, member) {
 // ============ ATTENDANCE TRACKING ============
 
 /**
- * Get all members with attendance info for attendance management
- */
-export async function getAllMembersWithAttendance(db) {
-  const result = await db.prepare(`
-    SELECT
-      m.id,
-      m.first_name,
-      m.last_name,
-      m.email,
-      m.bac_level,
-      m.is_leader,
-      m.food_diet,
-      m.checked_in,
-      m.checked_in_at,
-      m.created_at,
-      t.id as team_id,
-      t.name as team_name,
-      t.room as team_room
-    FROM members m
-    JOIN teams t ON m.team_id = t.id
-    ORDER BY m.last_name, m.first_name
-  `).all();
-  return result.results;
-}
-
-/**
  * Check in a member (mark as present)
  */
 export async function checkInMember(db, memberId) {
-  const now = new Date().toISOString();
   const result = await db.prepare(`
     UPDATE members SET checked_in = 1, checked_in_at = ? WHERE id = ?
-  `).bind(now, memberId).run();
+  `).bind(NOW_ISO(), memberId).run();
   return result.meta.changes > 0;
 }
 
@@ -424,13 +348,7 @@ export async function checkInMember(db, memberId) {
  */
 export async function checkOutMember(db, memberId) {
   const result = await db.prepare(`
-    UPDATE members
-    SET checked_in = 0,
-        checked_in_at = NULL,
-        payment_tier = NULL,
-        payment_amount = NULL,
-        payment_confirmed_at = NULL
-    WHERE id = ?
+    UPDATE members SET ${CLEAR_ATTENDANCE_SQL} WHERE id = ?
   `).bind(memberId).run();
   return result.meta.changes > 0;
 }
@@ -452,28 +370,21 @@ export async function getAttendanceStats(db) {
 /**
  * Batch check-in multiple members
  */
-export async function checkInMembers(db, memberIds) {
-  const now = new Date().toISOString();
-  return runByMemberIds(
+export function checkInMembers(db, memberIds) {
+  return runByIds(
     db,
     memberIds,
     (placeholders) => `UPDATE members SET checked_in = 1, checked_in_at = ? WHERE id IN (${placeholders})`,
-    [now]
+    { leadingParams: [NOW_ISO()] }
   );
 }
 
 /**
  * Batch check-out multiple members
  */
-export async function checkOutMembers(db, memberIds) {
-  return runByMemberIds(db, memberIds, (placeholders) => `
-    UPDATE members
-    SET checked_in = 0,
-        checked_in_at = NULL,
-        payment_tier = NULL,
-        payment_amount = NULL,
-        payment_confirmed_at = NULL
-    WHERE id IN (${placeholders})
+export function checkOutMembers(db, memberIds) {
+  return runByIds(db, memberIds, (placeholders) => `
+    UPDATE members SET ${CLEAR_ATTENDANCE_SQL} WHERE id IN (${placeholders})
   `);
 }
 
@@ -507,8 +418,14 @@ export async function getAllMembersWithPizzaStatus(db) {
   return result.results;
 }
 
+/** Rows of a `GROUP BY food_diet` query, without the "no pizza" values. */
+const onlyRealPizzas = (rows) => rows.filter(row => !isNoPizza(row.food_diet));
+
 /**
- * Get pizza distribution statistics
+ * Get pizza distribution statistics.
+ *
+ * `by_type` lists real pizzas only: members whose `food_diet` means "no pizza"
+ * (`isNoPizza`: '', 'none', '0-rien') are not a pizza type.
  */
 export async function getPizzaStats(db) {
   // All members stats
@@ -558,12 +475,12 @@ export async function getPizzaStats(db) {
 
   return {
     ...result,
-    by_type: byType.results,
+    by_type: onlyRealPizzas(byType.results),
     present: {
       total: presentResult?.total || 0,
       received: presentResult?.received || 0,
       pending: presentResult?.pending || 0,
-      by_type: byTypePresent.results
+      by_type: onlyRealPizzas(byTypePresent.results)
     }
   };
 }
@@ -572,10 +489,9 @@ export async function getPizzaStats(db) {
  * Mark member as received pizza
  */
 export async function givePizza(db, memberId) {
-  const now = new Date().toISOString();
   const result = await db.prepare(`
     UPDATE members SET pizza_received = 1, pizza_received_at = ? WHERE id = ?
-  `).bind(now, memberId).run();
+  `).bind(NOW_ISO(), memberId).run();
   return result.meta.changes > 0;
 }
 
@@ -592,21 +508,20 @@ export async function revokePizza(db, memberId) {
 /**
  * Batch give pizza to multiple members
  */
-export async function givePizzaBatch(db, memberIds) {
-  const now = new Date().toISOString();
-  return runByMemberIds(
+export function givePizzaBatch(db, memberIds) {
+  return runByIds(
     db,
     memberIds,
     (placeholders) => `UPDATE members SET pizza_received = 1, pizza_received_at = ? WHERE id IN (${placeholders})`,
-    [now]
+    { leadingParams: [NOW_ISO()] }
   );
 }
 
 /**
  * Batch revoke pizza from multiple members
  */
-export async function revokePizzaBatch(db, memberIds) {
-  return runByMemberIds(
+export function revokePizzaBatch(db, memberIds) {
+  return runByIds(
     db,
     memberIds,
     (placeholders) => `UPDATE members SET pizza_received = 0, pizza_received_at = NULL WHERE id IN (${placeholders})`
@@ -619,7 +534,7 @@ export async function revokePizzaBatch(db, memberIds) {
  * Check in a member with payment information
  */
 export async function checkInWithPayment(db, memberId, paymentTier, paymentAmount) {
-  const now = new Date().toISOString();
+  const now = NOW_ISO();
   const result = await db.prepare(`
     UPDATE members
     SET checked_in = 1,
@@ -633,23 +548,33 @@ export async function checkInWithPayment(db, memberId, paymentTier, paymentAmoun
 }
 
 /**
- * Get payment statistics
+ * Revenue / head count per payment TIER recorded at check-in
+ * (`payment_tier`), Organisation team excluded.
+ *
+ * Not to be confused with `getPaymentStatusStats` (database/db.payments.js),
+ * which groups the online payment STATUS (`payment_status`).
  */
-export async function getPaymentStats(db) {
+export async function getTierStats(db) {
+  const { ASSO_MEMBER, NON_MEMBER, LATE } = PAYMENT_TIER;
   return await db.prepare(`
     SELECT
       COUNT(CASE WHEN payment_tier IS NOT NULL THEN 1 END) as total_paid,
       SUM(CASE WHEN payment_amount IS NOT NULL THEN payment_amount ELSE 0 END) as total_revenue,
-      COUNT(CASE WHEN payment_tier = 'asso_member' THEN 1 END) as asso_members,
-      SUM(CASE WHEN payment_tier = 'asso_member' THEN payment_amount ELSE 0 END) as asso_revenue,
-      COUNT(CASE WHEN payment_tier = 'non_member' THEN 1 END) as non_members,
-      SUM(CASE WHEN payment_tier = 'non_member' THEN payment_amount ELSE 0 END) as non_member_revenue,
-      COUNT(CASE WHEN payment_tier = 'late' THEN 1 END) as late_arrivals,
-      SUM(CASE WHEN payment_tier = 'late' THEN payment_amount ELSE 0 END) as late_revenue
+      COUNT(CASE WHEN payment_tier = ? THEN 1 END) as asso_members,
+      SUM(CASE WHEN payment_tier = ? THEN payment_amount ELSE 0 END) as asso_revenue,
+      COUNT(CASE WHEN payment_tier = ? THEN 1 END) as non_members,
+      SUM(CASE WHEN payment_tier = ? THEN payment_amount ELSE 0 END) as non_member_revenue,
+      COUNT(CASE WHEN payment_tier = ? THEN 1 END) as late_arrivals,
+      SUM(CASE WHEN payment_tier = ? THEN payment_amount ELSE 0 END) as late_revenue
     FROM members m
     JOIN teams t ON m.team_id = t.id
-    WHERE t.name != 'Organisation'
-  `).first();
+    WHERE t.name != ?
+  `).bind(
+    ASSO_MEMBER, ASSO_MEMBER,
+    NON_MEMBER, NON_MEMBER,
+    LATE, LATE,
+    ORGANISATION_TEAM_NAME
+  ).first();
 }
 
 /**
@@ -689,7 +614,7 @@ export async function getAllMembersWithPayment(db) {
 // ============ ROOM ASSIGNMENT ============
 
 /**
- * Get all teams with room assignments
+ * Get all teams with room assignments (Organisation excluded)
  */
 export async function getTeamsWithRooms(db) {
   const result = await db.prepare(`
@@ -702,15 +627,15 @@ export async function getTeamsWithRooms(db) {
       COUNT(m.id) as member_count
     FROM teams t
     LEFT JOIN members m ON t.id = m.team_id
-    WHERE t.name != 'Organisation'
+    WHERE t.name != ?
     GROUP BY t.id
     ORDER BY t.room IS NULL, t.room, t.name
-  `).all();
+  `).bind(ORGANISATION_TEAM_NAME).all();
   return result.results;
 }
 
 /**
- * Get room assignment statistics
+ * Get room assignment statistics (Organisation excluded)
  */
 export async function getRoomStats(db) {
   const result = await db.prepare(`
@@ -719,8 +644,8 @@ export async function getRoomStats(db) {
       COUNT(DISTINCT CASE WHEN t.room IS NOT NULL AND t.room != '' THEN t.id END) as assigned_teams,
       COUNT(DISTINCT CASE WHEN t.room IS NULL OR t.room = '' THEN t.id END) as unassigned_teams
     FROM teams t
-    WHERE t.name != 'Organisation'
-  `).first();
+    WHERE t.name != ?
+  `).bind(ORGANISATION_TEAM_NAME).first();
 
   // Get rooms with team counts
   const byRoom = await db.prepare(`
@@ -729,16 +654,16 @@ export async function getRoomStats(db) {
       COUNT(t.id) as team_count,
       SUM((SELECT COUNT(*) FROM members m WHERE m.team_id = t.id)) as member_count
     FROM teams t
-    WHERE t.name != 'Organisation' AND t.room IS NOT NULL AND t.room != ''
+    WHERE t.name != ? AND t.room IS NOT NULL AND t.room != ''
     GROUP BY t.room
     ORDER BY t.room
-  `).all();
+  `).bind(ORGANISATION_TEAM_NAME).all();
 
   return { ...result, by_room: byRoom.results };
 }
 
 /**
- * Get pizza stats grouped by room
+ * Get pizza stats grouped by room (Organisation and "no pizza" excluded)
  */
 export async function getPizzaStatsByRoom(db) {
   const result = await db.prepare(`
@@ -750,16 +675,17 @@ export async function getPizzaStatsByRoom(db) {
       SUM(CASE WHEN m.pizza_received = 1 THEN 1 ELSE 0 END) as received
     FROM members m
     JOIN teams t ON m.team_id = t.id
-    WHERE t.name != 'Organisation'
+    WHERE t.name != ?
       AND t.room IS NOT NULL AND t.room != ''
       AND m.food_diet IS NOT NULL AND m.food_diet != ''
     GROUP BY t.room, m.food_diet
     ORDER BY t.room, m.food_diet
-  `).all();
+  `).bind(ORGANISATION_TEAM_NAME).all();
 
   // Group by room
   const byRoom = {};
   for (const row of result.results) {
+    if (isNoPizza(row.food_diet)) continue;
     if (!byRoom[row.room]) {
       byRoom[row.room] = {
         room: row.room,
@@ -792,18 +718,30 @@ export async function setTeamRoom(db, teamId, room) {
 }
 
 /**
- * Batch assign rooms to teams
+ * Batch assign rooms to teams, atomically (one D1 batch).
+ *
+ * @param {D1Database} db
+ * @param {Array<{ teamId: number, room: string|null }>} assignments - one entry per team
+ * @returns {Promise<{ updated: number, skipped: number[] }>} `skipped` are the
+ *   team ids that do not exist (their update changed nothing)
  */
 export async function setTeamRoomsBatch(db, assignments) {
-  // assignments is an array of { teamId, room }
+  if (assignments.length === 0) return { updated: 0, skipped: [] };
+
+  const results = await db.batch(
+    assignments.map(({ teamId, room }) =>
+      db.prepare('UPDATE teams SET room = ? WHERE id = ?').bind(room || null, teamId)
+    )
+  );
+
   let updated = 0;
-  for (const { teamId, room } of assignments) {
-    const result = await db.prepare(`
-      UPDATE teams SET room = ? WHERE id = ?
-    `).bind(room || null, teamId).run();
-    updated += result.meta.changes;
+  const skipped = [];
+  for (const [i, result] of results.entries()) {
+    const changes = Number(result?.meta?.changes) || 0;
+    updated += changes;
+    if (changes === 0) skipped.push(assignments[i].teamId);
   }
-  return updated;
+  return { updated, skipped };
 }
 
 /**
@@ -816,138 +754,4 @@ export async function getDistinctRooms(db) {
     ORDER BY room
   `).all();
   return result.results.map(r => r.room);
-}
-
-// ============================================================================
-// Functions that INCLUDE Organization team (for admin panel views)
-// These should be used in admin tabs where org members should be visible
-// ============================================================================
-
-/**
- * Get all teams with room assignments (including Organisation)
- * For admin panel display where org members should be visible
- */
-export async function getAllTeamsWithRooms(db) {
-  const result = await db.prepare(`
-    SELECT
-      t.id,
-      t.name,
-      t.description,
-      t.room,
-      t.created_at,
-      COUNT(m.id) as member_count,
-      CASE WHEN t.name = 'Organisation' THEN 1 ELSE 0 END as is_organisation
-    FROM teams t
-    LEFT JOIN members m ON t.id = m.team_id
-    GROUP BY t.id
-    ORDER BY t.name = 'Organisation' DESC, t.room IS NULL, t.room, t.name
-  `).all();
-  return result.results;
-}
-
-/**
- * Get room assignment statistics (including Organisation)
- * For admin panel display
- */
-export async function getAllRoomStats(db) {
-  const result = await db.prepare(`
-    SELECT
-      COUNT(DISTINCT t.id) as total_teams,
-      COUNT(DISTINCT CASE WHEN t.room IS NOT NULL AND t.room != '' THEN t.id END) as assigned_teams,
-      COUNT(DISTINCT CASE WHEN t.room IS NULL OR t.room = '' THEN t.id END) as unassigned_teams,
-      COUNT(DISTINCT CASE WHEN t.name = 'Organisation' THEN t.id END) as organisation_teams
-    FROM teams t
-  `).first();
-
-  // Get rooms with team counts (including org)
-  const byRoom = await db.prepare(`
-    SELECT
-      t.room,
-      COUNT(t.id) as team_count,
-      SUM((SELECT COUNT(*) FROM members m WHERE m.team_id = t.id)) as member_count,
-      SUM(CASE WHEN t.name = 'Organisation' THEN 1 ELSE 0 END) as org_count
-    FROM teams t
-    WHERE t.room IS NOT NULL AND t.room != ''
-    GROUP BY t.room
-    ORDER BY t.room
-  `).all();
-
-  return { ...result, by_room: byRoom.results };
-}
-
-/**
- * Get pizza stats grouped by room (including Organisation)
- * For admin panel display
- */
-export async function getAllPizzaStatsByRoom(db) {
-  const result = await db.prepare(`
-    SELECT
-      t.room,
-      m.food_diet,
-      COUNT(*) as total,
-      SUM(CASE WHEN m.checked_in = 1 THEN 1 ELSE 0 END) as present,
-      SUM(CASE WHEN m.pizza_received = 1 THEN 1 ELSE 0 END) as received,
-      SUM(CASE WHEN t.name = 'Organisation' THEN 1 ELSE 0 END) as org_count
-    FROM members m
-    JOIN teams t ON m.team_id = t.id
-    WHERE t.room IS NOT NULL AND t.room != ''
-      AND m.food_diet IS NOT NULL AND m.food_diet != ''
-    GROUP BY t.room, m.food_diet
-    ORDER BY t.room, m.food_diet
-  `).all();
-
-  // Group by room
-  const byRoom = {};
-  for (const row of result.results) {
-    if (!byRoom[row.room]) {
-      byRoom[row.room] = {
-        room: row.room,
-        pizzas: [],
-        totals: { total: 0, present: 0, received: 0, org_count: 0 }
-      };
-    }
-    byRoom[row.room].pizzas.push({
-      food_diet: row.food_diet,
-      total: row.total,
-      present: row.present,
-      received: row.received,
-      org_count: row.org_count
-    });
-    byRoom[row.room].totals.total += row.total;
-    byRoom[row.room].totals.present += row.present;
-    byRoom[row.room].totals.received += row.received;
-    byRoom[row.room].totals.org_count += row.org_count;
-  }
-
-  return Object.values(byRoom);
-}
-
-/**
- * Get all teams (including Organisation) with member counts
- * For admin panel team list
- */
-export async function getAllTeams(db) {
-  const result = await db.prepare(`
-    SELECT
-      t.id,
-      t.name,
-      t.description,
-      t.created_at,
-      COUNT(m.id) as member_count,
-      CASE WHEN t.name = 'Organisation' THEN 1 ELSE 0 END as is_organisation
-    FROM teams t
-    LEFT JOIN members m ON t.id = m.team_id
-    GROUP BY t.id
-    ORDER BY t.name = 'Organisation' DESC, t.created_at DESC
-  `).all();
-  return result.results;
-}
-
-/**
- * Get total participant count (including Organisation)
- * For admin panel stats
- */
-export async function getAllParticipants(db) {
-  const result = await db.prepare('SELECT COUNT(*) as count FROM members').first();
-  return result?.count || 0;
 }

@@ -43,7 +43,7 @@ describe('Team View - Password Authentication', () => {
 
     expect(response.status).toBe(400);
     const data = await response.json();
-    expect(data.error).toContain('Password is required');
+    expect(data.code).toBe('password_required');
   });
 
   it('should reject empty password', async () => {
@@ -216,8 +216,9 @@ describe('Team View - Error Handling', () => {
       body: JSON.stringify({ password: 'test' })
     });
 
-    // Should return 404 for NaN teamId
-    expect(response.status).toBe(404);
+    // A malformed team id is an invalid_id, not an unknown team
+    expect(response.status).toBe(400);
+    expect((await response.json()).code).toBe('invalid_id');
   });
 
   it('should handle invalid JSON body', async () => {

@@ -1,12 +1,12 @@
 /**
- * Admin action/change delegation
+ * Admin action/change maps
  *
  * Builds the lookup maps consumed by the delegated `click` and `change`
- * listeners, and wires those listeners up. This replaces inline
- * onclick/onchange handlers and window.* globals with data-action /
- * data-change attributes read from the clicked/changed element's dataset.
+ * listeners. The listeners themselves come from the design system
+ * (`bindDelegation` in @info-evry/astro-design/scripts/delegation, bound in
+ * main.js): data-action / data-change attributes replace inline
+ * onclick/onchange handlers and window.* globals.
  */
-/* eslint-env browser */
 
 import { toggleDisclosure } from '@info-evry/astro-design/scripts/disclosure';
 import {
@@ -31,7 +31,7 @@ import { viewArchive, deleteArchive } from './archives.js';
 
 /**
  * Build the click-action ("actions") and change-action ("changes") lookup
- * maps used by the delegated document listeners.
+ * maps used by the delegated document listeners (`bindDelegation`).
  * @param {Object} deps
  * @param {Function} deps.api - API client function
  * @param {Function} deps.loadData - Reload callback
@@ -84,28 +84,4 @@ export function buildActions({ api, loadData, updateDeleteButton }) {
   };
 
   return { actions, changes };
-}
-
-/**
- * Bind the delegated `click` and `change` listeners on document.
- * @param {Object<string, Function>} actions - Click action map (data-action)
- * @param {Object<string, Function>} changes - Change action map (data-change)
- */
-export function bindDelegation(actions, changes) {
-  document.addEventListener('click', (e) => {
-    const el = e.target.closest('[data-action]');
-    if (!el) return;
-    if ('stop' in el.dataset) e.stopPropagation();
-    const fn = actions[el.dataset.action];
-    if (fn) {
-      e.preventDefault?.();
-      fn(el, e);
-    }
-  });
-
-  document.addEventListener('change', (e) => {
-    const el = e.target.closest('[data-change]');
-    if (!el) return;
-    changes[el.dataset.change]?.(el, e);
-  });
 }

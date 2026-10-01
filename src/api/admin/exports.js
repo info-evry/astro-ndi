@@ -2,167 +2,125 @@
  * Admin export handlers - CSV generation and statistics
  */
 
-import { json, error } from 'astro-core/router';
-import { generateCSV, createCSVResponse } from '../../lib/csv.js';
+import { json } from 'astro-core/router';
+import { adminOnly } from 'astro-core/auth';
+import { csvResponse } from 'astro-core/csv';
+import { parsePositiveId } from 'astro-core/ids';
+import { invalidId, notFound, serverError } from 'astro-core/http';
+import { generateMembersCsv, generateOfficialMembersCsv } from '../../lib/members-csv.js';
 import * as db from '../../lib/db.js';
-import { getCapacitySettings } from '../../database/db.settings.js';
-import { verifyAdmin } from '../../shared/auth.js';
+import { getCapacitySettings, getSetting } from '../../database/db.settings.js';
+import { DEFAULT_SCHOOL_NAME } from '../../shared/constants.js';
 
-const EXPORT_FAILED_MSG = 'Export failed';
+const MSG_TEAM_NOT_FOUND = 'Équipe introuvable';
+const LOG_EXPORT_FAILED = 'Export error:';
+
+/**
+ * School name of the official export: the `school_name` setting, then the
+ * SCHOOL_NAME environment variable, then the default.
+ */
+async function getSchoolName(env) {
+  try {
+    const stored = await getSetting(env.DB, 'school_name');
+    if (stored) return stored;
+  } catch {
+    // settings table unavailable: fall back to the environment value
+  }
+  return env.SCHOOL_NAME || DEFAULT_SCHOOL_NAME;
+}
+
+/** Filesystem-safe version of a team name for download file names. */
+const safeTeamName = (name) => name.replaceAll(/[^a-z0-9]/gi, '_');
+
+/**
+ * Load a team for the per-team exports: the team (with `team_name` set on its
+ * members) or the error response.
+ */
+async function loadTeamForExport(env, rawTeamId) {
+  const teamId = parsePositiveId(rawTeamId);
+  if (teamId === null) return { response: invalidId("Identifiant d'équipe invalide") };
+
+  const team = await db.getTeamById(env.DB, teamId);
+  if (!team) return { response: notFound(MSG_TEAM_NOT_FOUND) };
+
+  return {
+    team,
+    members: team.members.map(m => ({ ...m, team_name: team.name }))
+  };
+}
 
 /**
  * GET /api/admin/members - Get all members
  */
-export async function listAllMembers(request, env) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const listAllMembers = adminOnly(async (request, env) => {
   try {
     const members = await db.getAllMembers(env.DB);
     return json({ members });
   } catch (error_) {
-    console.error('Error listing members:', error_);
-    return error('Failed to fetch members', 500);
+    return serverError('Error listing members:', error_);
   }
-}
+});
 
 /**
  * GET /api/admin/export - Export all data as CSV
  */
-export async function exportAllCSV(request, env) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const exportAllCSV = adminOnly(async (request, env) => {
   try {
     const members = await db.getAllMembers(env.DB);
-    const csv = generateMembersCSV(members);
-
-    return createCSVResponse(csv, 'participants.csv');
+    return csvResponse(generateMembersCsv(members), 'participants.csv');
   } catch (error_) {
-    console.error('Error exporting:', error_);
-    return error(EXPORT_FAILED_MSG, 500);
+    return serverError(LOG_EXPORT_FAILED, error_);
   }
-}
+});
 
 /**
  * GET /api/admin/export/:teamId - Export team data as CSV
  */
-export async function exportTeamCSV(request, env, ctx, params) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const exportTeamCSV = adminOnly(async (request, env, ctx, params) => {
   try {
-    const team = await db.getTeamById(env.DB, params.teamId);
-    if (!team) {
-      return error('Team not found', 404);
-    }
+    const { team, members, response } = await loadTeamForExport(env, params.teamId);
+    if (response) return response;
 
-    const members = team.members.map(m => ({
-      ...m,
-      team_name: team.name
-    }));
-
-    const csv = generateMembersCSV(members);
-    const safeTeamName = team.name.replaceAll(/[^a-z0-9]/gi, '_');
-
-    return createCSVResponse(csv, `participants_${safeTeamName}.csv`);
+    return csvResponse(generateMembersCsv(members), `participants_${safeTeamName(team.name)}.csv`);
   } catch (error_) {
-    console.error('Error exporting team:', error_);
-    return error(EXPORT_FAILED_MSG, 500);
+    return serverError(LOG_EXPORT_FAILED, error_);
   }
-}
+});
 
 /**
  * GET /api/admin/export-official - Export data in official NDI format
  */
-export async function exportOfficialCSV(request, env) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const exportOfficialCSV = adminOnly(async (request, env) => {
   try {
     const members = await db.getAllMembers(env.DB);
+    const csv = generateOfficialMembersCsv(members, await getSchoolName(env));
 
-    // Get school name from settings with fallback
-    const DEFAULT_SCHOOL_NAME = "Université d'Evry";
-    let schoolName = DEFAULT_SCHOOL_NAME;
-    try {
-      const { getSetting } = await import('../../database/db.settings.js');
-      const dbSchoolName = await getSetting(env.DB, 'school_name');
-      if (dbSchoolName) {
-        schoolName = dbSchoolName;
-      } else if (env.SCHOOL_NAME) {
-        schoolName = env.SCHOOL_NAME;
-      }
-    } catch {
-      // Fall back to env value or default
-      if (env.SCHOOL_NAME) schoolName = env.SCHOOL_NAME;
-    }
-
-    const csv = generateOfficialMembersCSV(members, schoolName);
-
-    return createCSVResponse(csv, 'participants_officiel.csv');
+    return csvResponse(csv, 'participants_officiel.csv');
   } catch (error_) {
-    console.error('Error exporting official:', error_);
-    return error(EXPORT_FAILED_MSG, 500);
+    return serverError(LOG_EXPORT_FAILED, error_);
   }
-}
+});
 
 /**
  * GET /api/admin/export-official/:teamId - Export team data in official NDI format
  */
-export async function exportTeamOfficialCSV(request, env, ctx, params) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const exportTeamOfficialCSV = adminOnly(async (request, env, ctx, params) => {
   try {
-    const team = await db.getTeamById(env.DB, params.teamId);
-    if (!team) {
-      return error('Team not found', 404);
-    }
+    const { team, members, response } = await loadTeamForExport(env, params.teamId);
+    if (response) return response;
 
-    const members = team.members.map(m => ({
-      ...m,
-      team_name: team.name
-    }));
+    const csv = generateOfficialMembersCsv(members, await getSchoolName(env));
 
-    // Get school name from settings with fallback
-    const DEFAULT_SCHOOL_NAME = "Université d'Evry";
-    let schoolName = DEFAULT_SCHOOL_NAME;
-    try {
-      const { getSetting } = await import('../../database/db.settings.js');
-      const dbSchoolName = await getSetting(env.DB, 'school_name');
-      if (dbSchoolName) {
-        schoolName = dbSchoolName;
-      } else if (env.SCHOOL_NAME) {
-        schoolName = env.SCHOOL_NAME;
-      }
-    } catch {
-      if (env.SCHOOL_NAME) schoolName = env.SCHOOL_NAME;
-    }
-
-    const csv = generateOfficialMembersCSV(members, schoolName);
-    const safeTeamName = team.name.replaceAll(/[^a-z0-9]/gi, '_');
-
-    return createCSVResponse(csv, `participants_officiel_${safeTeamName}.csv`);
+    return csvResponse(csv, `participants_officiel_${safeTeamName(team.name)}.csv`);
   } catch (error_) {
-    console.error('Error exporting team official:', error_);
-    return error(EXPORT_FAILED_MSG, 500);
+    return serverError(LOG_EXPORT_FAILED, error_);
   }
-}
+});
 
 /**
  * GET /api/admin/stats - Detailed admin statistics
  */
-export async function adminStats(request, env) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const adminStats = adminOnly(async (request, env) => {
   try {
     const teamsExcludingOrg = await db.getTeamsExcludingOrg(env.DB);
     const participantsExcludingOrg = await db.getParticipantsExcludingOrg(env.DB);
@@ -182,85 +140,11 @@ export async function adminStats(request, env) {
         max_participants: maxTotal,
         available_spots: Math.max(0, maxTotal - participantsExcludingOrg),
         food_preferences: foodStats,
-        bac_level_distribution: await getBacLevelStats(env.DB)
+        bac_level_distribution: await db.getBacLevelStats(env.DB)
       },
       teams: teamsWithMembers
     });
   } catch (error_) {
-    console.error('Error fetching admin stats:', error_);
-    return error('Failed to fetch statistics', 500);
+    return serverError('Error fetching admin stats:', error_);
   }
-}
-
-/**
- * Generate CSV from member data
- * Uses semicolon delimiter for European Excel compatibility
- */
-function generateMembersCSV(members) {
-  const headers = [
-    'ID',
-    'Prénom',
-    'Nom',
-    'Email',
-    'Équipe',
-    'Niveau BAC',
-    'Chef d\'équipe',
-    'Pizza',
-    'Date d\'inscription'
-  ];
-
-  const rows = members.map(m => [
-    m.id,
-    m.first_name,
-    m.last_name,
-    m.email,
-    m.team_name,
-    `BAC+${m.bac_level}`,
-    m.is_leader ? 'Oui' : 'Non',
-    m.food_diet || 'Aucune',
-    m.created_at
-  ]);
-
-  return generateCSV(headers, rows);
-}
-
-/**
- * Generate official NDI format CSV
- * Format: prenom;nom;mail;niveauBac;equipe;estLeader (0\1);ecole
- */
-function generateOfficialMembersCSV(members, schoolName) {
-  const headers = [
-    'prenom',
-    'nom',
-    'mail',
-    'niveauBac',
-    'equipe',
-    String.raw`estLeader (0\1)`,
-    'ecole (nom exact saisi sur le site)'
-  ];
-
-  const rows = members.map(m => [
-    m.first_name,
-    (m.last_name || '').toUpperCase(),
-    m.email,
-    Number.parseInt(m.bac_level, 10) || 0,
-    m.team_name,
-    m.is_leader ? 1 : 0,
-    schoolName
-  ]);
-
-  return generateCSV(headers, rows);
-}
-
-/**
- * Get BAC level distribution
- */
-async function getBacLevelStats(database) {
-  const result = await database.prepare(`
-    SELECT bac_level, COUNT(*) as count
-    FROM members
-    GROUP BY bac_level
-    ORDER BY bac_level
-  `).all();
-  return result.results;
-}
+});

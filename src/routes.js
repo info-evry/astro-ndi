@@ -3,7 +3,8 @@
  */
 
 import { Router } from 'astro-core/router';
-import { createRateLimiter, pathPrefix, pathPattern } from 'astro-core/ratelimit';
+import { createAdminGuard } from 'astro-core/auth';
+import { ADMIN_RATE_LIMIT, createRateLimiter, pathPattern, pathPrefix } from 'astro-core/ratelimit';
 import { getConfig } from './api/config.js';
 import { listTeams, getTeam, getStats } from './api/teams.js';
 import { register } from './api/register.js';
@@ -63,6 +64,7 @@ export function createRouter() {
 
   // Rate limiting - protects public/write-heavy endpoints from abuse.
   // Fails open (allows requests) if the RATE_LIMIT KV binding is missing.
+  // The first matching rule applies; paths match on a segment boundary.
   router.use(createRateLimiter({
     rules: [
       {
@@ -80,21 +82,22 @@ export function createRouter() {
         windowSec: 600
       },
       {
+        // The endpoints that start or check a payment. GET /api/payment/pricing
+        // and the SumUp webhook (POST /api/payment/callback) are deliberately
+        // not listed: they are never rate limited.
         name: 'payment',
-        match: (path) => path.startsWith('/api/payment/')
-          && path !== '/api/payment/pricing'
-          && path !== '/api/payment/callback',
+        methods: ['POST'],
+        match: pathPattern(/^\/api\/payment\/(?:checkout|verify|delayed)$/),
         limit: 20,
         windowSec: 600
       },
-      {
-        name: 'admin',
-        match: pathPrefix('/api/admin/'),
-        limit: 60,
-        windowSec: 60
-      }
+      ADMIN_RATE_LIMIT
     ]
   }));
+
+  // Defence in depth: every /api/admin path needs the admin token, even if a
+  // handler forgets to wrap itself with adminOnly (the handlers still do).
+  router.use(createAdminGuard());
 
   // Public API routes
   router.get('/api/config', getConfig);

@@ -43,6 +43,15 @@ export async function getAllSettings(db) {
   return result.results;
 }
 
+const UPSERT_SETTING_SQL = `
+  INSERT INTO settings (key, value, description, updated_at)
+  VALUES (?, ?, ?, datetime('now'))
+  ON CONFLICT(key) DO UPDATE SET
+    value = excluded.value,
+    description = CASE WHEN excluded.description != '' THEN excluded.description ELSE settings.description END,
+    updated_at = datetime('now')
+`;
+
 /**
  * Set a single setting
  * @param {D1Database} db
@@ -52,15 +61,20 @@ export async function getAllSettings(db) {
  * @returns {Promise<boolean>}
  */
 export async function setSetting(db, key, value, description = '') {
-  await db.prepare(`
-    INSERT INTO settings (key, value, description, updated_at)
-    VALUES (?, ?, ?, datetime('now'))
-    ON CONFLICT(key) DO UPDATE SET
-      value = excluded.value,
-      description = CASE WHEN excluded.description != '' THEN excluded.description ELSE settings.description END,
-      updated_at = datetime('now')
-  `).bind(key, value, description).run();
+  await db.prepare(UPSERT_SETTING_SQL).bind(key, value, description).run();
   return true;
+}
+
+/**
+ * Set several settings atomically (one D1 batch: all or none).
+ * @param {D1Database} db
+ * @param {Array<[string, string]>} entries - `[key, stringified value]` pairs
+ * @returns {Promise<number>} number of settings written
+ */
+export async function setSettings(db, entries) {
+  if (entries.length === 0) return 0;
+  await db.batch(entries.map(([key, value]) => db.prepare(UPSERT_SETTING_SQL).bind(key, value, '')));
+  return entries.length;
 }
 
 /**
@@ -101,13 +115,13 @@ export async function getCapacitySettings(db, env) {
 
   try {
     const dbMaxTeam = await getSetting(db, 'max_team_size');
-    if (dbMaxTeam) maxTeamSize = Number.parseInt(dbMaxTeam, 10);
+    if (dbMaxTeam) maxTeamSize = Number.parseInt(dbMaxTeam, 10) || maxTeamSize;
 
     const dbMaxTotal = await getSetting(db, 'max_total_participants');
-    if (dbMaxTotal) maxTotalParticipants = Number.parseInt(dbMaxTotal, 10);
+    if (dbMaxTotal) maxTotalParticipants = Number.parseInt(dbMaxTotal, 10) || maxTotalParticipants;
 
     const dbMinTeam = await getSetting(db, 'min_team_size');
-    if (dbMinTeam) minTeamSize = Number.parseInt(dbMinTeam, 10);
+    if (dbMinTeam) minTeamSize = Number.parseInt(dbMinTeam, 10) || minTeamSize;
   } catch (error) {
     console.error('Error reading capacity settings from DB:', error);
     // Fall back to env values

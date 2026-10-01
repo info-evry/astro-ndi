@@ -1,7 +1,16 @@
 ---
 /**
  * SettingsTab - Settings management panel
+ * Initial values come from src/shared/constants.js (the same defaults the API uses).
  */
+import {
+  DEFAULT_LATE_CUTOFF_TIME,
+  DEFAULT_PRICES,
+  DEFAULT_SCHOOL_NAME,
+  DEFAULT_TIER1_CUTOFF_DAYS
+} from '../../../shared/constants.js';
+
+const euros = (cents: number) => (cents / 100).toFixed(2);
 ---
 
 <div id="panel-settings" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-settings">
@@ -22,7 +31,7 @@
         <h3>Export Officiel NDI</h3>
         <div class="form-group">
           <label for="setting-school-name">Nom de l'école (exact comme saisi sur le site NDI)</label>
-          <input type="text" id="setting-school-name" value="Université d'Evry" maxlength="256" placeholder="Université d'Evry">
+          <input type="text" id="setting-school-name" value={DEFAULT_SCHOOL_NAME} maxlength="256" placeholder={DEFAULT_SCHOOL_NAME}>
         </div>
       </div>
 
@@ -104,17 +113,17 @@
         <div class="settings-grid">
           <div class="form-group">
             <label for="setting-price-tier1">Prix anticipé (€)</label>
-            <input type="number" id="setting-price-tier1" min="0" max="100" step="0.01" value="5.00">
+            <input type="number" id="setting-price-tier1" min="0" max="100" step="0.01" value={euros(DEFAULT_PRICES.tier1)}>
             <span class="form-hint">Inscription avant la date limite</span>
           </div>
           <div class="form-group">
             <label for="setting-price-tier2">Prix dernière semaine (€)</label>
-            <input type="number" id="setting-price-tier2" min="0" max="100" step="0.01" value="7.00">
+            <input type="number" id="setting-price-tier2" min="0" max="100" step="0.01" value={euros(DEFAULT_PRICES.tier2)}>
             <span class="form-hint">Inscription dans les derniers jours</span>
           </div>
           <div class="form-group">
             <label for="setting-tier1-cutoff-days">Jours avant deadline pour tarif anticipé</label>
-            <input type="number" id="setting-tier1-cutoff-days" min="1" max="30" value="7">
+            <input type="number" id="setting-tier1-cutoff-days" min="1" max="30" value={DEFAULT_TIER1_CUTOFF_DAYS}>
             <span class="form-hint">Nombre de jours avant la deadline</span>
           </div>
         </div>
@@ -144,19 +153,19 @@
         <div class="settings-grid">
           <div class="form-group">
             <label for="setting-price-asso-member">Prix membre asso (€)</label>
-            <input type="number" id="setting-price-asso-member" min="0" max="100" step="0.01" value="5.00">
+            <input type="number" id="setting-price-asso-member" min="0" max="100" step="0.01" value={euros(DEFAULT_PRICES.assoMember)}>
           </div>
           <div class="form-group">
             <label for="setting-price-non-member">Prix non-membre (€)</label>
-            <input type="number" id="setting-price-non-member" min="0" max="100" step="0.01" value="8.00">
+            <input type="number" id="setting-price-non-member" min="0" max="100" step="0.01" value={euros(DEFAULT_PRICES.nonMember)}>
           </div>
           <div class="form-group">
             <label for="setting-late-cutoff">Heure limite (arrivée tardive)</label>
-            <input type="time" id="setting-late-cutoff" value="19:00">
+            <input type="time" id="setting-late-cutoff" value={DEFAULT_LATE_CUTOFF_TIME}>
           </div>
           <div class="form-group">
             <label for="setting-price-late">Prix retardataire (€)</label>
-            <input type="number" id="setting-price-late" min="0" max="100" step="0.01" value="10.00">
+            <input type="number" id="setting-price-late" min="0" max="100" step="0.01" value={euros(DEFAULT_PRICES.late)}>
           </div>
         </div>
       </div>

@@ -40,42 +40,69 @@ astro-ndi/
 │   ├── pages/
 │   │   ├── index.astro       # Public registration page
 │   │   ├── admin.astro       # Admin dashboard
-│   │   └── api/[...slug].ts  # API route handler
+│   │   └── api/[...slug].ts  # Catch-all API route (astro-core/api-route: CORS, 404/500)
+│   ├── routes.js             # Router: rate limits, admin guard, every route
 │   ├── api/                  # API handlers
-│   │   ├── admin.js          # Admin CRUD operations
-│   │   ├── config.js         # Public config endpoint
+│   │   ├── admin/            # Admin handlers (members, teams, attendance, pizza, rooms, archives, exports)
+│   │   ├── config.js         # Public config endpoint + configured pizza ids
 │   │   ├── register.js       # Registration handler
-│   │   ├── teams.js          # Team listing
+│   │   ├── teams.js          # Team listing / public stats
 │   │   └── team-view.js      # View team members
 │   ├── database/             # Database helpers
-│   │   ├── db.teams.js       # Team queries
-│   │   ├── db.members.js     # Member queries
-│   │   └── db.settings.js    # Settings queries
-│   ├── features/admin/       # Admin features
-│   │   ├── admin.import.js   # CSV import
-│   │   └── admin.settings.js # Settings management
-│   ├── lib/                  # Utilities
-│   │   ├── validation.js     # Input validation (re-exports astro-core/validation)
-│   │   └── db.js             # D1 helpers
-│   ├── shared/               # Shared utilities
-│   │   ├── auth.js           # Admin authentication
-│   │   ├── crypto.js         # Password hashing
-│   │   └── response.js       # JSON responses
-│   ├── layouts/
-│   │   ├── BaseLayout.astro  # Public layout
-│   │   └── AdminLayout.astro # Admin layout
-│   └── components/
-│       ├── Header.astro      # Site header
-│       └── Footer.astro      # Site footer
-├── db/
-│   ├── schema.sql            # Database schema
-│   ├── seed.sql              # Test data
-│   └── migrate-*.sql         # Migrations
-├── test/                     # API tests
+│   │   ├── db.settings.js    # Settings queries (incl. atomic multi-write)
+│   │   ├── db.payments.js    # Online payment queries
+│   │   └── db.archives.js    # Archives, GDPR expiry, data reset
+│   ├── features/
+│   │   ├── admin/            # admin.import.js (CSV import), admin.settings.js (settings schema)
+│   │   └── payment/          # SumUp checkout / verify / webhook
+│   ├── lib/
+│   │   ├── db.js             # Teams, members, attendance, pizza, rooms (the one place)
+│   │   ├── validation.js     # Member / team / registration validation, normalizeTeamPassword
+│   │   └── members-csv.js    # CSV export formats and import header aliases
+│   ├── shared/
+│   │   ├── constants.js      # Shared by the Worker and the browser (see below)
+│   │   ├── http.js           # Body / id-list helpers over astro-core
+│   │   └── crypto.js         # Password hashing (PBKDF2)
+│   ├── client/               # Browser code (admin dashboard, registration page)
+│   ├── layouts/ components/  # Astro layouts and components
+├── db/                       # Schema, seed and migrations
+├── test/                     # Workers tests (test/*.test.js) and happy-dom tests (test/dom/)
 ├── public/                   # Static assets
-└── docs/
-    └── setup.md              # Cloudflare setup guide
+└── docs/                     # Setup guide, archive plan
 ```
+
+### Shared layers
+
+The site keeps no private copy of what the platform provides:
+
+| Concern | Module |
+|---------|--------|
+| Error bodies, `serverError`, JSON body / id parsing, D1 batches, admin auth, CSV, settings validation, CORS route, rate limits | `astro-core` (`http`, `request`, `ids`, `d1`, `auth`, `csv`, `settings`, `api-route`, `ratelimit`) |
+| Login flow, event delegation, downloads, confirm modal, public API client, `escapeHtml`, `numberOrNull` | `@info-evry/astro-design/scripts/*` |
+| Pricing tier (`calculateTier`, `getPrice`), SumUp | `astro-payments` |
+
+`src/shared/constants.js` is the single source of the site's own constants
+(Organisation team name, `isNoPizza`, payment statuses and tiers, default
+prices, request caps). The server and the browser bundles import the same file.
+
+### Error contract
+
+Every error is `{ "error": <message>, "code": <code> }` (messages are French by
+default). Malformed id in a path or body: `400 invalid_id`; missing, malformed,
+`null` or array JSON: `400 invalid_body`; body too large: `413
+payload_too_large`; unique violation: `409 conflict`; unknown parent (team,
+member): `404 not_found`; real failures: `500 internal_error` (the cause is
+logged, never sent). The regression test `test/api.no-500.test.js` hits every
+registered route with hostile input and asserts no 5xx.
+
+### Capacity
+
+The Organisation team does not count against the capacity: the registration
+capacity check, the public `available_spots` and the admin statistics all use
+the number of participants **excluding** the Organisation team
+(`getParticipantsExcludingOrg`). Joining the Organisation team is not limited
+by the capacity. A data reset (`POST /api/admin/reset`) deletes every other
+team, all members and all payment events, but keeps the Organisation team.
 
 ## Quick Start
 
@@ -121,14 +148,14 @@ See `docs/setup.md` for database configuration.
 ### Testing
 
 ```bash
-# Build first (required for Workers tests)
-bun run build
+# Build, Workers tests, then happy-dom (client) tests
+bun run test
 
-# Run tests with Vitest
-bunx vitest run
+# Only the client tests (no build needed)
+bun run test:dom
 
-# Watch mode
-bunx vitest
+# Workers tests alone (the build must be fresh: they run against dist/)
+bun run build && bunx vitest run
 ```
 
 For detailed development and deployment instructions, see [maestro docs](../../docs/DEVELOPMENT.md).
@@ -171,8 +198,12 @@ client IP:
 |------|-------|-------|
 | `register` | `POST /api/register` | 5 requests / 10 min |
 | `team-view` | `POST /api/teams/:id/view` | 10 requests / 10 min |
-| `payment` | any method under `/api/payment/*` (excluding `pricing` and `callback`) | 20 requests / 10 min |
-| `admin` | any method under `/api/admin/*` | 60 requests / 1 min |
+| `payment` | `POST /api/payment/checkout`, `/verify`, `/delayed` (`GET /pricing` and the SumUp webhook `POST /callback` are never limited) | 20 requests / 10 min |
+| `admin` | any method under `/api/admin/` (`ADMIN_RATE_LIMIT` of astro-core) | 60 requests / 1 min |
+
+Paths match on a whole segment (`/api/registerX` is not `/api/register`).
+Every `/api/admin` request also goes through the admin guard
+(`createAdminGuard()`), and each admin handler is wrapped with `adminOnly`.
 
 If the `RATE_LIMIT` KV binding is not configured, rate limiting fails open
 (requests are allowed through) rather than blocking traffic.
@@ -203,28 +234,77 @@ body. Requests without either are rejected with `403`.
 | `POST` | `/api/payment/verify` | Verify payment completion for a checkout (`{ checkoutId, teamPassword? }`) |
 | `POST` | `/api/payment/delayed` | Mark a member's payment as delayed/pay-at-event (`{ memberId, teamPassword? }`); rejected with `409` if the member has already paid |
 
-The `/api/payment/callback` webhook (called by SumUp, not by end users) never
-mutates the database unless `SUMUP_API_KEY` is configured; if it isn't, it
-acknowledges the callback without processing it (`{ received: true, processed: false }`).
+The `/api/payment/callback` webhook (called by SumUp, not by end users) answers
+`400 invalid_body` for a body that is not a JSON object. Otherwise it always
+answers `200`: it never mutates the database unless `SUMUP_API_KEY` is
+configured (`{ received: true, processed: false }`), and a processing failure
+is logged and reported as `processed: false`, never with the error message.
+
+Team passwords are normalised the same way everywhere (register, join, view,
+payment, admin create / update): trimmed and capped at 64 characters
+(`normalizeTeamPassword`).
 
 ### Admin (Bearer token required)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/admin/stats` | Detailed statistics |
+| `GET` | `/api/admin/stats` | Detailed statistics and all teams with members |
+| `GET` | `/api/admin/members` | All members |
+| `POST` | `/api/admin/members` | Add a member (`teamId`, names, email, `bacLevel`, `isLeader`, `foodDiet`) |
+| `PUT` | `/api/admin/members/:id` | Update a member (partial; `teamId` moves it; unknown team: `404`) |
+| `DELETE` | `/api/admin/members/:id` | Delete a member |
+| `POST` | `/api/admin/members/delete-batch` | Delete members (`{ memberIds }`, 1 to 1000 ids) |
+| `POST` | `/api/admin/teams` | Create a team (`409` if the name exists) |
+| `PUT` | `/api/admin/teams/:id` | Update a team (name, description, password) |
+| `DELETE` | `/api/admin/teams/:id` | Delete a team and its members (not the Organisation team) |
 | `GET` | `/api/admin/settings` | Get all settings |
-| `PUT` | `/api/admin/settings` | Update settings |
-| `GET` | `/api/admin/export` | Export all data to CSV |
-| `GET` | `/api/admin/export/ndi` | Export in official NDI format |
-| `POST` | `/api/admin/import` | Import members from CSV. Teams created by the import are assigned a random 16-character password (never a hash of the team name); the plain text passwords are returned once in the response as `passwords: [{ team, password }]` and are never logged or persisted anywhere other than the (hashed) `teams.password_hash` column. Re-importing rows for an already-existing team does not generate or return a new password. |
-| `GET` | `/api/admin/teams` | List all teams with members |
-| `POST` | `/api/admin/teams` | Create team |
-| `PUT` | `/api/admin/teams/:id` | Update team |
-| `DELETE` | `/api/admin/teams/:id` | Delete team |
-| `POST` | `/api/admin/members` | Add member |
-| `PUT` | `/api/admin/members/:id` | Update member |
-| `DELETE` | `/api/admin/members/:id` | Delete member |
-| `PUT` | `/api/admin/members/:id/move` | Move member to different team |
+| `PUT` | `/api/admin/settings` | Update settings (validated against a schema, written atomically) |
+| `GET` | `/api/admin/export`, `/export/:teamId` | Members CSV (`;`, French headers, UTF-8 BOM) |
+| `GET` | `/api/admin/export-official`, `/export-official/:teamId` | Official NDI CSV |
+| `POST` | `/api/admin/import` | Import members from CSV (see below) |
+| `GET` | `/api/admin/attendance` | Members with attendance and payment, plus statistics |
+| `POST` | `/api/admin/attendance/check-in/:id` | Check in. Optional body `{ paymentTier, paymentAmount }`; an absent body is a plain check-in, a malformed one is a `400` |
+| `POST` | `/api/admin/attendance/check-out/:id` | Check out |
+| `POST` | `/api/admin/attendance/check-in-batch`, `/check-out-batch` | Batch (`{ memberIds }`) |
+| `GET` | `/api/admin/pizza` | Members with pizza status, plus statistics |
+| `POST` | `/api/admin/pizza/give/:id`, `/revoke/:id` | Hand out / take back a pizza |
+| `POST` | `/api/admin/pizza/give-batch`, `/revoke-batch` | Batch (`{ memberIds }`) |
+| `GET` | `/api/admin/rooms` | Teams with rooms, statistics |
+| `PUT` | `/api/admin/rooms/:teamId` | Assign or clear a room (`{ room }`) |
+| `POST` | `/api/admin/rooms/batch` | Assign rooms (`{ assignments: [{ teamId, room }] }`, at most 1000; unknown teams are listed in `skipped`) |
+| `GET` / `POST` | `/api/admin/archives` | List / create the yearly archive |
+| `GET` | `/api/admin/archives/:year`, `/archives/:year/export` | One archive (`year` between 2000 and 2100) |
+| `DELETE` | `/api/admin/archives/:year` | Delete an archive (development environment only) |
+| `POST` | `/api/admin/expiration-check` | GDPR expiry check |
+| `GET` | `/api/admin/event-year`, `/api/admin/reset/check` | Event year, reset safety check |
+| `POST` | `/api/admin/reset` | Reset the event data (`{ confirmation: "SUPPRIMER" }`), keeping the Organisation team |
+
+#### Check-in payment
+
+`paymentTier` must be one of `asso_member`, `non_member`, `late`,
+`organisation` (on-site, chosen in the check-in modal), `online_tier1`,
+`online_tier2` (a member who already paid online) or `tier1`, `tier2`;
+`paymentAmount` is an integer number of cents between 0 and 100000.
+
+#### CSV import and export
+
+Exports use `;`, French headers (`ID;Prénom;Nom;Email;Équipe;Niveau BAC;Chef
+d'équipe;Pizza;Date d'inscription`), a UTF-8 BOM and the formula-injection guard
+of `astro-core/csv`.
+
+The import accepts, with `,`, `;` or tab as delimiter: the English headers
+(`firstname,lastname,email,teamname,baclevel,fooddiet,ismanager`), the French
+export headers and the official NDI headers, so **an ndi export can be
+re-imported**. Leader: `Oui`/`Yes`/`1`/`true`; BAC level: `3` or `BAC+3`; pizza:
+a configured pizza id, `Aucune` (no pizza) or empty. At most 2000 data rows
+(`400 too_many_rows`). Invalid rows are reported (`stats.errors`, the first 10;
+`stats.errorCount`, all of them) and skipped, members that already exist are
+skipped without an error. Teams created by the import are assigned a random
+16-character password (never a hash of the team name); the plain text passwords
+are returned once in the response as `passwords: [{ team, password }]` and are
+never logged or persisted anywhere other than the (hashed) `teams.password_hash`
+column. Re-importing rows for an already-existing team does not generate or
+return a new password.
 
 ## Database Schema
 

@@ -148,8 +148,16 @@ describe('Archive API - POST /api/admin/archives', () => {
 
 describe('Archive API - GET /api/admin/archives/:year', () => {
   it('should return 404 for non-existent archive', async () => {
-    const response = await adminFetch('/api/admin/archives/1999');
+    const response = await adminFetch('/api/admin/archives/2020');
     expect(response.status).toBe(404);
+  });
+
+  it('should return 400 invalid_year for a year outside 2000-2100, like create', async () => {
+    for (const year of ['1999', '2101']) {
+      const response = await adminFetch(`/api/admin/archives/${year}`);
+      expect(response.status).toBe(400);
+      expect((await response.json()).code).toBe('invalid_year');
+    }
   });
 
   it('should return 400 for invalid year', async () => {
@@ -176,8 +184,14 @@ describe('Archive API - GET /api/admin/archives/:year', () => {
 
 describe('Archive API - GET /api/admin/archives/:year/export', () => {
   it('should return 404 for non-existent archive', async () => {
-    const response = await adminFetch('/api/admin/archives/1999/export');
+    const response = await adminFetch('/api/admin/archives/2020/export');
     expect(response.status).toBe(404);
+  });
+
+  it('should return 400 invalid_year for a year outside 2000-2100', async () => {
+    const response = await adminFetch('/api/admin/archives/1999/export');
+    expect(response.status).toBe(400);
+    expect((await response.json()).code).toBe('invalid_year');
   });
 
   it('should return export files if archive exists', async () => {

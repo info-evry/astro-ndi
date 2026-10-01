@@ -3,18 +3,22 @@
  *
  * This module bootstraps the admin dashboard by:
  * 1. Creating the API client (base URL read from <meta name="base-url">)
- * 2. Initializing all modules
- * 3. Setting up event listeners (including delegated data-action/data-change handling)
+ * 2. Creating the admin shell (login flow: stored token, interactive login,
+ *    401 handling; see astro-design/scripts/admin-shell)
+ * 3. Initializing all modules
+ * 4. Setting up event listeners (including delegated data-action/data-change handling)
  */
 /* eslint-env browser */
 
 // Shared design-system client scripts
 import { $ } from '@info-evry/astro-design/scripts/dom';
 import { toastError } from '@info-evry/astro-design/scripts/toast';
-import { createApiClient, readBaseUrl } from '@info-evry/astro-design/scripts/api-client';
+import { createApiClient } from '@info-evry/astro-design/scripts/api-client';
+import { createAdminShell } from '@info-evry/astro-design/scripts/admin-shell';
+import { bindDelegation } from '@info-evry/astro-design/scripts/delegation';
 import { initTabs } from '@info-evry/astro-design/scripts/tabs';
 import { initModals } from '@info-evry/astro-design/scripts/modal';
-import { buildActions, bindDelegation } from './actions.js';
+import { buildActions } from './actions.js';
 
 // State management
 import {
@@ -73,79 +77,85 @@ import {
 
 const TOKEN_KEY = 'ndi_admin_token';
 const client = createApiClient({ tokenKey: TOKEN_KEY });
-const { api, setToken, getToken, clearToken } = client;
-const apiBase = readBaseUrl();
-
-let adminToken = getToken();
+const { api } = client;
 
 /**
- * Load all data
+ * Load and render all the data. Throws on failure: the admin shell decides
+ * what a 401 or any other failure means (login screen, toast).
  */
 async function loadData() {
-  try {
-    const data = await api('/admin/stats', { method: 'GET' });
+  const data = await api('/admin/stats', { method: 'GET' });
 
-    // Render stats
-    const statsGrid = $('stats-grid');
-    const foodStats = $('food-stats');
-    renderStats(data.stats, statsGrid, foodStats);
+  // Render stats
+  const statsGrid = $('stats-grid');
+  const foodStats = $('food-stats');
+  renderStats(data.stats, statsGrid, foodStats);
 
-    // Render teams
-    const teamsContainer = $('teams-container');
-    if (teamsContainer) {
-      renderTeams(data.teams || [], teamsContainer);
-    }
-
-    // Store pizzas config
-    if (data.pizzas) {
-      setPizzasConfig(data.pizzas);
-    }
-
-    // Load other data in parallel
-    await Promise.all([
-      loadAttendanceData(api),
-      loadPizzaData(api),
-      loadRoomsData(api),
-      loadArchives(api),
-      loadSettings(api)
-    ]);
-
-  } catch (error) {
-    console.error('Error loading data:', error);
-    if (error.message === 'Unauthorized') {
-      showAuth();
-      clearToken();
-      adminToken = '';
-    } else {
-      toastError('Erreur lors du chargement des données');
-    }
-    throw error; // Re-throw to let caller know loading failed
+  // Render teams
+  const teamsContainer = $('teams-container');
+  if (teamsContainer) {
+    renderTeams(data.teams || [], teamsContainer);
   }
+
+  // Store pizzas config
+  if (data.pizzas) {
+    setPizzasConfig(data.pizzas);
+  }
+
+  // Load other data in parallel
+  await Promise.all([
+    loadAttendanceData(api),
+    loadPizzaData(api),
+    loadRoomsData(api),
+    loadArchives(api),
+    loadSettings(api)
+  ]);
 }
+
+let authedModulesReady = false;
+
+/**
+ * Initialise the modules that need an authenticated API client.
+ * The shell runs it once, after the first successful login (stored token or
+ * interactive). They all share the live `api` client, so none of them keeps a
+ * stale copy of the token.
+ */
+function initAuthedModules() {
+  if (authedModulesReady) return;
+  authedModulesReady = true;
+  initSettings(api);
+  initImport(api, reloadData);
+  initAllParticipants();
+  initArchives(api, reloadData);
+}
+
+const shell = createAdminShell({
+  api: client,
+  selectors: {
+    authSection: '#auth-section',
+    adminContent: '#admin-content',
+    tokenInput: '#admin-token',
+    authBtn: '#auth-btn',
+    authError: '#auth-error'
+  },
+  load: loadData,
+  afterLogin: initAuthedModules
+});
 
 /**
  * loadData for fire-and-forget callers (buttons, forms, domain modules).
- * loadData already reports its failures (toast, or back to the login form
- * on a 401), so here they must not surface as unhandled rejections.
+ * Never throws: a 401 sends the admin back to the login form, any other
+ * failure is reported with a toast (see `shell.reload`).
  */
-async function reloadData() {
-  try {
-    await loadData();
-  } catch {
-    // already handled in loadData
-  }
+function reloadData() {
+  return shell.reload();
 }
 
 // ============================================================
-// AUTH HANDLING
+// ELEMENTS
 // ============================================================
 
 const elements = {
-  get authSection() { return $('auth-section'); },
-  get adminContent() { return $('admin-content'); },
-  get tokenInput() { return $('admin-token'); },
-  get authBtn() { return $('auth-btn'); },
-  get authError() { return $('auth-error'); },
   get exportOfficialBtn() { return $('export-official-btn'); },
   get exportAllBtn() { return $('export-all-btn'); },
   get refreshBtn() { return $('refresh-btn'); },
@@ -156,64 +166,6 @@ const elements = {
   get teamForm() { return $('team-form'); },
   get memberForm() { return $('member-form'); }
 };
-
-function showAuth() {
-  elements.authSection?.classList.remove('hidden');
-  elements.adminContent?.classList.add('hidden');
-}
-
-function showAdmin() {
-  elements.authSection?.classList.add('hidden');
-  elements.adminContent?.classList.remove('hidden');
-}
-
-function showAuthError(message) {
-  if (elements.authError) {
-    elements.authError.textContent = message;
-    elements.authError.classList.remove('hidden');
-  }
-}
-
-function hideAuthError() {
-  elements.authError?.classList.add('hidden');
-}
-
-let authedModulesReady = false;
-
-/**
- * Initialise the modules that need an authenticated API client.
- * Runs once, on either the stored-token or the interactive login path.
- */
-function initAuthedModules() {
-  if (authedModulesReady) return;
-  authedModulesReady = true;
-  initSettings(api);
-  initImport(api, reloadData);
-  initAllParticipants();
-  initArchives(api, apiBase, adminToken, reloadData);
-}
-
-async function handleAuth() {
-  const token = elements.tokenInput?.value?.trim();
-  if (!token) {
-    showAuthError('Veuillez entrer un token');
-    return;
-  }
-
-  hideAuthError();
-  adminToken = token;
-  setToken(token);
-
-  try {
-    await loadData();
-    showAdmin();
-    initAuthedModules();
-  } catch (error) {
-    showAuthError(error.message === 'Unauthorized' ? 'Token invalide' : error.message);
-    clearToken();
-    adminToken = '';
-  }
-}
 
 function handleRefresh() {
   reloadData();
@@ -235,13 +187,7 @@ function updateDeleteButton() {
 async function init() {
   // Wire up delegated data-action/data-change handlers
   const { actions, changes } = buildActions({ api, loadData: reloadData, updateDeleteButton });
-  bindDelegation(actions, changes);
-
-  // Set up auth event listeners
-  elements.authBtn?.addEventListener('click', handleAuth);
-  elements.tokenInput?.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') handleAuth();
-  });
+  bindDelegation(actions, changes, { onError: (error) => toastError(error?.message || 'Une erreur est survenue') });
 
   // Set up action buttons
   elements.exportOfficialBtn?.addEventListener('click', () => handleExportOfficial(api));
@@ -272,22 +218,8 @@ async function init() {
   initPizza(api);
   initRooms(api);
 
-  // Try to load data if we have a token
-  if (adminToken) {
-    try {
-      await loadData();
-      showAdmin();
-      initAuthedModules();
-    } catch (error) {
-      showAuth();
-      if (error.message === 'Unauthorized') {
-        clearToken();
-        adminToken = '';
-      }
-    }
-  } else {
-    showAuth();
-  }
+  // Log in with the stored token, or show the login form
+  await shell.init();
 }
 
 // Run on DOMContentLoaded

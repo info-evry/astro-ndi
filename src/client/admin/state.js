@@ -2,6 +2,13 @@
  * Admin global state management
  */
 
+import {
+  DEFAULT_LATE_CUTOFF_TIME,
+  DEFAULT_PRICES,
+  DEFAULT_SCHOOL_NAME,
+  DEFAULT_TIER1_CUTOFF_DAYS
+} from '../../shared/constants.js';
+
 // Teams and members data
 export let teamsData = [];
 export let selectedMembers = new Set();
@@ -12,7 +19,7 @@ export const settingsState = {
   maxTeamSize: 15,
   maxTotalParticipants: 200,
   minTeamSize: 1,
-  schoolName: "Université d'Evry",
+  schoolName: DEFAULT_SCHOOL_NAME,
   pizzas: [],
   bacLevels: [],
   isDirty: false,
@@ -21,14 +28,14 @@ export const settingsState = {
 
 // Pricing settings
 export const pricingSettings = {
-  priceAssoMember: 500,
-  priceNonMember: 800,
-  priceLate: 1000,
-  lateCutoffTime: '19:00',
+  priceAssoMember: DEFAULT_PRICES.assoMember,
+  priceNonMember: DEFAULT_PRICES.nonMember,
+  priceLate: DEFAULT_PRICES.late,
+  lateCutoffTime: DEFAULT_LATE_CUTOFF_TIME,
   paymentEnabled: false,
-  priceTier1: 500,
-  priceTier2: 700,
-  tier1CutoffDays: 7,
+  priceTier1: DEFAULT_PRICES.tier1,
+  priceTier2: DEFAULT_PRICES.tier2,
+  tier1CutoffDays: DEFAULT_TIER1_CUTOFF_DAYS,
   registrationDeadline: ''
 };
 

@@ -73,9 +73,16 @@ describe('DELETE /api/admin/teams/:id', () => {
     expect(await countRows('members', 'WHERE team_id = ?', org.id)).toBe(2);
   });
 
-  it.each(['987654321', 'abc', '-3'])('answers 404 for the unknown id %s', async (id) => {
-    const response = await adminFetch(`/api/admin/teams/${id}`, { method: 'DELETE' });
+  it('answers 404 for an unknown id', async () => {
+    const response = await adminFetch('/api/admin/teams/987654321', { method: 'DELETE' });
     expect(response.status).toBe(404);
+    expect((await response.json()).code).toBe('not_found');
+  });
+
+  it.each(['abc', '-3', '0', '1.5'])('answers 400 invalid_id for the malformed id %s', async (id) => {
+    const response = await adminFetch(`/api/admin/teams/${id}`, { method: 'DELETE' });
+    expect(response.status).toBe(400);
+    expect((await response.json()).code).toBe('invalid_id');
   });
 });
 

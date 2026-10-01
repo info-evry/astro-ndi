@@ -169,7 +169,7 @@ describe('Payment endpoints - malformed input', () => {
   it.each(['checkout', 'verify', 'delayed'])('%s answers 400 for invalid JSON', async (name) => {
     const response = await postJson(`/api/payment/${name}`, '{not json');
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: 'Invalid JSON body' });
+    expect(await response.json()).toEqual({ error: 'Corps de requête invalide', code: 'invalid_body' });
   });
 
   it.each(['checkout', 'verify', 'delayed'])('%s answers 400 for null / array / scalar bodies', async (name) => {
@@ -193,10 +193,11 @@ describe('Payment endpoints - malformed input', () => {
     }
   });
 
-  it.each(['checkout', 'delayed'])('%s answers 404 for non-numeric, negative and huge member ids', async (name) => {
+  it.each(['checkout', 'delayed'])('%s answers 400 invalid_id for non-numeric, negative and huge member ids', async (name) => {
     for (const memberId of ['abc', '1; DROP TABLE members', -5, 1e30, '99999999999999999999']) {
       const response = await postJson(`/api/payment/${name}`, { memberId });
-      expect(response.status).toBe(404);
+      expect(response.status).toBe(400);
+      expect((await response.json()).code).toBe('invalid_id');
     }
     expect(await countRows('members')).toBe(0);
   });
@@ -256,10 +257,12 @@ describe('POST /api/payment/callback without SUMUP_API_KEY', () => {
     expect(await countRows('payment_events')).toBe(0);
   });
 
-  it('acknowledges malformed JSON without touching the database', async () => {
-    const response = await postJson('/api/payment/callback', '{not json');
-    expect(response.status).toBe(200);
-    expect((await response.json()).received).toBe(true);
+  it('answers 400 for a body that is not a JSON object, without touching the database', async () => {
+    for (const body of ['{not json', 'null', '[]', '"x"']) {
+      const response = await postJson('/api/payment/callback', body);
+      expect(response.status).toBe(400);
+      expect((await response.json()).code).toBe('invalid_body');
+    }
     expect(await countRows('payment_events')).toBe(0);
   });
 });
@@ -383,7 +386,7 @@ describe('Checkout creation (SumUp mocked)', () => {
       { ...env, ...SUMUP_ENV }
     );
     expect(response.status).toBe(400);
-    expect((await response.json()).error).toContain('status');
+    expect((await response.json()).code).toBe('invalid_payment_status');
   });
 });
 
@@ -449,7 +452,9 @@ describe('Payment verification (SumUp mocked)', () => {
     const payer = await seedPayer({ checkout_id: 'co-verify' });
     const response = await postJson('/api/payment/verify', { checkoutId: 'co-verify', teamPassword: payer.password });
     expect(response.status).toBe(500);
-    expect((await response.json()).error).toContain('API key');
+    const data = await response.json();
+    expect(data.code).toBe('internal_error');
+    expect(data.error).not.toContain('SumUp');
   });
 });
 

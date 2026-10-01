@@ -2,128 +2,125 @@
  * Admin member CRUD handlers
  */
 
-import { json, error } from 'astro-core/router';
+import { json } from 'astro-core/router';
+import { adminOnly } from 'astro-core/auth';
+import { parsePositiveId } from 'astro-core/ids';
+import { isForeignKeyError, isUniqueConstraintError } from 'astro-core/request';
+import { badRequest, conflict, invalidId, notFound, serverError } from 'astro-core/http';
 import * as db from '../../lib/db.js';
-import { verifyAdmin } from '../../shared/auth.js';
+import { validateMember, validateMemberUpdate } from '../../lib/validation.js';
+import { readBody, readIdList } from '../../shared/http.js';
+import { getConfiguredPizzaIds } from '../config.js';
+
+const MSG_TEAM_NOT_FOUND = 'Équipe introuvable';
+const MSG_MEMBER_NOT_FOUND = 'Membre introuvable';
+const MSG_MEMBER_EXISTS = 'Un membre portant ce nom existe déjà';
 
 /**
  * POST /api/admin/members - Add member manually (no password required)
  */
-export async function addMemberManually(request, env) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const addMemberManually = adminOnly(async (request, env) => {
   try {
-    const data = await request.json();
-    const { teamId, firstName, lastName, email, bacLevel = 0, isLeader = false, foodDiet = '' } = data;
+    const { data, response } = await readBody(request);
+    if (response) return response;
 
-    if (!teamId || !firstName || !lastName || !email) {
-      return error('Missing required fields: teamId, firstName, lastName, email', 400);
+    const teamId = parsePositiveId(data.teamId);
+    if (teamId === null) return invalidId("Identifiant d'équipe invalide");
+
+    const validation = validateMember(data, { pizzaIds: await getConfiguredPizzaIds(env) });
+    if (!validation.valid) {
+      return badRequest(validation.errors.join('; '), 'validation_error');
     }
 
     // Verify team exists
     const team = await db.getTeamById(env.DB, teamId);
-    if (!team) {
-      return error('Team not found', 404);
+    if (!team) return notFound(MSG_TEAM_NOT_FOUND);
+
+    try {
+      const member = await db.addMemberAdmin(env.DB, teamId, validation.value);
+      return json({ success: true, member });
+    } catch (error_) {
+      if (isUniqueConstraintError(error_)) return conflict(MSG_MEMBER_EXISTS);
+      if (isForeignKeyError(error_)) return notFound(MSG_TEAM_NOT_FOUND);
+      throw error_;
     }
-
-    const member = await db.addMemberAdmin(env.DB, teamId, {
-      firstName, lastName, email, bacLevel, isLeader, foodDiet
-    });
-
-    return json({ success: true, member });
   } catch (error_) {
-    console.error('Error adding member:', error_);
-    if (error_.message?.includes('UNIQUE constraint')) {
-      return error('Member with this name already exists', 400);
-    }
-    return error('Failed to add member', 500);
+    return serverError('Error adding member:', error_);
   }
-}
+});
 
 /**
  * PUT /api/admin/members/:id - Update member
  */
-export async function updateMemberAdmin(request, env, ctx, params) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const updateMemberAdmin = adminOnly(async (request, env, ctx, params) => {
   try {
-    const memberId = Number.parseInt(params.id, 10);
-    if (Number.isNaN(memberId)) {
-      return error('Invalid member ID', 400);
-    }
-    const updates = await request.json();
+    const memberId = parsePositiveId(params.id);
+    if (memberId === null) return invalidId();
+
+    const { data, response } = await readBody(request);
+    if (response) return response;
 
     const member = await db.getMemberById(env.DB, memberId);
-    if (!member) {
-      return error('Member not found', 404);
+    if (!member) return notFound(MSG_MEMBER_NOT_FOUND);
+
+    const validation = validateMemberUpdate(data, { pizzaIds: await getConfiguredPizzaIds(env) });
+    if (!validation.valid) {
+      return badRequest(validation.errors.join('; '), 'validation_error');
+    }
+    const updates = validation.value;
+
+    if (data.teamId !== undefined) {
+      const teamId = parsePositiveId(data.teamId);
+      if (teamId === null) return invalidId("Identifiant d'équipe invalide");
+      // An unknown team is a clean 404, not a foreign-key 500
+      if (!await db.getTeamById(env.DB, teamId)) return notFound(MSG_TEAM_NOT_FOUND);
+      updates.teamId = teamId;
     }
 
-    await db.updateMember(env.DB, memberId, updates);
+    try {
+      await db.updateMember(env.DB, memberId, updates);
+    } catch (error_) {
+      if (isUniqueConstraintError(error_)) return conflict(MSG_MEMBER_EXISTS);
+      if (isForeignKeyError(error_)) return notFound(MSG_TEAM_NOT_FOUND);
+      throw error_;
+    }
     const updated = await db.getMemberById(env.DB, memberId);
 
     return json({ success: true, member: updated });
   } catch (error_) {
-    console.error('Error updating member:', error_);
-    return error('Failed to update member', 500);
+    return serverError('Error updating member:', error_);
   }
-}
+});
 
 /**
  * DELETE /api/admin/members/:id - Delete single member
  */
-export async function deleteMemberAdmin(request, env, ctx, params) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const deleteMemberAdmin = adminOnly(async (request, env, ctx, params) => {
   try {
-    const memberId = Number.parseInt(params.id, 10);
-    if (Number.isNaN(memberId)) {
-      return error('Invalid member ID', 400);
-    }
-    const deleted = await db.deleteMember(env.DB, memberId);
+    const memberId = parsePositiveId(params.id);
+    if (memberId === null) return invalidId();
 
-    if (!deleted) {
-      return error('Member not found', 404);
-    }
+    const deleted = await db.deleteMember(env.DB, memberId);
+    if (!deleted) return notFound(MSG_MEMBER_NOT_FOUND);
 
     return json({ success: true, message: 'Member deleted' });
   } catch (error_) {
-    console.error('Error deleting member:', error_);
-    return error('Failed to delete member', 500);
+    return serverError('Error deleting member:', error_);
   }
-}
+});
 
 /**
  * POST /api/admin/members/delete-batch - Delete multiple members
  */
-export async function deleteMembersBatch(request, env) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const deleteMembersBatch = adminOnly(async (request, env) => {
   try {
-    const { memberIds } = await request.json();
+    const { ids, response } = await readIdList(request, 'memberIds');
+    if (response) return response;
 
-    if (!Array.isArray(memberIds) || memberIds.length === 0) {
-      return error('memberIds array is required', 400);
-    }
-
-    // Validate all IDs before processing
-    const parsedIds = memberIds.map(id => Number.parseInt(id, 10));
-    if (parsedIds.some(id => Number.isNaN(id))) {
-      return error('Invalid member ID in array', 400);
-    }
-
-    const deleted = await db.deleteMembers(env.DB, parsedIds);
+    const deleted = await db.deleteMembers(env.DB, ids);
 
     return json({ success: true, deleted });
   } catch (error_) {
-    console.error('Error deleting members:', error_);
-    return error('Failed to delete members', 500);
+    return serverError('Error deleting members:', error_);
   }
-}
+});

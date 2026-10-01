@@ -27,7 +27,7 @@ describe('PUT /api/admin/settings - authorization and body', () => {
   it.each(['{not json', 'null', '[]', '12', '"text"'])('answers 400 for the body %s', async (body) => {
     const response = await put(body);
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: 'Invalid JSON body' });
+    expect(await response.json()).toEqual({ error: 'Corps de requête invalide', code: 'invalid_body' });
   });
 
   it('accepts an empty object as a no-op', async () => {
@@ -41,7 +41,7 @@ describe('PUT /api/admin/settings - key whitelist', () => {
   it('rejects unknown keys and names them', async () => {
     const response = await put({ max_team_size: 5, evil_key: 1, another: 2 });
     expect(response.status).toBe(400);
-    expect((await response.json()).error).toBe('Invalid setting keys: evil_key, another');
+    expect((await response.json()).error).toBe('Clés inconnues : evil_key, another');
   });
 
   it('applies nothing when one key of the batch is invalid', async () => {
@@ -108,7 +108,7 @@ describe('PUT /api/admin/settings - numeric bounds', () => {
     for (const bad of [min - 1, max + 1, 1e12, -1e12]) {
       const response = await put({ [key]: bad });
       expect(response.status).toBe(400);
-      expect((await response.json()).error).toContain(`Invalid value for ${key}`);
+      expect((await response.json()).error).toContain(`Valeur invalide pour ${key}`);
     }
     expect(await stored(key)).toBe(String(min));
   });
@@ -208,7 +208,7 @@ describe('PUT /api/admin/settings - pizza list', () => {
   ])('rejects %s instead of an array', async (_label, value) => {
     const response = await put({ pizzas: value });
     expect(response.status).toBe(400);
-    expect((await response.json()).error).toContain('Must be an array');
+    expect((await response.json()).error).toContain('Doit être un tableau');
   });
 
   it.each([

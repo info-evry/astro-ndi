@@ -4,7 +4,8 @@
  */
 /* eslint-env browser */
 
-import { isValidEmail } from '../lib/validation.js';
+import { isValidEmail } from 'astro-core/validation';
+import { NO_PIZZA } from '../../shared/constants.js';
 import { escapeHtml } from '@info-evry/astro-design/scripts/dom';
 import { state } from './state.js';
 import { elements } from './elements.js';
@@ -38,7 +39,7 @@ export function collectFormData() {
     email: formData.get('email'),
     bacLevel: Number.parseInt(formData.get('bacLevel'), 10),
     isLeader: state.isNewTeam ? true : formData.get('isLeader') === 'on',
-    foodDiet: formData.get('foodDiet') || 'none'
+    foodDiet: formData.get('foodDiet') || NO_PIZZA
   });
 
   return data;

@@ -3,10 +3,13 @@
  */
 /* eslint-env browser */
 
-import { $, escapeHtml } from '@info-evry/astro-design/scripts/dom';
+import { $, escapeHtml, numberOrNull } from '@info-evry/astro-design/scripts/dom';
 import { formatTeamWithRoom } from './format.js';
 import { toastSuccess, toastError } from '@info-evry/astro-design/scripts/toast';
 import { openModal, closeModal } from '@info-evry/astro-design/scripts/modal';
+import { confirmAction } from '@info-evry/astro-design/scripts/confirm';
+import { downloadFromApi } from '@info-evry/astro-design/scripts/download';
+import { isOrganisationTeamName } from '../../shared/constants.js';
 import { statCardHtml } from '@info-evry/astro-design/scripts/templates';
 import {
   teamsData,
@@ -26,8 +29,9 @@ import {
 // Element ID constants
 const EL_MEMBER_FORM_TEAM = 'member-form-team';
 const EL_MEMBER_FORM_FOOD = 'member-form-food';
-const EL_CONFIRM_MODAL = 'confirm-modal';
+const CONFIRM_DELETE_LABEL = 'Supprimer';
 const MSG_EXPORT_ERROR = 'Erreur export: ';
+const EXPORT_OFFICIAL_DONE = 'Export officiel téléchargé';
 
 // Team sort state per team
 const teamSortState = {};
@@ -87,7 +91,7 @@ export function renderTeams(teams, container) {
           <button type="button" class="icon-btn" data-action="edit-team" data-team-id="${team.id}" title="Modifier" aria-label="Modifier l'équipe">􀈊</button>
           <button type="button" class="action-btn" data-action="export-team" data-team-id="${team.id}" data-team-name="${escapeHtml(team.name)}">Exporter CSV</button>
           <button type="button" class="action-btn primary" data-action="export-team-official" data-team-id="${team.id}" data-team-name="${escapeHtml(team.name)}">Export Officiel</button>
-          ${team.name === 'Organisation' ? '' : `<button type="button" class="icon-btn danger" data-action="confirm-delete-team" data-team-id="${team.id}" data-team-name="${escapeHtml(team.name)}" title="Supprimer" aria-label="Supprimer l'équipe">􀈑</button>`}
+          ${isOrganisationTeamName(team.name) ? '' : `<button type="button" class="icon-btn danger" data-action="confirm-delete-team" data-team-id="${team.id}" data-team-name="${escapeHtml(team.name)}" title="Supprimer" aria-label="Supprimer l'équipe">􀈑</button>`}
         </div>
         ${renderMembersTable(team.members, team.id)}
       </div>
@@ -371,29 +375,32 @@ export function openAddMemberModal() {
 }
 
 /**
- * Confirm delete team
+ * Confirm delete team (shared confirm modal: see astro-design `confirmAction`)
  * @param {number} teamId - Team ID
  * @param {string} teamName - Team name
- * @param {Function} onConfirm - Callback on confirm
+ * @param {Function} onConfirm - Called with the team ID on confirm; may reject
+ *   (the modal then stays open and the error is shown in a toast)
  */
 export function confirmDeleteTeam(teamId, teamName, onConfirm) {
-  $('confirm-message').textContent =
-    `Êtes-vous sûr de vouloir supprimer l'équipe "${teamName}" et tous ses membres ?`;
-  $('confirm-delete-btn').onclick = () => onConfirm(teamId);
-  openModal(EL_CONFIRM_MODAL);
+  confirmAction({
+    message: `Êtes-vous sûr de vouloir supprimer l'équipe "${teamName}" et tous ses membres ?`,
+    confirmLabel: CONFIRM_DELETE_LABEL,
+    onConfirm: () => onConfirm(teamId)
+  });
 }
 
 /**
  * Confirm delete member
  * @param {number} memberId - Member ID
  * @param {string} memberName - Member name
- * @param {Function} onConfirm - Callback on confirm
+ * @param {Function} onConfirm - Called with the member ID on confirm; may reject
  */
 export function confirmDeleteMember(memberId, memberName, onConfirm) {
-  $('confirm-message').textContent =
-    `Êtes-vous sûr de vouloir supprimer ${memberName} ?`;
-  $('confirm-delete-btn').onclick = () => onConfirm(memberId);
-  openModal(EL_CONFIRM_MODAL);
+  confirmAction({
+    message: `Êtes-vous sûr de vouloir supprimer ${memberName} ?`,
+    confirmLabel: CONFIRM_DELETE_LABEL,
+    onConfirm: () => onConfirm(memberId)
+  });
 }
 
 /**
@@ -439,11 +446,11 @@ export async function handleTeamSubmit(e, api, loadData) {
 export async function handleMemberSubmit(e, api, loadData) {
   e.preventDefault();
   const id = $('member-form-id').value;
-  const teamId = Number.parseInt($(EL_MEMBER_FORM_TEAM).value);
+  const teamId = numberOrNull($(EL_MEMBER_FORM_TEAM).value);
   const firstName = $('member-form-firstname').value;
   const lastName = $('member-form-lastname').value;
   const email = $('member-form-email').value;
-  const bacLevel = Number.parseInt($('member-form-bac').value);
+  const bacLevel = numberOrNull($('member-form-bac').value);
   const foodDiet = $(EL_MEMBER_FORM_FOOD).value;
   const isLeader = $('member-form-leader').checked;
 
@@ -469,69 +476,57 @@ export async function handleMemberSubmit(e, api, loadData) {
 }
 
 /**
- * Delete team
+ * Delete team. Runs inside the confirm modal: a failure rejects, so the modal
+ * stays open and `confirmAction` shows the error.
  * @param {number} teamId - Team ID
  * @param {Function} api - API function
  * @param {Function} loadData - Callback to reload data
  */
 export async function deleteTeam(teamId, api, loadData) {
-  try {
-    await api(`/admin/teams/${teamId}`, { method: 'DELETE' });
-    toastSuccess('Équipe supprimée');
-    closeModal(EL_CONFIRM_MODAL);
-    loadData();
-  } catch (error) {
-    toastError('Erreur: ' + error.message);
-  }
+  await api(`/admin/teams/${teamId}`, { method: 'DELETE' });
+  toastSuccess('Équipe supprimée');
+  loadData();
 }
 
 /**
- * Delete member
+ * Delete member. Runs inside the confirm modal (see `deleteTeam`).
  * @param {number} memberId - Member ID
  * @param {Function} api - API function
  * @param {Function} loadData - Callback to reload data
  * @param {Function} updateDeleteButton - Callback to update delete button
  */
 export async function deleteMember(memberId, api, loadData, updateDeleteButton) {
-  try {
-    await api(`/admin/members/${memberId}`, { method: 'DELETE' });
-    toastSuccess('Membre supprimé');
-    closeModal(EL_CONFIRM_MODAL);
-    selectedMembers.delete(memberId);
-    updateDeleteButton();
-    loadData();
-  } catch (error) {
-    toastError('Erreur: ' + error.message);
-  }
+  await api(`/admin/members/${memberId}`, { method: 'DELETE' });
+  toastSuccess('Membre supprimé');
+  selectedMembers.delete(memberId);
+  updateDeleteButton();
+  loadData();
 }
 
 /**
- * Delete selected members
+ * Delete selected members (after confirmation)
  * @param {Function} api - API function
  * @param {Function} loadData - Callback to reload data
  * @param {Function} updateDeleteButton - Callback to update delete button
  */
-export async function deleteSelectedMembers(api, loadData, updateDeleteButton) {
+export function deleteSelectedMembers(api, loadData, updateDeleteButton) {
   if (selectedMembers.size === 0) return;
 
-  $('confirm-message').textContent =
-    `Êtes-vous sûr de vouloir supprimer ${selectedMembers.size} membre(s) ?`;
-  $('confirm-delete-btn').onclick = async () => {
-    try {
+  const count = selectedMembers.size;
+  confirmAction({
+    message: `Êtes-vous sûr de vouloir supprimer ${count} membre(s) ?`,
+    confirmLabel: CONFIRM_DELETE_LABEL,
+    onConfirm: async () => {
       await api('/admin/members/delete-batch', {
         method: 'POST',
         body: JSON.stringify({ memberIds: [...selectedMembers] })
       });
-      toastSuccess(`${selectedMembers.size} membre(s) supprimé(s)`);
-      closeModal(EL_CONFIRM_MODAL);
+      toastSuccess(`${count} membre(s) supprimé(s)`);
       selectedMembers.clear();
       updateDeleteButton();
       loadData();
-    } catch (error) {
-      toastError('Erreur: ' + error.message);
     }
-  };
-  openModal(EL_CONFIRM_MODAL);
+  });
 }
 
 /**
@@ -753,26 +748,32 @@ export function filterTeams() {
 // ============================================================
 
 /**
+ * Download a CSV export through the admin API client.
+ * @param {Function} api - API function
+ * @param {string} endpoint - Export endpoint
+ * @param {string} filename - Download file name
+ * @param {string} [successMessage] - Toast shown once the file is saved
+ */
+async function exportCsv(api, endpoint, filename, successMessage) {
+  try {
+    await downloadFromApi(api, endpoint, filename);
+    if (successMessage) toastSuccess(successMessage);
+  } catch (error) {
+    toastError(MSG_EXPORT_ERROR + error.message);
+  }
+}
+
+/** Filesystem-safe version of a team name (same rule as the server). */
+const safeTeamName = (teamName) => teamName.replaceAll(/[^a-z0-9]/gi, '_');
+
+/**
  * Export team CSV
  * @param {number} teamId - Team ID
  * @param {string} teamName - Team name
  * @param {Function} api - API function
  */
-export async function exportTeam(teamId, teamName, api) {
-  try {
-    const response = await api(`/admin/export/${teamId}`);
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `participants_${teamName.replaceAll(/[^a-z0-9]/gi, '_')}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    toastError(MSG_EXPORT_ERROR + error.message);
-  }
+export function exportTeam(teamId, teamName, api) {
+  return exportCsv(api, `/admin/export/${teamId}`, `participants_${safeTeamName(teamName)}.csv`);
 }
 
 /**
@@ -781,63 +782,27 @@ export async function exportTeam(teamId, teamName, api) {
  * @param {string} teamName - Team name
  * @param {Function} api - API function
  */
-export async function exportTeamOfficial(teamId, teamName, api) {
-  try {
-    const response = await api(`/admin/export-official/${teamId}`);
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `participants_officiel_${teamName.replaceAll(/[^a-z0-9]/gi, '_')}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toastSuccess('Export officiel téléchargé');
-  } catch (error) {
-    toastError(MSG_EXPORT_ERROR + error.message);
-  }
+export function exportTeamOfficial(teamId, teamName, api) {
+  return exportCsv(
+    api,
+    `/admin/export-official/${teamId}`,
+    `participants_officiel_${safeTeamName(teamName)}.csv`,
+    EXPORT_OFFICIAL_DONE
+  );
 }
 
 /**
  * Export all participants CSV
  * @param {Function} api - API function
  */
-export async function handleExportAll(api) {
-  try {
-    const response = await api('/admin/export');
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'participants.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    toastError(MSG_EXPORT_ERROR + error.message);
-  }
+export function handleExportAll(api) {
+  return exportCsv(api, '/admin/export', 'participants.csv');
 }
 
 /**
  * Export official participants CSV
  * @param {Function} api - API function
  */
-export async function handleExportOfficial(api) {
-  try {
-    const response = await api('/admin/export-official');
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'participants_officiel.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toastSuccess('Export officiel téléchargé');
-  } catch (error) {
-    toastError(MSG_EXPORT_ERROR + error.message);
-  }
+export function handleExportOfficial(api) {
+  return exportCsv(api, '/admin/export-official', 'participants_officiel.csv', EXPORT_OFFICIAL_DONE);
 }

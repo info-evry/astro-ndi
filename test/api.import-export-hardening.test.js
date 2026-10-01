@@ -32,6 +32,8 @@ function parseExport(text) {
     } else if (!quoted && char === ';') {
       record.push(field);
       field = '';
+    } else if (!quoted && char === '\r') {
+      // CRLF line endings: the \n that follows ends the record
     } else if (!quoted && char === '\n') {
       record.push(field);
       records.push(record);
@@ -157,8 +159,8 @@ describe('CSV import - duplicates and invalid rows', () => {
 
     expect(data.stats).toMatchObject({ membersImported: 1, membersSkipped: 2, totalRows: 3 });
     expect(data.stats.errors).toHaveLength(2);
-    expect(data.stats.errors[0]).toContain('line 3');
-    expect(data.stats.errors[1]).toContain('line 4');
+    expect(data.stats.errors[0]).toContain('Ligne 3');
+    expect(data.stats.errors[1]).toContain('Ligne 4');
   });
 
   it('reports members without a name or email', async () => {
@@ -171,7 +173,9 @@ describe('CSV import - duplicates and invalid rows', () => {
 
     expect(data.stats.membersImported).toBe(0);
     expect(data.stats.membersSkipped).toBe(2);
-    expect(data.stats.errors.every(e => e.includes('missing name or email'))).toBe(true);
+    expect(data.stats.errors).toHaveLength(2);
+    expect(data.stats.errors[0]).toMatch(/^Ligne 2 : .*Email is required/);
+    expect(data.stats.errors[1]).toMatch(/^Ligne 3 : .*First name is required/);
   });
 
   it('caps the reported errors at 10', async () => {
@@ -181,11 +185,13 @@ describe('CSV import - duplicates and invalid rows', () => {
     const data = await (await importCsv(lines.join('\n'))).json();
     expect(data.stats.membersSkipped).toBe(15);
     expect(data.stats.errors).toHaveLength(10);
+    expect(data.stats.errorCount).toBe(15);
   });
 
-  it('answers 400 when every row is malformed', async () => {
+  it('answers 400 no_valid_rows when every row has the wrong number of cells', async () => {
     const response = await importCsv('firstName,lastName,email,teamName\nonly,two');
     expect(response.status).toBe(400);
+    expect((await response.json()).code).toBe('no_valid_rows');
   });
 
   it('answers 400 for a header-only file and for a missing / non-string csv', async () => {
@@ -226,10 +232,20 @@ describe('CSV import - formats', () => {
     expect(data.passwords[0].team).toBe(`${team}, the second`);
   });
 
-  it('only understands commas: a semicolon-delimited file is rejected with a clear message', async () => {
-    const response = await importCsv(`firstName;lastName;email;teamName\nSemi;${uniq('L')};semi@example.com;${uniq('Semi')}`);
+  it('accepts a semicolon-delimited file (the delimiter is detected)', async () => {
+    const team = uniq('Semi');
+    const response = await importCsv(`firstName;lastName;email;teamName\nSemi;${uniq('L')};semi@example.com;${team}`);
+    expect(response.status).toBe(200);
+    expect((await response.json()).stats).toMatchObject({ membersImported: 1, teamsCreated: 1 });
+    expect(await countRows('teams', 'WHERE name = ?', team)).toBe(1);
+  });
+
+  it('answers 400 missing_columns when a required column is absent', async () => {
+    const response = await importCsv(`firstName;email;teamName\nSemi;semi@example.com;${uniq('Semi')}`);
     expect(response.status).toBe(400);
-    expect((await response.json()).error).toContain('Missing required columns');
+    const data = await response.json();
+    expect(data.code).toBe('missing_columns');
+    expect(data.error).toContain('lastname');
     expect(await countRows('members')).toBe(0);
   });
 
@@ -249,7 +265,7 @@ describe('CSV import - size limit and auth', () => {
     const response = await importCsv(`firstName,lastName,email,teamName\nBig,${filler},big@example.com,${uniq('Big')}`);
 
     expect(response.status).toBe(413);
-    expect((await response.json()).error).toContain('too large');
+    expect((await response.json()).code).toBe('payload_too_large');
     expect(await countRows('members')).toBe(0);
   });
 
@@ -301,13 +317,14 @@ describe('CSV export - injection protection and format', () => {
     const cells = records.flat();
 
     expect(cells).toContain("'=SUM(1+1)");
-    expect(cells).toContain("'+49 123");
+    // a phone number is not a formula: it is written as is
+    expect(cells).toContain('+49 123');
     expect(cells).toContain("'-Cmd|team");
     expect(cells).toContain("'\tTabbed");
     expect(cells).toContain("'@cmd");
-    // no cell may still start with a formula trigger
+    // no cell may still start with a formula trigger (apart from the phone number)
     for (const cell of cells) {
-      expect(cell).not.toMatch(/^[=+\-@\t\r]/);
+      if (/^[=+\-@\t\r]/.test(cell)) expect(cell).toMatch(/^\+?[\d ().-]+$/);
     }
   });
 
@@ -318,7 +335,7 @@ describe('CSV export - injection protection and format', () => {
       const cells = parseExport(await (await adminFetch(path)).text()).flat();
       expect(cells).toContain("'=SUM(1+1)");
       for (const cell of cells) {
-        expect(cell).not.toMatch(/^[=+\-@\t\r]/);
+        if (/^[=+\-@\t\r]/.test(cell)) expect(cell).toMatch(/^\+?[\d ().-]+$/);
       }
     }
   });

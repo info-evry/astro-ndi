@@ -4,30 +4,28 @@
  */
 /* eslint-env browser */
 
-let apiBase = '';
+import { createPublicClient } from '@info-evry/astro-design/scripts/public-client';
+
+/** @type {import('@info-evry/astro-design/scripts/public-client').PublicClient} */
+let client = createPublicClient({ baseUrl: '' });
 
 /**
  * Initialize API with base URL
  * @param {string} baseUrl - Base URL from Astro
  */
 export function initApi(baseUrl) {
-  apiBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  client = createPublicClient({ baseUrl });
 }
 
 /**
- * Make API request
+ * Make an API request. Failures are `ApiError`s (never a bare SyntaxError):
+ * `message` is the server's (French) error text, `code` its error code.
  * @param {string} endpoint - API endpoint
- * @param {object} options - Fetch options
+ * @param {{ method?: string, body?: unknown }} [options]
  * @returns {Promise<object>}
  */
-async function api(endpoint, options = {}) {
-  const response = await fetch(`${apiBase}/api${endpoint}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options
-  });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error || 'Request failed');
-  return data;
+function api(endpoint, { method = 'GET', body } = {}) {
+  return method === 'GET' ? client.get(endpoint) : client.post(endpoint, body);
 }
 
 /**
@@ -76,10 +74,7 @@ export async function loadPricing() {
  * @returns {Promise<object>}
  */
 export async function submitRegistration(data) {
-  return api('/register', {
-    method: 'POST',
-    body: JSON.stringify(data)
-  });
+  return api('/register', { method: 'POST', body: data });
 }
 
 /**
@@ -89,8 +84,5 @@ export async function submitRegistration(data) {
  * @returns {Promise<object>}
  */
 export async function viewTeamMembers(teamId, password) {
-  return api(`/teams/${teamId}/view`, {
-    method: 'POST',
-    body: JSON.stringify({ password })
-  });
+  return api(`/teams/${teamId}/view`, { method: 'POST', body: { password } });
 }

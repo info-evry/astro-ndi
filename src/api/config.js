@@ -2,7 +2,8 @@
  * Configuration API - serves pizza options and other config
  */
 
-import { json, error } from 'astro-core/router';
+import { json } from 'astro-core/router';
+import { serverError } from 'astro-core/http';
 import * as settingsDb from '../database/db.settings.js';
 
 // Default configuration embedded in worker
@@ -84,10 +85,10 @@ async function isD1Available(env) {
 async function loadD1Settings(config, env) {
   try {
     const d1Pizzas = await settingsDb.getSettingJson(env.DB, 'pizzas');
-    if (d1Pizzas) config.pizzas = d1Pizzas;
+    if (Array.isArray(d1Pizzas)) config.pizzas = d1Pizzas;
 
     const d1BacLevels = await settingsDb.getSettingJson(env.DB, 'bac_levels');
-    if (d1BacLevels) config.bacLevels = d1BacLevels;
+    if (Array.isArray(d1BacLevels)) config.bacLevels = d1BacLevels;
 
     const capacity = await settingsDb.getCapacitySettings(env.DB, env);
     config.maxTeamSize = capacity.maxTeamSize;
@@ -128,24 +129,44 @@ function applyDefaultCapacity(config, env) {
 }
 
 /**
- * GET /api/config - Get public configuration
+ * Build the public configuration.
  * Priority: D1 settings > KV namespace > Default values
+ * @param {object} env
+ * @returns {Promise<object>}
+ */
+export async function loadConfig(env) {
+  const config = { ...DEFAULT_CONFIG };
+
+  const d1Available = await isD1Available(env);
+  if (d1Available) {
+    await loadD1Settings(config, env);
+  } else if (env.CONFIG) {
+    await loadKVSettings(config, env);
+  }
+
+  applyDefaultCapacity(config, env);
+  return config;
+}
+
+/**
+ * Ids of the configured pizzas: the values a member's `foodDiet` may take
+ * (besides the "no pizza" values, see `isNoPizza`).
+ * @param {object} env
+ * @returns {Promise<string[]>}
+ */
+export async function getConfiguredPizzaIds(env) {
+  const { pizzas } = await loadConfig(env);
+  if (!Array.isArray(pizzas)) return [];
+  return pizzas.flatMap(pizza => (typeof pizza?.id === 'string' ? [pizza.id] : []));
+}
+
+/**
+ * GET /api/config - Get public configuration
  */
 export async function getConfig(request, env) {
   try {
-    const config = { ...DEFAULT_CONFIG };
-
-    const d1Available = await isD1Available(env);
-    if (d1Available) {
-      await loadD1Settings(config, env);
-    } else if (env.CONFIG) {
-      await loadKVSettings(config, env);
-    }
-
-    applyDefaultCapacity(config, env);
-    return json({ config });
+    return json({ config: await loadConfig(env) });
   } catch (error_) {
-    console.error('Error fetching config:', error_);
-    return error('Failed to fetch configuration', 500);
+    return serverError('Error fetching config:', error_);
   }
 }

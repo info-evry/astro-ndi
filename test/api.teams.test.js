@@ -288,7 +288,7 @@ describe('POST /api/teams/:id/view - Public Team View', () => {
 
     expect(viewResponse.status).toBe(400);
     const viewData = await viewResponse.json();
-    expect(viewData.error).toContain('required');
+    expect(viewData.code).toBe('password_required');
   });
 
   it('should return 404 for non-existent team', async () => {
@@ -357,6 +357,6 @@ describe('Team Capacity and Full Teams', () => {
 
     expect(joinResponse.status).toBe(400);
     const joinData = await joinResponse.json();
-    expect(joinData.error).toContain('full');
+    expect(joinData.code).toBe('team_full');
   });
 });

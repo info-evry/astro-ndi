@@ -2,30 +2,34 @@
  * Public team view API - allows users to view team members with password
  */
 
-import { json, error } from 'astro-core/router';
+import { json } from 'astro-core/router';
+import { parsePositiveId } from 'astro-core/ids';
+import { badRequest, forbidden, invalidId, notFound, serverError } from 'astro-core/http';
 import * as db from '../lib/db.js';
+import { normalizeTeamPassword } from '../lib/validation.js';
 import { hashPassword, verifyPassword, needsHashUpgrade } from '../shared/crypto.js';
-import { readJsonObject, INVALID_JSON_MESSAGE } from '../shared/http.js';
+import { readBody } from '../shared/http.js';
 
 /**
  * POST /api/teams/:id/view - View team members with password
  */
 export async function viewTeamMembers(request, env, ctx, params) {
   try {
-    const teamId = Number.parseInt(params.id, 10);
-    const body = await readJsonObject(request);
-    if (!body) {
-      return error(INVALID_JSON_MESSAGE, 400);
-    }
-    const { password } = body;
+    const teamId = parsePositiveId(params.id);
+    if (teamId === null) return invalidId();
 
+    const { data, response } = await readBody(request);
+    if (response) return response;
+
+    // Same trim / length policy as when the password was set
+    const password = normalizeTeamPassword(data.password);
     if (!password) {
-      return error('Password is required', 400);
+      return badRequest('Mot de passe requis', 'password_required');
     }
 
     const team = await db.getTeamById(env.DB, teamId);
     if (!team) {
-      return error('Team not found', 404);
+      return notFound('Équipe introuvable');
     }
 
     // Verify password using the new verifyPassword function
@@ -33,7 +37,7 @@ export async function viewTeamMembers(request, env, ctx, params) {
     const isValid = await verifyPassword(password, team.password_hash);
 
     if (!isValid) {
-      return error('Mot de passe incorrect', 403);
+      return forbidden('Mot de passe incorrect');
     }
 
     // Upgrade legacy hash to new format on successful login
@@ -66,7 +70,6 @@ export async function viewTeamMembers(request, env, ctx, params) {
       }
     });
   } catch (error_) {
-    console.error('Error viewing team:', error_);
-    return error('Failed to load team', 500);
+    return serverError('Error viewing team:', error_);
   }
 }

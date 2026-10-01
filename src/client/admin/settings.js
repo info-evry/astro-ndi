@@ -3,8 +3,14 @@
  */
 /* eslint-env browser */
 
-import { $, escapeHtml } from '@info-evry/astro-design/scripts/dom';
+import { $, escapeHtml, numberOrNull } from '@info-evry/astro-design/scripts/dom';
 import { toastSuccess, toastError } from '@info-evry/astro-design/scripts/toast';
+import {
+  DEFAULT_LATE_CUTOFF_TIME,
+  DEFAULT_PRICES,
+  DEFAULT_SCHOOL_NAME,
+  DEFAULT_TIER1_CUTOFF_DAYS
+} from '../../shared/constants.js';
 import { settingsState, pricingSettings } from './state.js';
 
 /**
@@ -18,22 +24,22 @@ export async function loadSettings(api) {
     settingsState.maxTeamSize = Number.parseInt(data.settings.max_team_size, 10) || 15;
     settingsState.maxTotalParticipants = Number.parseInt(data.settings.max_total_participants, 10) || 200;
     settingsState.minTeamSize = Number.parseInt(data.settings.min_team_size, 10) || 1;
-    settingsState.schoolName = data.settings.school_name || "Université d'Evry";
+    settingsState.schoolName = data.settings.school_name || DEFAULT_SCHOOL_NAME;
     settingsState.pizzas = data.settings.pizzas || [];
     settingsState.bacLevels = data.settings.bac_levels || [];
     settingsState.isDirty = false;
 
     // On-site pricing settings
-    pricingSettings.priceAssoMember = Number.parseInt(data.settings.price_asso_member, 10) || 500;
-    pricingSettings.priceNonMember = Number.parseInt(data.settings.price_non_member, 10) || 800;
-    pricingSettings.priceLate = Number.parseInt(data.settings.price_late, 10) || 1000;
-    pricingSettings.lateCutoffTime = data.settings.late_cutoff_time || '19:00';
+    pricingSettings.priceAssoMember = Number.parseInt(data.settings.price_asso_member, 10) || DEFAULT_PRICES.assoMember;
+    pricingSettings.priceNonMember = Number.parseInt(data.settings.price_non_member, 10) || DEFAULT_PRICES.nonMember;
+    pricingSettings.priceLate = Number.parseInt(data.settings.price_late, 10) || DEFAULT_PRICES.late;
+    pricingSettings.lateCutoffTime = data.settings.late_cutoff_time || DEFAULT_LATE_CUTOFF_TIME;
 
     // Online payment settings
     pricingSettings.paymentEnabled = data.settings.payment_enabled === 'true' || data.settings.payment_enabled === true;
-    pricingSettings.priceTier1 = Number.parseInt(data.settings.price_tier1, 10) || 500;
-    pricingSettings.priceTier2 = Number.parseInt(data.settings.price_tier2, 10) || 700;
-    pricingSettings.tier1CutoffDays = Number.parseInt(data.settings.tier1_cutoff_days, 10) || 7;
+    pricingSettings.priceTier1 = Number.parseInt(data.settings.price_tier1, 10) || DEFAULT_PRICES.tier1;
+    pricingSettings.priceTier2 = Number.parseInt(data.settings.price_tier2, 10) || DEFAULT_PRICES.tier2;
+    pricingSettings.tier1CutoffDays = Number.parseInt(data.settings.tier1_cutoff_days, 10) || DEFAULT_TIER1_CUTOFF_DAYS;
     pricingSettings.registrationDeadline = data.settings.registration_deadline || '';
 
     // GDPR settings
@@ -228,43 +234,56 @@ export function deletePizza(index) {
 }
 
 /**
+ * Convert a price typed in euros to cents; an empty input means the default.
+ * Returns NaN for text that is not a number (reported by the caller).
+ * @param {string|undefined} value - Input value, in euros
+ * @param {number} defaultCents - Price used when the input is empty
+ * @returns {number}
+ */
+function euroInputToCents(value, defaultCents) {
+  if (value === undefined || value.trim() === '') return defaultCents;
+  const euros = numberOrNull(value);
+  return euros === null ? Number.NaN : Math.round(euros * 100);
+}
+
+/**
  * Save settings to API
  * @param {Function} api - API function
  */
 export async function saveSettings(api) {
   try {
-    const maxTeamSize = Number.parseInt($('setting-max-team')?.value, 10);
-    const maxTotalParticipants = Number.parseInt($('setting-max-participants')?.value, 10);
-    const minTeamSize = Number.parseInt($('setting-min-team')?.value, 10);
-    const schoolName = $('setting-school-name')?.value?.trim() || "Université d'Evry";
+    const maxTeamSize = numberOrNull($('setting-max-team')?.value);
+    const maxTotalParticipants = numberOrNull($('setting-max-participants')?.value);
+    const minTeamSize = numberOrNull($('setting-min-team')?.value);
+    const schoolName = $('setting-school-name')?.value?.trim() || DEFAULT_SCHOOL_NAME;
 
     // On-site pricing (convert euros to cents)
-    const priceAssoMember = Math.round(Number.parseFloat($('setting-price-asso-member')?.value || '5') * 100);
-    const priceNonMember = Math.round(Number.parseFloat($('setting-price-non-member')?.value || '8') * 100);
-    const priceLate = Math.round(Number.parseFloat($('setting-price-late')?.value || '10') * 100);
-    const lateCutoffTime = $('setting-late-cutoff')?.value || '19:00';
+    const priceAssoMember = euroInputToCents($('setting-price-asso-member')?.value, DEFAULT_PRICES.assoMember);
+    const priceNonMember = euroInputToCents($('setting-price-non-member')?.value, DEFAULT_PRICES.nonMember);
+    const priceLate = euroInputToCents($('setting-price-late')?.value, DEFAULT_PRICES.late);
+    const lateCutoffTime = $('setting-late-cutoff')?.value || DEFAULT_LATE_CUTOFF_TIME;
 
     // Online payment settings
     const paymentEnabled = $('setting-payment-enabled')?.checked || false;
-    const priceTier1 = Math.round(Number.parseFloat($('setting-price-tier1')?.value || '5') * 100);
-    const priceTier2 = Math.round(Number.parseFloat($('setting-price-tier2')?.value || '7') * 100);
-    const tier1CutoffDays = Number.parseInt($('setting-tier1-cutoff-days')?.value, 10) || 7;
+    const priceTier1 = euroInputToCents($('setting-price-tier1')?.value, DEFAULT_PRICES.tier1);
+    const priceTier2 = euroInputToCents($('setting-price-tier2')?.value, DEFAULT_PRICES.tier2);
+    const tier1CutoffDays = numberOrNull($('setting-tier1-cutoff-days')?.value) || DEFAULT_TIER1_CUTOFF_DAYS;
     const registrationDeadlineValue = $('setting-registration-deadline')?.value || '';
     const registrationDeadline = registrationDeadlineValue ? new Date(registrationDeadlineValue).toISOString() : '';
 
     // GDPR settings
-    const gdprRetentionYears = Number.parseInt($('setting-gdpr-retention')?.value, 10) || 3;
+    const gdprRetentionYears = numberOrNull($('setting-gdpr-retention')?.value) || 3;
 
     // Validation
-    if (Number.isNaN(maxTeamSize) || maxTeamSize < 1 || maxTeamSize > 100) {
+    if (!Number.isInteger(maxTeamSize) || maxTeamSize < 1 || maxTeamSize > 100) {
       toastError('Taille max d\'équipe invalide (1-100)');
       return;
     }
-    if (Number.isNaN(maxTotalParticipants) || maxTotalParticipants < 1 || maxTotalParticipants > 10_000) {
+    if (!Number.isInteger(maxTotalParticipants) || maxTotalParticipants < 1 || maxTotalParticipants > 10_000) {
       toastError('Participants max invalide (1-10000)');
       return;
     }
-    if (Number.isNaN(minTeamSize) || minTeamSize < 1 || minTeamSize > 50) {
+    if (!Number.isInteger(minTeamSize) || minTeamSize < 1 || minTeamSize > 50) {
       toastError('Taille min d\'équipe invalide (1-50)');
       return;
     }
@@ -288,7 +307,7 @@ export async function saveSettings(api) {
       toastError('Prix dernière semaine invalide');
       return;
     }
-    if (Number.isNaN(tier1CutoffDays) || tier1CutoffDays < 1 || tier1CutoffDays > 30) {
+    if (!Number.isInteger(tier1CutoffDays) || tier1CutoffDays < 1 || tier1CutoffDays > 30) {
       toastError('Jours avant deadline invalide (1-30)');
       return;
     }

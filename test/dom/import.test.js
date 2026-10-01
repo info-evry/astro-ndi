@@ -38,12 +38,31 @@ afterEach(() => {
 const byId = (id) => document.getElementById(id);
 const click = (el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
 
-describe('parseCSVLine', () => {
-  it('splits on commas and keeps quoted commas', () => {
-    expect(importMod.parseCSVLine('a,b,c')).toEqual(['a', 'b', 'c']);
-    expect(importMod.parseCSVLine('a,"b,c",d')).toEqual(['a', 'b,c', 'd']);
-    expect(importMod.parseCSVLine('')).toEqual(['']);
-    expect(importMod.parseCSVLine('a,,c')).toEqual(['a', '', 'c']);
+describe('parseImportRows (same parser and header aliases as the server)', () => {
+  it('reads the English headers with commas and quoted commas', () => {
+    expect(importMod.parseImportRows('firstName,lastName,email,teamName\nAnn,"One, the first",ann@example.com,"Alpha, team"')).toEqual([
+      { team: 'Alpha, team', firstName: 'Ann', lastName: 'One, the first', email: 'ann@example.com' }
+    ]);
+  });
+
+  it('reads the French headers of an export, with ";", a BOM and CRLF line endings', () => {
+    const csv = "\uFEFFID;Prénom;Nom;Email;Équipe;Niveau BAC;Chef d'équipe;Pizza;Date d'inscription\r\n"
+      + "7;Ada;Lovelace;ada@example.com;Analytical;BAC+5;Oui;reine;2026-10-01\r\n";
+    expect(importMod.parseImportRows(csv)).toEqual([
+      { team: 'Analytical', firstName: 'Ada', lastName: 'Lovelace', email: 'ada@example.com' }
+    ]);
+  });
+
+  it('strips the spreadsheet-injection guard of exported cells', () => {
+    const [row] = importMod.parseImportRows("Prénom;Nom;Email;Équipe\n'=cmd;+49 123;x@y.co;'-team");
+    expect(row).toMatchObject({ firstName: '=cmd', lastName: '+49 123', team: '-team' });
+  });
+
+  it('refuses what the server would refuse: no data row, a missing required column, too many rows', () => {
+    expect(() => importMod.parseImportRows('firstName,lastName,email,teamName')).toThrow('au moins une ligne de données');
+    expect(() => importMod.parseImportRows('firstName,email\nA,b@c.co')).toThrow('Colonnes obligatoires manquantes : lastname, teamname');
+    const many = ['firstName,lastName,email,teamName', ...Array.from({ length: 2001 }, () => 'A,B,c@d.co,T')].join('\n');
+    expect(() => importMod.parseImportRows(many)).toThrow('maximum 2000');
   });
 });
 
@@ -56,7 +75,7 @@ describe('parseAndPreview', () => {
     expect(byId('import-preview-content').querySelectorAll('tbody tr')).toHaveLength(3);
     expect(byId('import-btn').disabled).toBe(false);
     expect(state.parsedRows).toHaveLength(3);
-    expect(state.parsedRows[0]).toMatchObject({ firstname: 'Ann', teamname: 'Alpha' });
+    expect(state.parsedRows[0]).toMatchObject({ firstName: 'Ann', team: 'Alpha' });
   });
 
   it('previews 5 rows and summarizes the rest', () => {
@@ -98,7 +117,7 @@ describe('parseAndPreview', () => {
   it('handles Windows line endings and a BOM-prefixed header', () => {
     importMod.parseAndPreview('\uFEFFfirstName,lastName,email,teamName\r\nAnn,One,a@b.co,Alpha\r\n');
     expect(state.parsedRows).toHaveLength(1);
-    expect(state.parsedRows[0].teamname).toBe('Alpha');
+    expect(state.parsedRows[0].team).toBe('Alpha');
   });
 });
 

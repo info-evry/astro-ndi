@@ -1,12 +1,12 @@
 /**
- * verifyAdmin edge cases: KV override, fail-closed behaviour and malformed
+ * verifyAdminToken (astro-core/auth, used by every admin handler) edge cases: KV override, fail-closed behaviour and malformed
  * Authorization headers. Pure-function cases call verifyAdmin directly with
  * a fake env; the HTTP cases go through the real worker.
  */
 
 import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
 import { env, SELF } from 'cloudflare:test';
-import { verifyAdmin } from '../src/shared/auth.js';
+import { verifyAdminToken as verifyAdmin } from 'astro-core/auth';
 import { setupSchema } from './helpers.js';
 
 const BASE = 'http://localhost';
@@ -153,7 +153,7 @@ describe('verifyAdmin through the worker', () => {
     for (const header of ['Bearer ' + 'a'.repeat(8000), 'Bearer éèê', 'Bearer ', 'Bearer', 'Bearer null', 'Bearer undefined']) {
       const response = await SELF.fetch(`${BASE}/api/admin/event-year`, { headers: { Authorization: header } });
       expect(response.status).toBe(401);
-      expect(await response.json()).toEqual({ error: 'Unauthorized' });
+      expect(await response.json()).toEqual({ error: 'Non autorisé', code: 'unauthorized' });
     }
   });
 });

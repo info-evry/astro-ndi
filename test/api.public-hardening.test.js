@@ -66,14 +66,15 @@ describe('GET /api/teams/:id - public team info', () => {
   it('returns 404 for an unknown id', async () => {
     const response = await SELF.fetch(`${BASE}/api/teams/987654321`);
     expect(response.status).toBe(404);
-    expect(await response.json()).toEqual({ error: 'Team not found' });
+    expect(await response.json()).toEqual({ error: 'Équipe introuvable', code: 'not_found' });
   });
 
   it.each(['abc', '1.5', '-1', '0', '99999999999999999999', '%F0%9F%A5'])(
-    'returns 404 (not 500) for the non-id value %s',
+    'returns 400 invalid_id (not 500) for the non-id value %s',
     async (id) => {
       const response = await SELF.fetch(`${BASE}/api/teams/${id}`);
-      expect(response.status).toBe(404);
+      expect(response.status).toBe(400);
+      expect((await response.json()).code).toBe('invalid_id');
     }
   );
 
@@ -117,7 +118,6 @@ describe('Unknown paths answer 404, never 500', () => {
     '/api/nope',
     '/api/',
     '/api/teams/1/nope',
-    '/api/admin/nope',
     '/_astro/missing-asset.js',
     '/nuit-de-linfo/nonexistent',
     '/nuit-de-linfo/api/nope',
@@ -132,6 +132,16 @@ describe('Unknown paths answer 404, never 500', () => {
   ])('GET %s', async (path) => {
     const response = await SELF.fetch(`${BASE}${path}`);
     expect(response.status).toBe(404);
+  });
+
+  it('answers 401 under /api/admin without a token (admin guard) and 404 with one', async () => {
+    const anonymous = await SELF.fetch(`${BASE}/api/admin/nope`);
+    expect(anonymous.status).toBe(401);
+    expect(await anonymous.json()).toEqual({ error: 'Non autorisé', code: 'unauthorized' });
+
+    const admin = await SELF.fetch(`${BASE}/api/admin/nope`, { headers: { Authorization: 'Bearer test-admin-token' } });
+    expect(admin.status).toBe(404);
+    expect((await admin.json()).code).toBe('not_found');
   });
 
   it('returns a JSON error body for unknown API routes', async () => {
@@ -202,7 +212,7 @@ describe('Malformed JSON bodies on public endpoints answer 400', () => {
   ])('%s rejects a syntactically invalid body', async (_label, path) => {
     const response = await postJson(path(), '{not valid json');
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: 'Invalid JSON body' });
+    expect(await response.json()).toEqual({ error: 'Corps de requête invalide', code: 'invalid_body' });
   });
 
   it.each([

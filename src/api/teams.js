@@ -2,9 +2,12 @@
  * Teams API handlers
  */
 
-import { json, error } from 'astro-core/router';
+import { json } from 'astro-core/router';
+import { parsePositiveId } from 'astro-core/ids';
+import { invalidId, notFound, serverError } from 'astro-core/http';
 import * as db from '../lib/db.js';
 import * as settingsDb from '../database/db.settings.js';
+import { isOrganisationTeamName } from '../shared/constants.js';
 
 /**
  * GET /api/teams - List all teams with member counts
@@ -17,7 +20,7 @@ export async function listTeams(request, env) {
 
     // Add available slots info
     const teamsWithSlots = teams.map(team => {
-      const isOrganisation = team.name === 'Organisation';
+      const isOrganisation = isOrganisationTeamName(team.name);
       return {
         ...team,
         available_slots: isOrganisation ? null : maxTeamSize - team.member_count,
@@ -28,8 +31,7 @@ export async function listTeams(request, env) {
 
     return json({ teams: teamsWithSlots });
   } catch (error_) {
-    console.error('Error listing teams:', error_);
-    return error('Failed to fetch teams', 500);
+    return serverError('Error listing teams:', error_);
   }
 }
 
@@ -38,9 +40,12 @@ export async function listTeams(request, env) {
  */
 export async function getTeam(request, env, ctx, params) {
   try {
-    const team = await db.getTeamById(env.DB, params.id);
+    const teamId = parsePositiveId(params.id);
+    if (teamId === null) return invalidId();
+
+    const team = await db.getTeamById(env.DB, teamId);
     if (!team) {
-      return error('Team not found', 404);
+      return notFound('Équipe introuvable');
     }
     // Public endpoint: never expose member PII or the password hash.
     // Member details are only available through POST /api/teams/:id/view
@@ -53,12 +58,11 @@ export async function getTeam(request, env, ctx, params) {
         room: team.room ?? null,
         created_at: team.created_at,
         member_count: team.members?.length || 0,
-        is_organisation: team.name === 'Organisation'
+        is_organisation: isOrganisationTeamName(team.name)
       }
     });
   } catch (error_) {
-    console.error('Error fetching team:', error_);
-    return error('Failed to fetch team', 500);
+    return serverError('Error fetching team:', error_);
   }
 }
 
@@ -83,7 +87,6 @@ export async function getStats(request, env) {
       }
     });
   } catch (error_) {
-    console.error('Error fetching stats:', error_);
-    return error('Failed to fetch statistics', 500);
+    return serverError('Error fetching stats:', error_);
   }
 }

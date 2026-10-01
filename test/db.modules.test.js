@@ -1,12 +1,11 @@
 /**
- * Direct tests of the database modules under src/database
- * (teams, members, settings, payments) against the D1 binding.
+ * Direct tests of the database layer (src/lib/db.js for teams and members,
+ * src/database for settings and payments) against the D1 binding.
  */
 
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { env } from 'cloudflare:test';
-import * as teamsDb from '../src/database/db.teams.js';
-import * as membersDb from '../src/database/db.members.js';
+import * as db from '../src/lib/db.js';
 import * as settingsDb from '../src/database/db.settings.js';
 import * as paymentsDb from '../src/database/db.payments.js';
 import { setupSchema, clearAllTables, uniq } from './helpers.js';
@@ -20,7 +19,7 @@ const person = (overrides = {}) => {
 };
 
 async function newTeam(name = uniq('Team'), description = 'desc', hash = 'salt:hash') {
-  return teamsDb.createTeam(env.DB, name, description, hash);
+  return db.createTeam(env.DB, name, description, hash);
 }
 
 const throwingDb = {
@@ -29,53 +28,53 @@ const throwingDb = {
   }
 };
 
-describe('db.teams', () => {
+describe('db (teams)', () => {
   it('createTeam returns the new id and stores the password hash', async () => {
-    const team = await teamsDb.createTeam(env.DB, 'Alpha', 'First', 'salt:abc');
+    const team = await db.createTeam(env.DB, 'Alpha', 'First', 'salt:abc');
     expect(team).toEqual({ id: expect.any(Number), name: 'Alpha', description: 'First' });
 
-    const row = await teamsDb.getTeamByName(env.DB, 'Alpha');
+    const row = await db.getTeamByName(env.DB, 'Alpha');
     expect(row).toMatchObject({ id: team.id, description: 'First', password_hash: 'salt:abc' });
   });
 
   it('createTeam defaults description and hash to empty strings', async () => {
-    const team = await teamsDb.createTeam(env.DB, 'Bare');
-    const row = await teamsDb.getTeamById(env.DB, team.id);
+    const team = await db.createTeam(env.DB, 'Bare');
+    const row = await db.getTeamById(env.DB, team.id);
     expect(row).toMatchObject({ description: '', password_hash: '' });
   });
 
   it('createTeam enforces unique team names', async () => {
-    await teamsDb.createTeam(env.DB, 'Unique');
-    await expect(teamsDb.createTeam(env.DB, 'Unique')).rejects.toThrow(/UNIQUE/i);
+    await db.createTeam(env.DB, 'Unique');
+    await expect(db.createTeam(env.DB, 'Unique')).rejects.toThrow(/UNIQUE/i);
   });
 
   it('getTeamById returns the team with its members, and null for an unknown id', async () => {
     const team = await newTeam();
-    const first = await membersDb.addMember(env.DB, team.id, person());
-    const second = await membersDb.addMember(env.DB, team.id, person());
+    const first = await db.addMemberAdmin(env.DB, team.id, person());
+    const second = await db.addMemberAdmin(env.DB, team.id, person());
 
-    const found = await teamsDb.getTeamById(env.DB, team.id);
+    const found = await db.getTeamById(env.DB, team.id);
     expect(found.name).toBe(team.name);
     expect(found.members.map(m => m.id).sort()).toEqual([first.id, second.id].sort());
 
-    expect(await teamsDb.getTeamById(env.DB, 987_654)).toBeNull();
-    expect(await teamsDb.getTeamById(env.DB, 'not-a-number')).toBeNull();
+    expect(await db.getTeamById(env.DB, 987_654)).toBeNull();
+    expect(await db.getTeamById(env.DB, 'not-a-number')).toBeNull();
   });
 
   it('getTeamByName is exact and returns null when missing', async () => {
-    await teamsDb.createTeam(env.DB, 'Exact Name');
-    expect(await teamsDb.getTeamByName(env.DB, 'Exact Name')).not.toBeNull();
-    expect(await teamsDb.getTeamByName(env.DB, 'exact name')).toBeNull();
-    expect(await teamsDb.getTeamByName(env.DB, 'Missing')).toBeNull();
+    await db.createTeam(env.DB, 'Exact Name');
+    expect(await db.getTeamByName(env.DB, 'Exact Name')).not.toBeNull();
+    expect(await db.getTeamByName(env.DB, 'exact name')).toBeNull();
+    expect(await db.getTeamByName(env.DB, 'Missing')).toBeNull();
   });
 
   it('getTeams lists every team with its member_count, including empty ones', async () => {
     const empty = await newTeam();
     const busy = await newTeam();
-    await membersDb.addMember(env.DB, busy.id, person());
-    await membersDb.addMember(env.DB, busy.id, person());
+    await db.addMemberAdmin(env.DB, busy.id, person());
+    await db.addMemberAdmin(env.DB, busy.id, person());
 
-    const teams = await teamsDb.getTeams(env.DB);
+    const teams = await db.getTeams(env.DB);
     expect(teams.find(t => t.id === empty.id).member_count).toBe(0);
     expect(teams.find(t => t.id === busy.id).member_count).toBe(2);
     expect(teams[0]).not.toHaveProperty('password_hash');
@@ -85,46 +84,46 @@ describe('db.teams', () => {
     it('updates only the provided fields', async () => {
       const team = await newTeam('Before', 'old description', 'salt:old');
 
-      expect(await teamsDb.updateTeam(env.DB, team.id, { name: 'After' })).toBe(true);
-      expect(await teamsDb.getTeamById(env.DB, team.id)).toMatchObject({ name: 'After', description: 'old description', password_hash: 'salt:old' });
+      expect(await db.updateTeam(env.DB, team.id, { name: 'After' })).toBe(true);
+      expect(await db.getTeamById(env.DB, team.id)).toMatchObject({ name: 'After', description: 'old description', password_hash: 'salt:old' });
 
-      await teamsDb.updateTeam(env.DB, team.id, { description: 'new description' });
-      expect(await teamsDb.getTeamById(env.DB, team.id)).toMatchObject({ name: 'After', description: 'new description', password_hash: 'salt:old' });
+      await db.updateTeam(env.DB, team.id, { description: 'new description' });
+      expect(await db.getTeamById(env.DB, team.id)).toMatchObject({ name: 'After', description: 'new description', password_hash: 'salt:old' });
 
-      await teamsDb.updateTeam(env.DB, team.id, { passwordHash: 'salt:new' });
-      expect(await teamsDb.getTeamById(env.DB, team.id)).toMatchObject({ name: 'After', description: 'new description', password_hash: 'salt:new' });
+      await db.updateTeam(env.DB, team.id, { passwordHash: 'salt:new' });
+      expect(await db.getTeamById(env.DB, team.id)).toMatchObject({ name: 'After', description: 'new description', password_hash: 'salt:new' });
     });
 
     it('updates several fields at once', async () => {
       const team = await newTeam();
-      await teamsDb.updateTeam(env.DB, team.id, { name: 'Both', description: 'changed', passwordHash: 'salt:x' });
-      expect(await teamsDb.getTeamById(env.DB, team.id)).toMatchObject({ name: 'Both', description: 'changed', password_hash: 'salt:x' });
+      await db.updateTeam(env.DB, team.id, { name: 'Both', description: 'changed', passwordHash: 'salt:x' });
+      expect(await db.getTeamById(env.DB, team.id)).toMatchObject({ name: 'Both', description: 'changed', password_hash: 'salt:x' });
     });
 
     it('returns false and changes nothing when there is nothing to update', async () => {
       const team = await newTeam('Stable', 'same', 'salt:same');
 
-      expect(await teamsDb.updateTeam(env.DB, team.id, {})).toBe(false);
-      expect(await teamsDb.updateTeam(env.DB, team.id, { name: undefined, description: undefined })).toBe(false);
-      expect(await teamsDb.getTeamById(env.DB, team.id)).toMatchObject({ name: 'Stable', description: 'same', password_hash: 'salt:same' });
+      expect(await db.updateTeam(env.DB, team.id, {})).toBe(false);
+      expect(await db.updateTeam(env.DB, team.id, { name: undefined, description: undefined })).toBe(false);
+      expect(await db.getTeamById(env.DB, team.id)).toMatchObject({ name: 'Stable', description: 'same', password_hash: 'salt:same' });
     });
 
     it('can clear the description with an empty string', async () => {
       const team = await newTeam('Clearable', 'to be cleared');
-      await teamsDb.updateTeam(env.DB, team.id, { description: '' });
-      expect((await teamsDb.getTeamById(env.DB, team.id)).description).toBe('');
+      await db.updateTeam(env.DB, team.id, { description: '' });
+      expect((await db.getTeamById(env.DB, team.id)).description).toBe('');
     });
 
     it('does not touch other teams', async () => {
       const [a, b] = [await newTeam('TeamA'), await newTeam('TeamB')];
-      await teamsDb.updateTeam(env.DB, a.id, { name: 'Renamed' });
-      expect((await teamsDb.getTeamById(env.DB, b.id)).name).toBe('TeamB');
+      await db.updateTeam(env.DB, a.id, { name: 'Renamed' });
+      expect((await db.getTeamById(env.DB, b.id)).name).toBe('TeamB');
     });
 
     it('rejects a rename to a name already in use', async () => {
       await newTeam('Taken');
       const other = await newTeam('Free');
-      await expect(teamsDb.updateTeam(env.DB, other.id, { name: 'Taken' })).rejects.toThrow(/UNIQUE/i);
+      await expect(db.updateTeam(env.DB, other.id, { name: 'Taken' })).rejects.toThrow(/UNIQUE/i);
     });
   });
 
@@ -132,204 +131,161 @@ describe('db.teams', () => {
     it('removes the team and cascades to its members only', async () => {
       const doomed = await newTeam();
       const safe = await newTeam();
-      await membersDb.addMember(env.DB, doomed.id, person());
-      await membersDb.addMember(env.DB, doomed.id, person());
-      const survivor = await membersDb.addMember(env.DB, safe.id, person());
+      await db.addMemberAdmin(env.DB, doomed.id, person());
+      await db.addMemberAdmin(env.DB, doomed.id, person());
+      const survivor = await db.addMemberAdmin(env.DB, safe.id, person());
 
-      expect(await teamsDb.deleteTeam(env.DB, doomed.id)).toBe(true);
+      expect(await db.deleteTeam(env.DB, doomed.id)).toBe(true);
 
-      expect(await teamsDb.getTeamById(env.DB, doomed.id)).toBeNull();
-      expect(await teamsDb.getTeamMemberCount(env.DB, doomed.id)).toBe(0);
-      expect(await membersDb.getTotalParticipants(env.DB)).toBe(1);
-      expect(await membersDb.getMemberById(env.DB, survivor.id)).not.toBeNull();
+      expect(await db.getTeamById(env.DB, doomed.id)).toBeNull();
+      expect(await db.getTeamMemberCount(env.DB, doomed.id)).toBe(0);
+      expect(await db.getParticipantsExcludingOrg(env.DB)).toBe(1);
+      expect(await db.getMemberById(env.DB, survivor.id)).not.toBeNull();
     });
 
     it('returns false for an unknown team', async () => {
-      expect(await teamsDb.deleteTeam(env.DB, 987_654)).toBe(false);
+      expect(await db.deleteTeam(env.DB, 987_654)).toBe(false);
     });
   });
 
   it('getTeamMemberCount counts members of one team', async () => {
     const [a, b] = [await newTeam(), await newTeam()];
-    await membersDb.addMember(env.DB, a.id, person());
-    await membersDb.addMember(env.DB, a.id, person());
-    await membersDb.addMember(env.DB, b.id, person());
+    await db.addMemberAdmin(env.DB, a.id, person());
+    await db.addMemberAdmin(env.DB, a.id, person());
+    await db.addMemberAdmin(env.DB, b.id, person());
 
-    expect(await teamsDb.getTeamMemberCount(env.DB, a.id)).toBe(2);
-    expect(await teamsDb.getTeamMemberCount(env.DB, b.id)).toBe(1);
-    expect(await teamsDb.getTeamMemberCount(env.DB, 987_654)).toBe(0);
+    expect(await db.getTeamMemberCount(env.DB, a.id)).toBe(2);
+    expect(await db.getTeamMemberCount(env.DB, b.id)).toBe(1);
+    expect(await db.getTeamMemberCount(env.DB, 987_654)).toBe(0);
   });
 
-  it('verifyTeamPassword compares the stored hash exactly', async () => {
-    const team = await newTeam('Verify', '', 'salt:exact');
-    expect(await teamsDb.verifyTeamPassword(env.DB, team.id, 'salt:exact')).toBe(true);
-    expect(await teamsDb.verifyTeamPassword(env.DB, team.id, 'salt:EXACT')).toBe(false);
-    expect(await teamsDb.verifyTeamPassword(env.DB, 987_654, 'salt:exact')).toBe(false);
-  });
 });
 
-describe('db.members', () => {
+describe('db (members)', () => {
   let team;
   beforeEach(async () => {
     team = await newTeam();
   });
 
-  it('addMember stores the row with defaults and returns the id', async () => {
+  it('addMemberAdmin stores the row with defaults and returns the id', async () => {
     const data = person();
-    const member = await membersDb.addMember(env.DB, team.id, data);
+    const member = await db.addMemberAdmin(env.DB, team.id, data);
     expect(member).toMatchObject({ id: expect.any(Number), ...data });
 
-    expect(await membersDb.getMemberById(env.DB, member.id)).toMatchObject({
+    expect(await db.getMemberById(env.DB, member.id)).toMatchObject({
       team_id: team.id, first_name: data.firstName, last_name: data.lastName, email: data.email,
       bac_level: 0, is_leader: 0, food_diet: ''
     });
   });
 
-  it('addMember stores the leader flag as 0/1 and the bac level / food choice', async () => {
-    const member = await membersDb.addMember(env.DB, team.id, person({ isLeader: true, bacLevel: 3, foodDiet: 'reine' }));
-    expect(await membersDb.getMemberById(env.DB, member.id)).toMatchObject({ is_leader: 1, bac_level: 3, food_diet: 'reine' });
+  it('addMemberAdmin stores the leader flag as 0/1 and the bac level / food choice', async () => {
+    const member = await db.addMemberAdmin(env.DB, team.id, person({ isLeader: true, bacLevel: 3, foodDiet: 'reine' }));
+    expect(await db.getMemberById(env.DB, member.id)).toMatchObject({ is_leader: 1, bac_level: 3, food_diet: 'reine' });
   });
 
-  it('addMember and addMemberAdmin reject a duplicate first/last name', async () => {
+  it('addMemberAdmin rejects a duplicate first/last name', async () => {
     const data = person();
-    await membersDb.addMember(env.DB, team.id, data);
-    await expect(membersDb.addMember(env.DB, team.id, person({ firstName: data.firstName, lastName: data.lastName }))).rejects.toThrow(/UNIQUE/i);
-    await expect(membersDb.addMemberAdmin(env.DB, team.id, person({ firstName: data.firstName, lastName: data.lastName }))).rejects.toThrow(/UNIQUE/i);
+    await db.addMemberAdmin(env.DB, team.id, data);
+    await expect(db.addMemberAdmin(env.DB, team.id, person({ firstName: data.firstName, lastName: data.lastName }))).rejects.toThrow(/UNIQUE/i);
   });
 
   it('addMemberAdmin also returns the team id', async () => {
-    const member = await membersDb.addMemberAdmin(env.DB, team.id, person());
+    const member = await db.addMemberAdmin(env.DB, team.id, person());
     expect(member.teamId).toBe(team.id);
   });
 
-  it('memberExists matches on the exact first + last name pair', async () => {
-    const data = person();
-    await membersDb.addMember(env.DB, team.id, data);
-
-    expect(await membersDb.memberExists(env.DB, data.firstName, data.lastName)).toBe(true);
-    expect(await membersDb.memberExists(env.DB, data.firstName, 'Other')).toBe(false);
-    expect(await membersDb.memberExists(env.DB, 'Other', data.lastName)).toBe(false);
-  });
-
   it('getMemberById returns null for an unknown id', async () => {
-    expect(await membersDb.getMemberById(env.DB, 987_654)).toBeNull();
+    expect(await db.getMemberById(env.DB, 987_654)).toBeNull();
   });
 
   describe('updateMember', () => {
     it('updates a single field without touching the others', async () => {
-      const member = await membersDb.addMember(env.DB, team.id, person({ bacLevel: 2, foodDiet: 'reine' }));
+      const member = await db.addMemberAdmin(env.DB, team.id, person({ bacLevel: 2, foodDiet: 'reine' }));
 
-      expect(await membersDb.updateMember(env.DB, member.id, { bacLevel: 5 })).toBe(true);
-      expect(await membersDb.getMemberById(env.DB, member.id)).toMatchObject({
+      expect(await db.updateMember(env.DB, member.id, { bacLevel: 5 })).toBe(true);
+      expect(await db.getMemberById(env.DB, member.id)).toMatchObject({
         bac_level: 5, food_diet: 'reine', first_name: member.firstName
       });
     });
 
     it('maps isLeader to 0/1 in both directions', async () => {
-      const member = await membersDb.addMember(env.DB, team.id, person());
+      const member = await db.addMemberAdmin(env.DB, team.id, person());
 
-      await membersDb.updateMember(env.DB, member.id, { isLeader: true });
-      expect((await membersDb.getMemberById(env.DB, member.id)).is_leader).toBe(1);
+      await db.updateMember(env.DB, member.id, { isLeader: true });
+      expect((await db.getMemberById(env.DB, member.id)).is_leader).toBe(1);
 
-      await membersDb.updateMember(env.DB, member.id, { isLeader: false });
-      expect((await membersDb.getMemberById(env.DB, member.id)).is_leader).toBe(0);
+      await db.updateMember(env.DB, member.id, { isLeader: false });
+      expect((await db.getMemberById(env.DB, member.id)).is_leader).toBe(0);
     });
 
     it('moves a member to another team', async () => {
       const other = await newTeam();
-      const member = await membersDb.addMember(env.DB, team.id, person());
+      const member = await db.addMemberAdmin(env.DB, team.id, person());
 
-      await membersDb.updateMember(env.DB, member.id, { teamId: other.id });
-      expect((await membersDb.getMemberById(env.DB, member.id)).team_id).toBe(other.id);
-      expect(await teamsDb.getTeamMemberCount(env.DB, team.id)).toBe(0);
-      expect(await teamsDb.getTeamMemberCount(env.DB, other.id)).toBe(1);
+      await db.updateMember(env.DB, member.id, { teamId: other.id });
+      expect((await db.getMemberById(env.DB, member.id)).team_id).toBe(other.id);
+      expect(await db.getTeamMemberCount(env.DB, team.id)).toBe(0);
+      expect(await db.getTeamMemberCount(env.DB, other.id)).toBe(1);
     });
 
     it('updates names, email and food choice together', async () => {
-      const member = await membersDb.addMember(env.DB, team.id, person());
+      const member = await db.addMemberAdmin(env.DB, team.id, person());
       const changes = { firstName: uniq('NF'), lastName: uniq('NL'), email: 'new@example.com', foodDiet: 'margherita' };
 
-      await membersDb.updateMember(env.DB, member.id, changes);
-      expect(await membersDb.getMemberById(env.DB, member.id)).toMatchObject({
+      await db.updateMember(env.DB, member.id, changes);
+      expect(await db.getMemberById(env.DB, member.id)).toMatchObject({
         first_name: changes.firstName, last_name: changes.lastName, email: changes.email, food_diet: 'margherita'
       });
     });
 
     it('returns false when there is nothing to change', async () => {
-      const member = await membersDb.addMember(env.DB, team.id, person());
-      expect(await membersDb.updateMember(env.DB, member.id, {})).toBe(false);
-      expect(await membersDb.updateMember(env.DB, member.id, { email: undefined })).toBe(false);
+      const member = await db.addMemberAdmin(env.DB, team.id, person());
+      expect(await db.updateMember(env.DB, member.id, {})).toBe(false);
+      expect(await db.updateMember(env.DB, member.id, { email: undefined })).toBe(false);
     });
   });
 
   it('deleteMember reports whether a row was removed', async () => {
-    const member = await membersDb.addMember(env.DB, team.id, person());
-    expect(await membersDb.deleteMember(env.DB, member.id)).toBe(true);
-    expect(await membersDb.deleteMember(env.DB, member.id)).toBe(false);
+    const member = await db.addMemberAdmin(env.DB, team.id, person());
+    expect(await db.deleteMember(env.DB, member.id)).toBe(true);
+    expect(await db.deleteMember(env.DB, member.id)).toBe(false);
   });
 
   it('deleteMembers removes the listed ids and reports how many existed', async () => {
-    const a = await membersDb.addMember(env.DB, team.id, person());
-    const b = await membersDb.addMember(env.DB, team.id, person());
-    const keep = await membersDb.addMember(env.DB, team.id, person());
+    const a = await db.addMemberAdmin(env.DB, team.id, person());
+    const b = await db.addMemberAdmin(env.DB, team.id, person());
+    const keep = await db.addMemberAdmin(env.DB, team.id, person());
 
-    expect(await membersDb.deleteMembers(env.DB, [])).toBe(0);
-    expect(await membersDb.deleteMembers(env.DB, [a.id, b.id, 987_654])).toBe(2);
-    expect(await membersDb.getMemberById(env.DB, keep.id)).not.toBeNull();
-    expect(await membersDb.getTotalParticipants(env.DB)).toBe(1);
+    expect(await db.deleteMembers(env.DB, [])).toBe(0);
+    expect(await db.deleteMembers(env.DB, [a.id, b.id, 987_654])).toBe(2);
+    expect(await db.getMemberById(env.DB, keep.id)).not.toBeNull();
+    expect(await db.getParticipantsExcludingOrg(env.DB)).toBe(1);
   });
 
   it('getAllMembers joins the team name and orders by team, then last and first name', async () => {
     const zed = await newTeam('Zed team');
     const abe = await newTeam('Abe team');
-    await membersDb.addMember(env.DB, zed.id, { firstName: 'Ann', lastName: 'Zulu', email: 'a@example.com' });
-    await membersDb.addMember(env.DB, abe.id, { firstName: 'Bob', lastName: 'Yankee', email: 'b@example.com' });
-    await membersDb.addMember(env.DB, abe.id, { firstName: 'Cid', lastName: 'Alpha', email: 'c@example.com' });
+    await db.addMemberAdmin(env.DB, zed.id, { firstName: 'Ann', lastName: 'Zulu', email: 'a@example.com' });
+    await db.addMemberAdmin(env.DB, abe.id, { firstName: 'Bob', lastName: 'Yankee', email: 'b@example.com' });
+    await db.addMemberAdmin(env.DB, abe.id, { firstName: 'Cid', lastName: 'Alpha', email: 'c@example.com' });
 
-    const members = await membersDb.getAllMembers(env.DB);
+    const members = await db.getAllMembers(env.DB);
     expect(members.map(m => `${m.team_name}/${m.last_name}`)).toEqual(['Abe team/Alpha', 'Abe team/Yankee', 'Zed team/Zulu']);
     expect(members[0]).not.toHaveProperty('team_id');
   });
 
-  it('getMembersByTeam only returns that team, ordered by last then first name', async () => {
-    const other = await newTeam();
-    await membersDb.addMember(env.DB, team.id, { firstName: 'Zoe', lastName: 'Same', email: 'z@example.com' });
-    await membersDb.addMember(env.DB, team.id, { firstName: 'Abe', lastName: 'Same', email: 'a@example.com' });
-    await membersDb.addMember(env.DB, other.id, person());
-
-    const members = await membersDb.getMembersByTeam(env.DB, team.id);
-    expect(members.map(m => m.first_name)).toEqual(['Abe', 'Zoe']);
-  });
-
-  it('getTotalParticipants counts every member', async () => {
-    expect(await membersDb.getTotalParticipants(env.DB)).toBe(0);
-    await membersDb.addMember(env.DB, team.id, person());
-    await membersDb.addMember(env.DB, team.id, person());
-    expect(await membersDb.getTotalParticipants(env.DB)).toBe(2);
-  });
-
   it('getFoodStats ignores empty choices and sorts by popularity', async () => {
-    await membersDb.addMember(env.DB, team.id, person({ foodDiet: 'reine' }));
-    await membersDb.addMember(env.DB, team.id, person({ foodDiet: 'margherita' }));
-    await membersDb.addMember(env.DB, team.id, person({ foodDiet: 'margherita' }));
-    await membersDb.addMember(env.DB, team.id, person({ foodDiet: '' }));
+    await db.addMemberAdmin(env.DB, team.id, person({ foodDiet: 'reine' }));
+    await db.addMemberAdmin(env.DB, team.id, person({ foodDiet: 'margherita' }));
+    await db.addMemberAdmin(env.DB, team.id, person({ foodDiet: 'margherita' }));
+    await db.addMemberAdmin(env.DB, team.id, person({ foodDiet: '' }));
 
-    expect(await membersDb.getFoodStats(env.DB)).toEqual([
+    expect(await db.getFoodStats(env.DB)).toEqual([
       { food_diet: 'margherita', count: 2 },
       { food_diet: 'reine', count: 1 }
     ]);
   });
 
-  it('getBacLevelStats groups by level in ascending order', async () => {
-    await membersDb.addMember(env.DB, team.id, person({ bacLevel: 5 }));
-    await membersDb.addMember(env.DB, team.id, person({ bacLevel: 1 }));
-    await membersDb.addMember(env.DB, team.id, person({ bacLevel: 5 }));
-
-    expect(await membersDb.getBacLevelStats(env.DB)).toEqual([
-      { bac_level: 1, count: 1 },
-      { bac_level: 5, count: 2 }
-    ]);
-  });
 });
 
 describe('db.settings', () => {
@@ -429,10 +385,10 @@ describe('db.payments', () => {
   let member;
   beforeEach(async () => {
     const team = await newTeam();
-    member = await membersDb.addMember(env.DB, team.id, person());
+    member = await db.addMemberAdmin(env.DB, team.id, person());
   });
 
-  const memberRow = (id = member.id) => membersDb.getMemberById(env.DB, id);
+  const memberRow = (id = member.id) => db.getMemberById(env.DB, id);
 
   describe('updateMemberPayment', () => {
     it('updates every supported payment column', async () => {
@@ -481,8 +437,8 @@ describe('db.payments', () => {
   });
 
   it('getPendingPayments only lists pending members, with their team name', async () => {
-    const team = await teamsDb.getTeamById(env.DB, (await memberRow()).team_id);
-    const pending = await membersDb.addMember(env.DB, team.id, person());
+    const team = await db.getTeamById(env.DB, (await memberRow()).team_id);
+    const pending = await db.addMemberAdmin(env.DB, team.id, person());
     await paymentsDb.updateMemberPayment(env.DB, pending.id, { payment_status: 'pending' });
     await paymentsDb.updateMemberPayment(env.DB, member.id, { payment_status: 'paid' });
 
@@ -491,24 +447,24 @@ describe('db.payments', () => {
     expect(rows[0].team_name).toBe(team.name);
   });
 
-  it('getPaymentStats aggregates counts and amounts per status', async () => {
-    const team = await teamsDb.getTeamById(env.DB, (await memberRow()).team_id);
-    const second = await membersDb.addMember(env.DB, team.id, person());
-    const third = await membersDb.addMember(env.DB, team.id, person());
+  it('getPaymentStatusStats aggregates counts and amounts per status', async () => {
+    const team = await db.getTeamById(env.DB, (await memberRow()).team_id);
+    const second = await db.addMemberAdmin(env.DB, team.id, person());
+    const third = await db.addMemberAdmin(env.DB, team.id, person());
     await paymentsDb.updateMemberPayment(env.DB, member.id, { payment_status: 'paid', payment_amount: 500 });
     await paymentsDb.updateMemberPayment(env.DB, second.id, { payment_status: 'paid', payment_amount: 700 });
     await paymentsDb.updateMemberPayment(env.DB, third.id, { payment_status: 'delayed' });
 
-    const stats = await paymentsDb.getPaymentStats(env.DB);
+    const stats = await paymentsDb.getPaymentStatusStats(env.DB);
     expect(stats.paid).toEqual({ count: 2, amount: 1200 });
     expect(stats.delayed).toEqual({ count: 1, amount: 0 });
     expect(stats.unpaid).toEqual({ count: 0, amount: 0 });
     expect(Object.keys(stats).sort()).toEqual(['delayed', 'paid', 'pending', 'refunded', 'unpaid']);
   });
 
-  it('getPaymentStats ignores statuses it does not know', async () => {
+  it('getPaymentStatusStats ignores statuses it does not know', async () => {
     await paymentsDb.updateMemberPayment(env.DB, member.id, { payment_status: 'mystery', payment_amount: 999 });
-    const stats = await paymentsDb.getPaymentStats(env.DB);
+    const stats = await paymentsDb.getPaymentStatusStats(env.DB);
     expect(stats).not.toHaveProperty('mystery');
     expect(Object.values(stats).reduce((sum, s) => sum + s.amount, 0)).toBe(0);
   });
@@ -572,23 +528,157 @@ describe('db.payments', () => {
 
     it('events disappear with their member (ON DELETE CASCADE)', async () => {
       await paymentsDb.logPaymentEvent(env.DB, { member_id: member.id, event_type: 'payment_delayed', amount: 0, tier: 'tier1' });
-      await membersDb.deleteMember(env.DB, member.id);
+      await db.deleteMember(env.DB, member.id);
       expect(await paymentsDb.getMemberPaymentEvents(env.DB, member.id)).toEqual([]);
     });
-  });
-
-  it('getMembersWithPaymentInfo joins the team name and room against the current schema', async () => {
-    const row = await memberRow();
-    await env.DB.prepare('UPDATE teams SET room = ? WHERE id = ?').bind('Salle 7', row.team_id).run();
-
-    const members = await paymentsDb.getMembersWithPaymentInfo(env.DB);
-    expect(members).toHaveLength(1);
-    expect(members[0]).toMatchObject({ id: member.id, team_room: 'Salle 7', payment_status: 'unpaid' });
-    expect(members[0].team_name).toBeTruthy();
   });
 
   it('paymentEventsTableExists is true for the real table and false when D1 errors', async () => {
     expect(await paymentsDb.paymentEventsTableExists(env.DB)).toBe(true);
     expect(await paymentsDb.paymentEventsTableExists(throwingDb)).toBe(false);
+  });
+});
+
+describe('db (statistics)', () => {
+  const ORG = 'Organisation';
+  let teamA;
+  let org;
+
+  /** Insert a member straight into D1 with the given columns. */
+  async function insertMember(teamId, columns = {}) {
+    const tag = uniq('s');
+    const row = { first_name: `F${tag}`, last_name: `L${tag}`, email: `${tag}@example.com`, ...columns };
+    const names = Object.keys(row);
+    const result = await env.DB.prepare(
+      `INSERT INTO members (team_id, ${names.join(', ')}) VALUES (?, ${names.map(() => '?').join(', ')})`
+    ).bind(teamId, ...Object.values(row)).run();
+    return result.meta.last_row_id;
+  }
+
+  beforeEach(async () => {
+    teamA = await newTeam();
+    org = await newTeam(ORG);
+  });
+
+  it('getParticipantsExcludingOrg and getTeamsExcludingOrg leave the Organisation team out', async () => {
+    await insertMember(teamA.id);
+    await insertMember(org.id);
+    await insertMember(org.id);
+
+    expect(await db.getParticipantsExcludingOrg(env.DB)).toBe(1);
+    expect((await db.getTeamsExcludingOrg(env.DB)).map(t => t.name)).toEqual([teamA.name]);
+    expect(await db.getTeams(env.DB)).toHaveLength(2);
+  });
+
+  it('getTierStats counts and sums the check-in tiers, Organisation excluded', async () => {
+    await insertMember(teamA.id, { payment_tier: 'asso_member', payment_amount: 500 });
+    await insertMember(teamA.id, { payment_tier: 'asso_member', payment_amount: 500 });
+    await insertMember(teamA.id, { payment_tier: 'non_member', payment_amount: 800 });
+    await insertMember(teamA.id, { payment_tier: 'late', payment_amount: 1000 });
+    await insertMember(teamA.id, { payment_tier: 'online_tier1', payment_amount: 500 });
+    await insertMember(org.id, { payment_tier: 'organisation', payment_amount: 0 });
+    await insertMember(org.id, { payment_tier: 'late', payment_amount: 1000 });
+
+    expect(await db.getTierStats(env.DB)).toMatchObject({
+      total_paid: 5, total_revenue: 3300,
+      asso_members: 2, asso_revenue: 1000,
+      non_members: 1, non_member_revenue: 800,
+      late_arrivals: 1, late_revenue: 1000
+    });
+  });
+
+  it('getPizzaStats lists real pizzas only: "none", "0-rien" and empty are not a pizza type', async () => {
+    await insertMember(teamA.id, { food_diet: 'reine', checked_in: 1 });
+    await insertMember(teamA.id, { food_diet: 'reine', pizza_received: 1 });
+    await insertMember(teamA.id, { food_diet: 'none', checked_in: 1 });
+    await insertMember(teamA.id, { food_diet: '0-rien' });
+    await insertMember(teamA.id, { food_diet: '' });
+
+    const stats = await db.getPizzaStats(env.DB);
+    expect(stats).toMatchObject({ total: 5, received: 1, pending: 4 });
+    expect(stats.by_type).toEqual([{ food_diet: 'reine', total: 2, received: 1 }]);
+    expect(stats.present.total).toBe(2);
+    expect(stats.present.by_type).toEqual([{ food_diet: 'reine', total: 1, received: 0 }]);
+  });
+
+  it('getPizzaStatsByRoom ignores the Organisation team and "no pizza" members', async () => {
+    await env.DB.prepare('UPDATE teams SET room = ? WHERE id IN (?, ?)').bind('Salle 1', teamA.id, org.id).run();
+    await insertMember(teamA.id, { food_diet: 'reine' });
+    await insertMember(teamA.id, { food_diet: 'none' });
+    await insertMember(org.id, { food_diet: 'reine' });
+
+    const [room] = await db.getPizzaStatsByRoom(env.DB);
+    expect(room.room).toBe('Salle 1');
+    expect(room.pizzas).toEqual([{ food_diet: 'reine', total: 1, present: 0, received: 0 }]);
+    expect(room.totals).toEqual({ total: 1, present: 0, received: 0 });
+  });
+
+  it('getTeamsWithRooms and getRoomStats exclude the Organisation team', async () => {
+    await env.DB.prepare('UPDATE teams SET room = ? WHERE id = ?').bind('Salle 2', org.id).run();
+
+    expect((await db.getTeamsWithRooms(env.DB)).map(t => t.name)).toEqual([teamA.name]);
+    expect(await db.getRoomStats(env.DB)).toMatchObject({ total_teams: 1, assigned_teams: 0, unassigned_teams: 1, by_room: [] });
+  });
+
+  it('getBacLevelStats groups by level in ascending order', async () => {
+    await insertMember(teamA.id, { bac_level: 5 });
+    await insertMember(teamA.id, { bac_level: 1 });
+    await insertMember(teamA.id, { bac_level: 5 });
+
+    expect(await db.getBacLevelStats(env.DB)).toEqual([{ bac_level: 1, count: 1 }, { bac_level: 5, count: 2 }]);
+  });
+});
+
+describe('db (batches)', () => {
+  it('batch helpers split long id lists into chunks that fit the D1 variable limit, in one batch', async () => {
+    const team = await newTeam();
+    const ids = [];
+    for (let i = 0; i < 12; i++) {
+      const rows = Array.from({ length: 25 }, (_, j) => {
+        const tag = `${uniq('b')}-${i}-${j}`;
+        return env.DB.prepare('INSERT INTO members (team_id, first_name, last_name, email) VALUES (?, ?, ?, ?)')
+          .bind(team.id, `F${tag}`, `L${tag}`, `${tag}@example.com`);
+      });
+      for (const result of await env.DB.batch(rows)) ids.push(result.meta.last_row_id);
+    }
+    expect(ids).toHaveLength(300);
+
+    expect(await db.checkInMembers(env.DB, ids)).toBe(300);
+    expect(await db.givePizzaBatch(env.DB, ids)).toBe(300);
+    expect(await db.revokePizzaBatch(env.DB, ids)).toBe(300);
+    expect(await db.checkOutMembers(env.DB, ids)).toBe(300);
+    expect(await db.getTeamMemberCount(env.DB, team.id)).toBe(300);
+    expect(await db.deleteMembers(env.DB, [...ids, 987_654_321])).toBe(300);
+    expect(await db.getTeamMemberCount(env.DB, team.id)).toBe(0);
+  });
+
+  it('setTeamRoomsBatch reports the teams that do not exist, in one atomic batch', async () => {
+    const [a, b] = [await newTeam(), await newTeam()];
+
+    const result = await db.setTeamRoomsBatch(env.DB, [
+      { teamId: a.id, room: 'Salle 1' }, { teamId: 987_654, room: 'Salle 2' }, { teamId: b.id, room: null }
+    ]);
+    expect(result).toEqual({ updated: 2, skipped: [987_654] });
+    expect((await db.getTeamById(env.DB, a.id)).room).toBe('Salle 1');
+    expect(await db.setTeamRoomsBatch(env.DB, [])).toEqual({ updated: 0, skipped: [] });
+  });
+
+  it('deleteTeam removes the team and its members together', async () => {
+    const team = await newTeam();
+    await db.addMemberAdmin(env.DB, team.id, person());
+    expect(await db.deleteTeam(env.DB, team.id)).toBe(true);
+    expect(await db.getTeamMemberCount(env.DB, team.id)).toBe(0);
+    expect(await db.deleteTeam(env.DB, team.id)).toBe(false);
+  });
+
+  it('setSettings writes every entry or none (one D1 batch)', async () => {
+    expect(await settingsDb.setSettings(env.DB, [['k1', 'v1'], ['k2', 'v2']])).toBe(2);
+    expect(await settingsDb.getSetting(env.DB, 'k2')).toBe('v2');
+
+    // a NOT NULL violation in the second statement rolls the whole batch back
+    await expect(settingsDb.setSettings(env.DB, [['k1', 'changed'], ['k3', null]])).rejects.toThrow();
+    expect(await settingsDb.getSetting(env.DB, 'k1')).toBe('v1');
+    expect(await settingsDb.getSetting(env.DB, 'k3')).toBeNull();
+    expect(await settingsDb.setSettings(env.DB, [])).toBe(0);
   });
 });

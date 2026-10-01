@@ -1,10 +1,17 @@
 /**
  * Import module - CSV import functionality
+ *
+ * The preview parses the file with the same code and the same header aliases
+ * as the server (astro-core/csv + lib/members-csv.js), so what is previewed is
+ * what the import will read: English or French (export) headers, `,` or `;`.
  */
 /* eslint-env browser */
 
 import { $, escapeHtml } from '@info-evry/astro-design/scripts/dom';
 import { toastSuccess, toastError } from '@info-evry/astro-design/scripts/toast';
+import { mapCsvHeaders, parseCsv, unescapeCsvCell } from 'astro-core/csv';
+import { MAX_IMPORT_ROWS } from '../../shared/constants.js';
+import { IMPORT_FIELD_LABELS, IMPORT_HEADER_ALIASES, REQUIRED_IMPORT_FIELDS } from '../../lib/members-csv.js';
 import { csvData, setCsvData, setParsedRows } from './state.js';
 
 // Element ID constants
@@ -35,33 +42,50 @@ export function handleFileSelect(event) {
 }
 
 /**
+ * Parse an import file into preview rows `{ team, firstName, lastName, email }`.
+ * Rows whose number of cells differs from the header are left out (the server
+ * reports them). Throws an Error with a displayable message for a file the
+ * server would refuse.
+ * @param {string} csv - CSV content
+ * @returns {Array<{team: string, firstName: string, lastName: string, email: string}>}
+ */
+export function parseImportRows(csv) {
+  const { headers, rows: cells } = parseCsv(csv);
+  if (cells.length === 0) {
+    throw new Error('Le fichier doit contenir au moins une ligne de données');
+  }
+  if (cells.length > MAX_IMPORT_ROWS) {
+    throw new Error(`Trop de lignes (${cells.length}) : maximum ${MAX_IMPORT_ROWS} par import`);
+  }
+
+  const columns = mapCsvHeaders(headers, IMPORT_HEADER_ALIASES);
+  const missing = REQUIRED_IMPORT_FIELDS.filter(field => columns[field] === undefined);
+  if (missing.length > 0) {
+    throw new Error(`Colonnes obligatoires manquantes : ${missing.map(field => IMPORT_FIELD_LABELS[field]).join(', ')}`);
+  }
+
+  const cell = (row, field) => unescapeCsvCell(row[columns[field]] ?? '');
+  return cells
+    .filter(row => row.length === headers.length)
+    .map(row => ({
+      team: cell(row, 'team'),
+      firstName: cell(row, 'firstName'),
+      lastName: cell(row, 'lastName'),
+      email: cell(row, 'email')
+    }));
+}
+
+/**
  * Parse CSV and show preview
  * @param {string} csv - CSV content
  */
 export function parseAndPreview(csv) {
   try {
-    const lines = csv.trim().split('\n');
-    if (lines.length < 2) {
-      throw new Error('Le fichier doit contenir au moins une ligne de données');
-    }
-
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-    const rows = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const values = parseCSVLine(lines[i]);
-      if (values.length === headers.length) {
-        const row = {};
-        for (const [idx, header] of headers.entries()) {
-          row[header] = values[idx].trim();
-        }
-        rows.push(row);
-      }
-    }
+    const rows = parseImportRows(csv);
 
     setParsedRows(rows);
 
-    const teams = new Set(rows.map(r => r.teamname || 'Sans équipe'));
+    const teams = new Set(rows.map(r => r.team || 'Sans équipe'));
 
     const preview = $('import-preview');
     const previewContent = $('import-preview-content');
@@ -83,9 +107,9 @@ export function parseAndPreview(csv) {
           <tbody>
             ${rows.slice(0, 5).map(row => `
               <tr>
-                <td>${escapeHtml(row.teamname || '-')}</td>
-                <td>${escapeHtml(row.firstname || '-')}</td>
-                <td>${escapeHtml(row.lastname || '-')}</td>
+                <td>${escapeHtml(row.team || '-')}</td>
+                <td>${escapeHtml(row.firstName || '-')}</td>
+                <td>${escapeHtml(row.lastName || '-')}</td>
                 <td>${escapeHtml(row.email || '-')}</td>
               </tr>
             `).join('')}
@@ -109,32 +133,6 @@ export function parseAndPreview(csv) {
     toastError(error.message);
     resetImport();
   }
-}
-
-/**
- * Parse a single CSV line (handles quoted values)
- * @param {string} line - CSV line
- * @returns {string[]} Parsed values
- */
-export function parseCSVLine(line) {
-  const values = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (const char of line) {
-
-    if (char === '"') {
-      inQuotes = !inQuotes;
-    } else if (char === ',' && !inQuotes) {
-      values.push(current);
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  values.push(current);
-
-  return values;
 }
 
 /**

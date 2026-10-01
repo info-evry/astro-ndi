@@ -145,7 +145,8 @@ describe('PUT /api/admin/settings', () => {
 
     expect(response.status).toBe(400);
     const data = await response.json();
-    expect(data.error).toContain('Invalid setting keys');
+    expect(data.code).toBe('invalid_settings');
+    expect(data.error).toContain('Clés inconnues');
   });
 
   it('should validate max_team_size range', async () => {

@@ -316,7 +316,7 @@ describe('Admin CRUD - Members', () => {
         email: 'manual@example.com',
         bacLevel: 2,
         isLeader: false,
-        foodDiet: 'regina'
+        foodDiet: 'reine'
       })
     });
 

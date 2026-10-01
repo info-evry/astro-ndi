@@ -32,7 +32,7 @@ describe('Admin API rate limit (60 requests / minute)', () => {
     }
 
     expect(response.status).toBe(429);
-    expect(await response.json()).toEqual({ error: 'Too many requests' });
+    expect(await response.json()).toEqual({ error: 'Too many requests', code: 'too_many_requests' });
     expect(response.headers.get('X-RateLimit-Limit')).toBe('60');
     expect(response.headers.get('X-RateLimit-Remaining')).toBe('0');
     const retryAfter = Number(response.headers.get('Retry-After'));

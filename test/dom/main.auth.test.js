@@ -179,7 +179,7 @@ describe('start-up with a stored token', () => {
     expect(settings).not.toHaveBeenCalled();
   });
 
-  it('keeps the token when the server is merely failing (500) but shows the login form', async () => {
+  it('keeps the token when the server is merely failing (500), shows the login form and a retry hint', async () => {
     installFetch({ statsStatus: 500 });
     localStorage.setItem(TOKEN_KEY, VALID);
     await loadMain();
@@ -187,7 +187,31 @@ describe('start-up with a stored token', () => {
     expect(isHidden('auth-section')).toBe(false);
     expect(isHidden('admin-content')).toBe(true);
     expect(localStorage.getItem(TOKEN_KEY)).toBe(VALID);
-    expect(document.querySelector('.toast.error')).not.toBeNull();
+    expect(byId('auth-error').textContent).toContain('indisponible');
+    expect(isHidden('auth-error')).toBe(false);
+  });
+
+  it('retries with the kept token when the login button is clicked with an empty field', async () => {
+    installFetch({ statsStatus: 500 });
+    localStorage.setItem(TOKEN_KEY, VALID);
+    await loadMain();
+    expect(isHidden('admin-content')).toBe(true);
+
+    installFetch();
+    click(byId('auth-btn'));
+    await flush();
+
+    expect(isHidden('admin-content')).toBe(false);
+    expect(statsCalls()[0].auth).toBe(`Bearer ${VALID}`);
+  });
+
+  it('hands the modules the live api client, never a token string (no stale token after a re-login)', async () => {
+    localStorage.setItem(TOKEN_KEY, VALID);
+    await loadMain();
+
+    const { archives } = await spies();
+    expect(archives.mock.calls[0]).toHaveLength(2);
+    expect(archives.mock.calls[0].every(arg => typeof arg === 'function')).toBe(true);
   });
 
   it('shows the login form straight away when there is no token', async () => {
@@ -257,18 +281,19 @@ describe('interactive login', () => {
 
   it('pressing Enter in the token field logs in', async () => {
     byId('admin-token').value = VALID;
-    byId('admin-token').dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
+    byId('admin-token').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     await flush();
 
     expect(isHidden('admin-content')).toBe(false);
   });
 
-  it('shows a server error message instead of "Token invalide" for non-401 failures', async () => {
+  it('shows a retry hint instead of "Token invalide" for a server failure, and keeps the token', async () => {
     installFetch({ statsStatus: 500 });
     await login(VALID);
 
-    expect(byId('auth-error').textContent).toBe('Internal server error');
-    expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+    expect(byId('auth-error').textContent).toContain('indisponible');
+    expect(byId('auth-error').textContent).not.toBe('Token invalide');
+    expect(localStorage.getItem(TOKEN_KEY)).toBe(VALID);
     expect(isHidden('admin-content')).toBe(true);
   });
 });

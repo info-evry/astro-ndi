@@ -219,8 +219,9 @@ describe('Expiry through the admin API', () => {
     expect(JSON.parse(text).archives[0]).not.toHaveProperty('members_json');
   });
 
-  it('answers 404 for an unknown archive year and 400 for a malformed one', async () => {
-    expect((await adminFetch('/api/admin/archives/1999')).status).toBe(404);
+  it('answers 404 for an unknown archive year and 400 for a malformed or out-of-range one', async () => {
+    expect((await adminFetch('/api/admin/archives/2031')).status).toBe(404);
+    expect((await adminFetch('/api/admin/archives/1999')).status).toBe(400);
     expect((await adminFetch('/api/admin/archives/abc')).status).toBe(400);
     expect((await adminFetch('/api/admin/archives/abc/export')).status).toBe(400);
   });

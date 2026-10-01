@@ -1,0 +1,61 @@
+/**
+ * src/shared/constants.js: the values the Worker and the browser bundles share.
+ */
+
+import { describe, it, expect } from 'vitest';
+import {
+  DEFAULT_PRICES, MAX_PAYMENT_AMOUNT_CENTS, NO_PIZZA, NO_PIZZA_VALUES, ONSITE_PAYMENT_TIERS, PAYMENT_STATUSES,
+  PAYMENT_TIER, PAYMENT_TIERS, isNoPizza, isOrganisationTeamName, isPaymentTier
+} from '../src/shared/constants.js';
+
+describe('isNoPizza', () => {
+  it.each(['', 'none', '0-rien', ' none ', 'NONE', null, undefined])('treats %j as "no pizza"', (value) => {
+    expect(isNoPizza(value)).toBe(true);
+  });
+
+  it.each(['reine', 'margherita', 'nothing', 0, false, {}, ['none']])('treats %j as a pizza', (value) => {
+    expect(isNoPizza(value)).toBe(false);
+  });
+
+  it('the value the registration form sends for "no pizza" is one of NO_PIZZA_VALUES', () => {
+    expect(NO_PIZZA_VALUES).toContain(NO_PIZZA);
+    expect(Object.isFrozen(NO_PIZZA_VALUES)).toBe(true);
+  });
+});
+
+describe('payment constants', () => {
+  it('lists every payment tier the check-in, the admin client and the online payment write', () => {
+    expect([...PAYMENT_TIERS].sort()).toEqual(
+      ['asso_member', 'late', 'non_member', 'online_tier1', 'online_tier2', 'organisation', 'tier1', 'tier2']
+    );
+    expect(ONSITE_PAYMENT_TIERS).toEqual(['asso_member', 'non_member', 'late', 'organisation']);
+    expect(PAYMENT_TIERS).toEqual(expect.arrayContaining(Object.values(PAYMENT_TIER)));
+  });
+
+  it('isPaymentTier only accepts exact tier strings', () => {
+    expect(isPaymentTier('late')).toBe(true);
+    expect(isPaymentTier('online_tier2')).toBe(true);
+    for (const value of ['LATE', ' late', 'free', '', null, undefined, 1, ['late'], { toString: () => 'late' }]) {
+      expect(isPaymentTier(value)).toBe(false);
+    }
+  });
+
+  it('knows the five payment statuses', () => {
+    expect(PAYMENT_STATUSES).toEqual(['unpaid', 'pending', 'paid', 'delayed', 'refunded']);
+  });
+
+  it('keeps the default prices below the payment cap', () => {
+    for (const price of Object.values(DEFAULT_PRICES)) {
+      expect(price).toBeGreaterThan(0);
+      expect(price).toBeLessThanOrEqual(MAX_PAYMENT_AMOUNT_CENTS);
+    }
+  });
+});
+
+describe('isOrganisationTeamName', () => {
+  it('matches the exact name only', () => {
+    expect(isOrganisationTeamName('Organisation')).toBe(true);
+    expect(isOrganisationTeamName('organisation')).toBe(false);
+    expect(isOrganisationTeamName(null)).toBe(false);
+  });
+});

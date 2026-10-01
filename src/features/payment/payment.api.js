@@ -4,13 +4,20 @@
  */
 
 import { json, error } from 'astro-core/router';
+import { verifyAdminToken } from 'astro-core/auth';
+import { parsePositiveId } from 'astro-core/ids';
+import { badRequest, forbidden, invalidId, notFound, serverError } from 'astro-core/http';
 import * as paymentsDb from '../../database/db.payments.js';
-import * as membersDb from '../../database/db.members.js';
 import * as settingsDb from '../../database/db.settings.js';
 import * as db from '../../lib/db.js';
-import { verifyAdmin } from '../../shared/auth.js';
+import { normalizeTeamPassword } from '../../lib/validation.js';
 import { verifyPassword } from '../../shared/crypto.js';
-import { readJsonObject, INVALID_JSON_MESSAGE } from '../../shared/http.js';
+import {
+  DEFAULT_PRICES,
+  DEFAULT_TIER1_CUTOFF_DAYS,
+  PAYMENT_STATUS
+} from '../../shared/constants.js';
+import { readBody } from '../../shared/http.js';
 import {
   SumUpClient,
   generateCheckoutReference,
@@ -19,10 +26,19 @@ import {
   getPrice
 } from 'astro-payments';
 
+const MSG_TEAM_AUTH = "Mot de passe d'équipe requis ou incorrect";
+const MSG_MEMBER_NOT_FOUND = 'Membre introuvable';
+const MSG_MEMBER_ID = 'memberId invalide ou manquant';
+const MSG_CHECKOUT_ID = 'checkoutId invalide ou manquant';
+const MSG_NOT_CONFIGURED = "Le paiement en ligne n'est pas configuré";
+const DAY_MS = 24 * 60 * 60 * 1000;
+const MAX_CHECKOUT_ID_LENGTH = 128;
+
 /**
  * Authorize a mutating action on behalf of a member's team.
  * Allows either an authenticated admin, or a caller who supplies the
- * correct team password for the member's team.
+ * correct team password for the member's team (same normalisation as when
+ * the password was set).
  * @param {Request} request
  * @param {object} env
  * @param {object} member - Member row (must include team_id)
@@ -30,11 +46,12 @@ import {
  * @returns {Promise<boolean>}
  */
 async function authorizeMemberAction(request, env, member, body) {
-  if (await verifyAdmin(request, env)) {
+  if (await verifyAdminToken(request, env)) {
     return true;
   }
 
-  if (typeof body.teamPassword !== 'string' || !body.teamPassword) {
+  const password = typeof body.teamPassword === 'string' ? normalizeTeamPassword(body.teamPassword) : '';
+  if (!password) {
     return false;
   }
 
@@ -43,7 +60,37 @@ async function authorizeMemberAction(request, env, member, body) {
     return false;
   }
 
-  return verifyPassword(body.teamPassword, team.password_hash);
+  return verifyPassword(password, team.password_hash);
+}
+
+/**
+ * Read an integer setting; the fallback is used when it is missing or corrupt.
+ * @returns {Promise<number>}
+ */
+async function readIntSetting(database, key, fallback) {
+  const parsed = Number.parseInt(await settingsDb.getSetting(database, key), 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+/**
+ * Pricing configuration: deadline, tier cut-off and the two online prices.
+ */
+async function loadPricingConfig(database) {
+  return {
+    registrationDeadline: await settingsDb.getSetting(database, 'registration_deadline'),
+    tierCutoffDays: await readIntSetting(database, 'tier1_cutoff_days', DEFAULT_TIER1_CUTOFF_DAYS),
+    tier1Price: await readIntSetting(database, 'price_tier1', DEFAULT_PRICES.tier1),
+    tier2Price: await readIntSetting(database, 'price_tier2', DEFAULT_PRICES.tier2)
+  };
+}
+
+/**
+ * Validate a checkout id taken from a request body.
+ * @param {unknown} value
+ * @returns {string|null}
+ */
+function parseCheckoutId(value) {
+  return typeof value === 'string' && value.length > 0 && value.length <= MAX_CHECKOUT_ID_LENGTH ? value : null;
 }
 
 /**
@@ -51,44 +98,34 @@ async function authorizeMemberAction(request, env, member, body) {
  */
 export async function createCheckout(request, env) {
   try {
-    const body = await readJsonObject(request);
-    if (!body) {
-      return error(INVALID_JSON_MESSAGE, 400);
-    }
-    const { memberId } = body;
+    const { data: body, response } = await readBody(request);
+    if (response) return response;
 
-    if (!memberId) {
-      return error('memberId is required', 400);
-    }
-    if (typeof memberId !== 'number' && typeof memberId !== 'string') {
-      return error('memberId must be a number', 400);
-    }
+    const memberId = parsePositiveId(body.memberId);
+    if (memberId === null) return invalidId(MSG_MEMBER_ID);
 
     // Verify member exists and payment is pending
-    const member = await membersDb.getMemberById(env.DB, memberId);
+    const member = await db.getMemberById(env.DB, memberId);
     if (!member) {
-      return error('Member not found', 404);
+      return notFound(MSG_MEMBER_NOT_FOUND);
     }
 
     if (!await authorizeMemberAction(request, env, member, body)) {
-      return error('Mot de passe d\'équipe requis ou incorrect', 403);
+      return forbidden(MSG_TEAM_AUTH);
     }
 
-    if (member.payment_status !== 'pending' && member.payment_status !== 'unpaid') {
-      return error(`Invalid payment status: ${member.payment_status}`, 400);
+    if (member.payment_status !== PAYMENT_STATUS.PENDING && member.payment_status !== PAYMENT_STATUS.UNPAID) {
+      return badRequest(`Statut de paiement invalide : ${member.payment_status}`, 'invalid_payment_status');
     }
 
     // Check if payment is enabled
     const paymentEnabled = await settingsDb.getSetting(env.DB, 'payment_enabled');
     if (paymentEnabled !== 'true') {
-      return error('Online payments are currently disabled', 400);
+      return badRequest('Le paiement en ligne est actuellement désactivé', 'payment_disabled');
     }
 
     // Get pricing configuration
-    const registrationDeadline = await settingsDb.getSetting(env.DB, 'registration_deadline');
-    const tierCutoffDays = Number.parseInt(await settingsDb.getSetting(env.DB, 'tier1_cutoff_days') || '7', 10);
-    const tier1Price = Number.parseInt(await settingsDb.getSetting(env.DB, 'price_tier1') || '500', 10);
-    const tier2Price = Number.parseInt(await settingsDb.getSetting(env.DB, 'price_tier2') || '700', 10);
+    const { registrationDeadline, tierCutoffDays, tier1Price, tier2Price } = await loadPricingConfig(env.DB);
 
     // Calculate tier and price
     const tier = member.registration_tier || calculateTier(registrationDeadline, tierCutoffDays);
@@ -98,13 +135,17 @@ export async function createCheckout(request, env) {
 
     // Check for SumUp credentials
     if (!env.SUMUP_API_KEY) {
-      return error('SumUp API key not configured', 500);
+      return serverError('SumUp API key not configured', null, MSG_NOT_CONFIGURED);
     }
     if (!env.SUMUP_MERCHANT_CODE) {
-      return error('SumUp merchant code not configured', 500);
+      return serverError('SumUp merchant code not configured', null, MSG_NOT_CONFIGURED);
     }
     if (env.SUMUP_MERCHANT_CODE === 'PLACEHOLDER_MERCHANT_CODE') {
-      return error('SumUp merchant code is not configured for this environment', 503);
+      return error(
+        "Le paiement en ligne n'est pas encore configuré pour cet environnement",
+        503,
+        'payment_unavailable'
+      );
     }
 
     // Create SumUp checkout
@@ -126,7 +167,7 @@ export async function createCheckout(request, env) {
     // Update member with checkout info
     await paymentsDb.updateMemberPayment(env.DB, memberId, {
       checkout_id: checkout.id,
-      payment_status: 'pending',
+      payment_status: PAYMENT_STATUS.PENDING,
       payment_method: 'online',
       registration_tier: tier
     });
@@ -149,8 +190,7 @@ export async function createCheckout(request, env) {
       reference: checkoutReference
     });
   } catch (error_) {
-    console.error('Error creating checkout:', error_);
-    return error(error_.message || 'Failed to create checkout', 500);
+    return serverError('Error creating checkout:', error_, 'Impossible de créer le paiement');
   }
 }
 
@@ -159,34 +199,27 @@ export async function createCheckout(request, env) {
  */
 export async function verifyPayment(request, env) {
   try {
-    const body = await readJsonObject(request);
-    if (!body) {
-      return error(INVALID_JSON_MESSAGE, 400);
-    }
-    const { checkoutId } = body;
+    const { data: body, response } = await readBody(request);
+    if (response) return response;
 
-    if (!checkoutId) {
-      return error('checkoutId is required', 400);
-    }
-    if (typeof checkoutId !== 'string') {
-      return error('checkoutId must be a string', 400);
-    }
+    const checkoutId = parseCheckoutId(body.checkoutId);
+    if (checkoutId === null) return badRequest(MSG_CHECKOUT_ID, 'invalid_checkout_id');
 
     // Find member by checkout ID
     const member = await paymentsDb.getMemberByCheckoutId(env.DB, checkoutId);
     if (!member) {
-      return error('Member not found for checkout', 404);
+      return notFound('Aucun membre pour ce paiement');
     }
 
     // Require admin or team password before revealing anything about the
     // payment status of this member.
     if (!await authorizeMemberAction(request, env, member, body)) {
-      return error('Mot de passe d\'équipe requis ou incorrect', 403);
+      return forbidden(MSG_TEAM_AUTH);
     }
 
     // Get checkout status from SumUp
     if (!env.SUMUP_API_KEY) {
-      return error('SumUp API key not configured', 500);
+      return serverError('SumUp API key not configured', null, MSG_NOT_CONFIGURED);
     }
 
     const sumup = new SumUpClient(env.SUMUP_API_KEY);
@@ -196,7 +229,7 @@ export async function verifyPayment(request, env) {
     if (checkout.isPaid) {
       // Payment successful - update member
       await paymentsDb.updateMemberPayment(env.DB, member.id, {
-        payment_status: 'paid',
+        payment_status: PAYMENT_STATUS.PAID,
         payment_amount: checkout.amountCents,
         payment_confirmed_at: new Date().toISOString(),
         transaction_id: checkout.transactionId,
@@ -253,8 +286,7 @@ export async function verifyPayment(request, env) {
       message: 'Payment not yet completed'
     });
   } catch (error_) {
-    console.error('Error verifying payment:', error_);
-    return error(error_.message || 'Failed to verify payment', 500);
+    return serverError('Error verifying payment:', error_, 'Impossible de vérifier le paiement');
   }
 }
 
@@ -263,41 +295,33 @@ export async function verifyPayment(request, env) {
  */
 export async function markPaymentDelayed(request, env) {
   try {
-    const body = await readJsonObject(request);
-    if (!body) {
-      return error(INVALID_JSON_MESSAGE, 400);
-    }
-    const { memberId } = body;
+    const { data: body, response } = await readBody(request);
+    if (response) return response;
 
-    if (!memberId) {
-      return error('memberId is required', 400);
-    }
-    if (typeof memberId !== 'number' && typeof memberId !== 'string') {
-      return error('memberId must be a number', 400);
-    }
+    const memberId = parsePositiveId(body.memberId);
+    if (memberId === null) return invalidId(MSG_MEMBER_ID);
 
     // Verify member exists
-    const member = await membersDb.getMemberById(env.DB, memberId);
+    const member = await db.getMemberById(env.DB, memberId);
     if (!member) {
-      return error('Member not found', 404);
+      return notFound(MSG_MEMBER_NOT_FOUND);
     }
 
     if (!await authorizeMemberAction(request, env, member, body)) {
-      return error('Mot de passe d\'équipe requis ou incorrect', 403);
+      return forbidden(MSG_TEAM_AUTH);
     }
 
-    if (member.payment_status === 'paid') {
-      return error('Member has already paid', 409);
+    if (member.payment_status === PAYMENT_STATUS.PAID) {
+      return error('Ce membre a déjà payé', 409, 'already_paid');
     }
 
     // Get pricing tier for the member
-    const registrationDeadline = await settingsDb.getSetting(env.DB, 'registration_deadline');
-    const tierCutoffDays = Number.parseInt(await settingsDb.getSetting(env.DB, 'tier1_cutoff_days') || '7', 10);
+    const { registrationDeadline, tierCutoffDays } = await loadPricingConfig(env.DB);
     const tier = calculateTier(registrationDeadline, tierCutoffDays);
 
     // Update member
     await paymentsDb.updateMemberPayment(env.DB, memberId, {
-      payment_status: 'delayed',
+      payment_status: PAYMENT_STATUS.DELAYED,
       payment_method: 'on_site',
       registration_tier: tier
     });
@@ -316,8 +340,7 @@ export async function markPaymentDelayed(request, env) {
       tier
     });
   } catch (error_) {
-    console.error('Error marking payment delayed:', error_);
-    return error(error_.message || 'Failed to mark payment delayed', 500);
+    return serverError('Error marking payment delayed:', error_, 'Impossible de différer le paiement');
   }
 }
 
@@ -327,10 +350,7 @@ export async function markPaymentDelayed(request, env) {
 export async function getPricing(request, env) {
   try {
     // Get pricing configuration
-    const registrationDeadline = await settingsDb.getSetting(env.DB, 'registration_deadline');
-    const tierCutoffDays = Number.parseInt(await settingsDb.getSetting(env.DB, 'tier1_cutoff_days') || '7', 10);
-    const tier1Price = Number.parseInt(await settingsDb.getSetting(env.DB, 'price_tier1') || '500', 10);
-    const tier2Price = Number.parseInt(await settingsDb.getSetting(env.DB, 'price_tier2') || '700', 10);
+    const { registrationDeadline, tierCutoffDays, tier1Price, tier2Price } = await loadPricingConfig(env.DB);
     const paymentEnabled = await settingsDb.getSetting(env.DB, 'payment_enabled');
 
     // Calculate current tier
@@ -342,8 +362,8 @@ export async function getPricing(request, env) {
     let daysUntilDeadline = null;
     if (registrationDeadline) {
       const deadline = new Date(registrationDeadline);
-      const now = new Date();
-      daysUntilDeadline = Math.floor((deadline.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+      const days = Math.floor((deadline.getTime() - Date.now()) / DAY_MS);
+      daysUntilDeadline = Number.isNaN(days) ? null : days;
     }
 
     return json({
@@ -366,21 +386,27 @@ export async function getPricing(request, env) {
       daysUntilDeadline
     });
   } catch (error_) {
-    console.error('Error getting pricing:', error_);
-    return error(error_.message || 'Failed to get pricing', 500);
+    return serverError('Error getting pricing:', error_, 'Impossible de charger les tarifs');
   }
 }
 
 /**
  * POST /api/payment/callback - SumUp webhook callback
- * This is called by SumUp when payment status changes
+ * This is called by SumUp when payment status changes.
+ *
+ * A body that is not a JSON object is a 400. Once the body is understood the
+ * webhook is always acknowledged with 200 (SumUp must not retry forever); a
+ * processing failure is logged server-side and reported as `processed: false`,
+ * never with its message.
  */
 export async function paymentCallback(request, env) {
-  try {
-    const body = await request.json();
+  const { data: body, response } = await readBody(request);
+  if (response) return response;
 
+  try {
     // SumUp sends checkout_reference and status
-    const { checkout_reference, id: checkoutId } = body;
+    const { checkout_reference, id } = body;
+    const checkoutId = parseCheckoutId(id);
 
     if (!checkout_reference && !checkoutId) {
       return json({ received: true }); // Acknowledge but ignore
@@ -408,10 +434,10 @@ export async function paymentCallback(request, env) {
     const rawCheckout = await sumup.getCheckout(checkoutId);
     const checkout = parseCheckoutResponse(rawCheckout);
 
-    if (checkout.isPaid && member.payment_status !== 'paid') {
+    if (checkout.isPaid && member.payment_status !== PAYMENT_STATUS.PAID) {
       // Update member
       await paymentsDb.updateMemberPayment(env.DB, member.id, {
-        payment_status: 'paid',
+        payment_status: PAYMENT_STATUS.PAID,
         payment_amount: checkout.amountCents,
         payment_confirmed_at: new Date().toISOString(),
         transaction_id: checkout.transactionId,
@@ -432,6 +458,6 @@ export async function paymentCallback(request, env) {
     return json({ received: true, processed: true });
   } catch (error_) {
     console.error('Error processing payment callback:', error_);
-    return json({ received: true, error: error_.message });
+    return json({ received: true, processed: false });
   }
 }

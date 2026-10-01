@@ -542,7 +542,7 @@ describe('CSV Import - Validation', () => {
 
     expect(response.status).toBe(400);
     const data = await response.json();
-    expect(data.error).toContain('Missing required columns');
+    expect(data.error).toContain('Colonnes obligatoires manquantes');
   });
 
   it('should reject empty CSV', async () => {

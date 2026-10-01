@@ -2,18 +2,19 @@
  * Admin pizza distribution handlers
  */
 
-import { json, error } from 'astro-core/router';
+import { json } from 'astro-core/router';
+import { adminOnly } from 'astro-core/auth';
+import { parsePositiveId } from 'astro-core/ids';
+import { invalidId, notFound, serverError } from 'astro-core/http';
 import * as db from '../../lib/db.js';
-import { verifyAdmin } from '../../shared/auth.js';
+import { readIdList } from '../../shared/http.js';
+
+const MSG_MEMBER_NOT_FOUND = 'Membre introuvable';
 
 /**
  * GET /api/admin/pizza - Get all members with pizza distribution status
  */
-export async function getPizza(request, env) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const getPizza = adminOnly(async (request, env) => {
   try {
     const members = await db.getAllMembersWithPizzaStatus(env.DB);
     const stats = await db.getPizzaStats(env.DB);
@@ -29,31 +30,23 @@ export async function getPizza(request, env) {
       }
     });
   } catch (error_) {
-    console.error('Error fetching pizza status:', error_);
-    return error('Failed to fetch pizza status', 500);
+    return serverError('Error fetching pizza status:', error_);
   }
-}
+});
 
 /**
  * POST /api/admin/pizza/give/:id - Mark member as received pizza
  */
-export async function givePizzaMember(request, env, ctx, params) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const givePizzaMember = adminOnly(async (request, env, ctx, params) => {
   try {
-    const memberId = Number.parseInt(params.id, 10);
+    const memberId = parsePositiveId(params.id);
+    if (memberId === null) return invalidId();
 
     const member = await db.getMemberById(env.DB, memberId);
-    if (!member) {
-      return error('Member not found', 404);
-    }
+    if (!member) return notFound(MSG_MEMBER_NOT_FOUND);
 
     const success = await db.givePizza(env.DB, memberId);
-    if (!success) {
-      return error('Failed to give pizza', 500);
-    }
+    if (!success) return notFound(MSG_MEMBER_NOT_FOUND); // deleted in the meantime
 
     const updated = await db.getMemberById(env.DB, memberId);
 
@@ -66,31 +59,23 @@ export async function givePizzaMember(request, env, ctx, params) {
       }
     });
   } catch (error_) {
-    console.error('Error giving pizza:', error_);
-    return error('Failed to give pizza', 500);
+    return serverError('Error giving pizza:', error_);
   }
-}
+});
 
 /**
  * POST /api/admin/pizza/revoke/:id - Revoke pizza from member (undo)
  */
-export async function revokePizzaMember(request, env, ctx, params) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const revokePizzaMember = adminOnly(async (request, env, ctx, params) => {
   try {
-    const memberId = Number.parseInt(params.id, 10);
+    const memberId = parsePositiveId(params.id);
+    if (memberId === null) return invalidId();
 
     const member = await db.getMemberById(env.DB, memberId);
-    if (!member) {
-      return error('Member not found', 404);
-    }
+    if (!member) return notFound(MSG_MEMBER_NOT_FOUND);
 
     const success = await db.revokePizza(env.DB, memberId);
-    if (!success) {
-      return error('Failed to revoke pizza', 500);
-    }
+    if (!success) return notFound(MSG_MEMBER_NOT_FOUND); // deleted in the meantime
 
     return json({
       success: true,
@@ -101,55 +86,38 @@ export async function revokePizzaMember(request, env, ctx, params) {
       }
     });
   } catch (error_) {
-    console.error('Error revoking pizza:', error_);
-    return error('Failed to revoke pizza', 500);
+    return serverError('Error revoking pizza:', error_);
   }
-}
+});
 
 /**
  * POST /api/admin/pizza/give-batch - Batch give pizza to multiple members
  */
-export async function givePizzaMembersBatch(request, env) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const givePizzaMembersBatch = adminOnly(async (request, env) => {
   try {
-    const { memberIds } = await request.json();
+    const { ids, response } = await readIdList(request, 'memberIds');
+    if (response) return response;
 
-    if (!Array.isArray(memberIds) || memberIds.length === 0) {
-      return error('memberIds array is required', 400);
-    }
-
-    const count = await db.givePizzaBatch(env.DB, memberIds.map(id => Number.parseInt(id, 10)));
+    const count = await db.givePizzaBatch(env.DB, ids);
 
     return json({ success: true, given: count });
   } catch (error_) {
-    console.error('Error batch giving pizza:', error_);
-    return error('Failed to give pizza', 500);
+    return serverError('Error batch giving pizza:', error_);
   }
-}
+});
 
 /**
  * POST /api/admin/pizza/revoke-batch - Batch revoke pizza from multiple members
  */
-export async function revokePizzaMembersBatch(request, env) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const revokePizzaMembersBatch = adminOnly(async (request, env) => {
   try {
-    const { memberIds } = await request.json();
+    const { ids, response } = await readIdList(request, 'memberIds');
+    if (response) return response;
 
-    if (!Array.isArray(memberIds) || memberIds.length === 0) {
-      return error('memberIds array is required', 400);
-    }
-
-    const count = await db.revokePizzaBatch(env.DB, memberIds.map(id => Number.parseInt(id, 10)));
+    const count = await db.revokePizzaBatch(env.DB, ids);
 
     return json({ success: true, revoked: count });
   } catch (error_) {
-    console.error('Error batch revoking pizza:', error_);
-    return error('Failed to revoke pizza', 500);
+    return serverError('Error batch revoking pizza:', error_);
   }
-}
+});

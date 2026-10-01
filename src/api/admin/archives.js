@@ -4,24 +4,42 @@
  */
 
 import { json, error } from 'astro-core/router';
-import { verifyAdmin } from '../../shared/auth.js';
+import { adminOnly } from 'astro-core/auth';
+import { parsePositiveId } from 'astro-core/ids';
+import { badRequest, forbidden, invalidId, notFound, serverError } from 'astro-core/http';
 import * as archivesDb from '../../database/db.archives.js';
+import { MAX_EVENT_YEAR, MIN_EVENT_YEAR } from '../../shared/constants.js';
+import { readOptionalBody } from '../../shared/http.js';
 
-// Error messages
-const ERR_INVALID_YEAR = 'Invalid year';
+const MSG_INVALID_YEAR = 'Année invalide';
+const MSG_ARCHIVE_NOT_FOUND = 'Archive introuvable';
+
+/**
+ * Validate an event year (path param or body value): a positive integer
+ * within [MIN_EVENT_YEAR, MAX_EVENT_YEAR].
+ * @param {unknown} value
+ * @returns {{ year: number, response: null } | { year: null, response: Response }}
+ */
+function parseYear(value) {
+  const year = parsePositiveId(value);
+  if (year === null) return { year: null, response: invalidId(MSG_INVALID_YEAR) };
+  if (year < MIN_EVENT_YEAR || year > MAX_EVENT_YEAR) {
+    return {
+      year: null,
+      response: badRequest(`${MSG_INVALID_YEAR} (${MIN_EVENT_YEAR}-${MAX_EVENT_YEAR})`, 'invalid_year')
+    };
+  }
+  return { year, response: null };
+}
 
 /**
  * GET /api/admin/archives - List all archives
  */
-export async function listArchives(request, env) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const listArchives = adminOnly(async (request, env) => {
   try {
     const archives = await archivesDb.getArchives(env.DB);
-    
-    // Parse stats for each archive
+
+    // Parse stats for each archive (a corrupt row gets `stats: null`)
     const archivesWithStats = archives.map(archive => ({
       event_year: archive.event_year,
       archived_at: archive.archived_at,
@@ -30,77 +48,65 @@ export async function listArchives(request, env) {
       total_teams: archive.total_teams,
       total_participants: archive.total_participants,
       total_revenue: archive.total_revenue,
-      stats: archive.stats_json ? JSON.parse(archive.stats_json) : null
+      stats: archivesDb.parseJsonColumn(archive.stats_json, null)
     }));
 
     return json({ archives: archivesWithStats });
   } catch (error_) {
-    console.error('Error listing archives:', error_);
-    return error('Failed to fetch archives', 500);
+    return serverError('Error listing archives:', error_);
   }
-}
+});
 
 /**
  * GET /api/admin/archives/:year - Get archive by year
  */
-export async function getArchive(request, env, ctx, params) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const getArchive = adminOnly(async (request, env, ctx, params) => {
   try {
-    const year = Number.parseInt(params.year, 10);
-    if (Number.isNaN(year)) {
-      return error(ERR_INVALID_YEAR, 400);
-    }
+    const { year, response } = parseYear(params.year);
+    if (response) return response;
 
     // Check and apply expiration if needed
     await archivesDb.checkAndApplyExpiration(env.DB, year);
 
     const archive = await archivesDb.getArchiveByYear(env.DB, year);
-    if (!archive) {
-      return error('Archive not found', 404);
-    }
+    if (!archive) return notFound(MSG_ARCHIVE_NOT_FOUND);
 
     return json({ archive });
   } catch (error_) {
-    console.error('Error fetching archive:', error_);
-    return error('Failed to fetch archive', 500);
+    return serverError('Error fetching archive:', error_);
   }
-}
+});
 
 /**
  * POST /api/admin/archives - Create new archive
+ * Optional body `{ year }`; without a body (or without a year) the event year is detected.
  */
-export async function createArchive(request, env) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const createArchive = adminOnly(async (request, env) => {
   try {
-    const body = await request.json().catch(() => ({}));
-    
-  // Get year from body or detect it
-  let year = body.year;
-  if (year) {
-    year = Number.parseInt(year, 10);
-    if (Number.isNaN(year) || year < 2000 || year > 2100) {
-      return error(ERR_INVALID_YEAR, 400);
+    const { data: body, response: bodyResponse } = await readOptionalBody(request);
+    if (bodyResponse) return bodyResponse;
+
+    // Get year from body or detect it
+    let year;
+    const requested = body?.year;
+    if (requested !== undefined && requested !== null && requested !== '') {
+      const parsed = parseYear(requested);
+      if (parsed.response) return parsed.response;
+      year = parsed.year;
+    } else {
+      year = await archivesDb.detectEventYear(env.DB);
     }
-  } else {
-    year = await archivesDb.detectEventYear(env.DB);
-  }
 
     // Check if archive already exists
     const exists = await archivesDb.archiveExists(env.DB, year);
     if (exists) {
-      return error(`Archive for ${year} already exists`, 409);
+      return error(`Une archive existe déjà pour ${year}`, 409, 'archive_exists');
     }
 
     // Check if there's data to archive
     const counts = await archivesDb.getDataCounts(env.DB);
     if (counts.teams === 0 && counts.members === 0) {
-      return error('No data to archive', 400);
+      return badRequest('Aucune donnée à archiver', 'no_data');
     }
 
     // Create the archive
@@ -117,32 +123,23 @@ export async function createArchive(request, env) {
       }
     }, 201);
   } catch (error_) {
-    console.error('Error creating archive:', error_);
-    return error('Failed to create archive', 500);
+    return serverError('Error creating archive:', error_);
   }
-}
+});
 
 /**
  * GET /api/admin/archives/:year/export - Export archive as JSON
  */
-export async function exportArchive(request, env, ctx, params) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const exportArchive = adminOnly(async (request, env, ctx, params) => {
   try {
-    const year = Number.parseInt(params.year, 10);
-    if (Number.isNaN(year)) {
-      return error(ERR_INVALID_YEAR, 400);
-    }
+    const { year, response } = parseYear(params.year);
+    if (response) return response;
 
     // Check and apply expiration if needed
     await archivesDb.checkAndApplyExpiration(env.DB, year);
 
     const archive = await archivesDb.getArchiveByYear(env.DB, year);
-    if (!archive) {
-      return error('Archive not found', 404);
-    }
+    if (!archive) return notFound(MSG_ARCHIVE_NOT_FOUND);
 
     // Return structured JSON export
     return json({
@@ -165,22 +162,17 @@ export async function exportArchive(request, env, ctx, params) {
       }
     });
   } catch (error_) {
-    console.error('Error exporting archive:', error_);
-    return error('Failed to export archive', 500);
+    return serverError('Error exporting archive:', error_);
   }
-}
+});
 
 /**
- * POST /api/admin/archives/check-expiration - Trigger GDPR expiration check
+ * POST /api/admin/expiration-check - Trigger GDPR expiration check
  */
-export async function checkExpiration(request, env) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const checkExpiration = adminOnly(async (request, env) => {
   try {
     const results = await archivesDb.checkAllExpirations(env.DB);
-    
+
     return json({
       checked: results.length,
       expired: results.filter(r => r.expired).length,
@@ -188,50 +180,43 @@ export async function checkExpiration(request, env) {
       details: results
     });
   } catch (error_) {
-    console.error('Error checking expirations:', error_);
-    return error('Failed to check expirations', 500);
+    return serverError('Error checking expirations:', error_);
   }
-}
+});
 
 /**
  * GET /api/admin/event-year - Get current event year
  */
-export async function getEventYear(request, env) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const getEventYear = adminOnly(async (request, env) => {
   try {
     const year = await archivesDb.detectEventYear(env.DB);
     return json({ year });
   } catch (error_) {
-    console.error('Error getting event year:', error_);
-    return error('Failed to get event year', 500);
+    return serverError('Error getting event year:', error_);
   }
-}
+});
 
 /**
- * POST /api/admin/reset - Reset all data with archive check
+ * POST /api/admin/reset - Reset all data with archive check.
+ * The Organisation team is kept (see `resetAllData`).
  */
-export async function resetData(request, env) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const resetData = adminOnly(async (request, env) => {
   try {
-    const body = await request.json().catch(() => ({}));
-    
+    const { data, response } = await readOptionalBody(request);
+    if (response) return response;
+    const body = data ?? {};
+
     // Require confirmation
     if (body.confirmation !== 'SUPPRIMER') {
-      return error('Confirmation required: type "SUPPRIMER"', 400);
+      return badRequest('Confirmation requise : tapez "SUPPRIMER"', 'confirmation_required');
     }
 
     // Get current year
     const year = await archivesDb.detectEventYear(env.DB);
-    
+
     // Check if archive exists for current year
     const archiveExists = await archivesDb.archiveExists(env.DB, year);
-    
+
     // If no archive and not forcing, suggest creating one
     if (!archiveExists && !body.force) {
       const counts = await archivesDb.getDataCounts(env.DB);
@@ -260,19 +245,14 @@ export async function resetData(request, env) {
       archiveCreated: body.createArchiveFirst && !archiveExists
     });
   } catch (error_) {
-    console.error('Error resetting data:', error_);
-    return error('Failed to reset data', 500);
+    return serverError('Error resetting data:', error_);
   }
-}
+});
 
 /**
  * GET /api/admin/reset/check - Check if reset is safe (archive exists)
  */
-export async function checkResetSafety(request, env) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const checkResetSafety = adminOnly(async (request, env) => {
   try {
     const year = await archivesDb.detectEventYear(env.DB);
     const archiveExists = await archivesDb.archiveExists(env.DB, year);
@@ -303,44 +283,33 @@ export async function checkResetSafety(request, env) {
       message: message
     });
   } catch (error_) {
-    console.error('Error checking reset safety:', error_);
-    return error('Failed to check reset safety', 500);
+    return serverError('Error checking reset safety:', error_);
   }
-}
+});
 
 /**
  * DELETE /api/admin/archives/:year - Delete an archive (development only)
  */
-export async function deleteArchive(request, env, ctx, params) {
-  if (!await verifyAdmin(request, env)) {
-    return error('Unauthorized', 401);
-  }
-
+export const deleteArchive = adminOnly(async (request, env, ctx, params) => {
   // Only allow in development environment
   if (env.ENVIRONMENT !== 'development') {
-    return error('Archive deletion is only allowed in development environment', 403);
+    return forbidden("La suppression d'une archive n'est autorisée qu'en environnement de développement");
   }
 
   try {
-    const year = Number.parseInt(params.year, 10);
-    if (Number.isNaN(year)) {
-      return error(ERR_INVALID_YEAR, 400);
-    }
+    const { year, response } = parseYear(params.year);
+    if (response) return response;
 
     // Check if archive exists
     const exists = await archivesDb.archiveExists(env.DB, year);
-    if (!exists) {
-      return error(`Archive for ${year} not found`, 404);
-    }
+    if (!exists) return notFound(MSG_ARCHIVE_NOT_FOUND);
 
     // Delete the archive
     const deleted = await archivesDb.deleteArchive(env.DB, year);
+    if (!deleted) return notFound(MSG_ARCHIVE_NOT_FOUND); // deleted in the meantime
 
-    return deleted
-      ? json({ success: true, message: `Archive for ${year} has been deleted` })
-      : error('Failed to delete archive', 500);
+    return json({ success: true, message: `Archive for ${year} has been deleted` });
   } catch (error_) {
-    console.error('Error deleting archive:', error_);
-    return error('Failed to delete archive', 500);
+    return serverError('Error deleting archive:', error_);
   }
-}
+});
