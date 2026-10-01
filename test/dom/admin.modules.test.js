@@ -485,6 +485,7 @@ describe('archives module', () => {
 
   it('createArchive and deleteArchive tell apart the HTTP statuses of the server', async () => {
     vi.stubGlobal('confirm', vi.fn(() => true));
+    vi.stubGlobal('prompt', vi.fn(() => '2025'));
     const fail = (status) => vi.fn().mockRejectedValue(Object.assign(new Error('x'), { status }));
     const lastToast = () => [...document.querySelectorAll('.toast.error')].at(-1).textContent;
 
