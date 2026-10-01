@@ -10,22 +10,18 @@
  *   config: object|null,
  *   teams: Array,
  *   stats: object|null,
- *   pricing: object|null,
  *   isNewTeam: boolean,
  *   selectedTeamId: number|null,
- *   isAtCapacity: boolean,
- *   paymentEnabled: boolean
+ *   isAtCapacity: boolean
  * }}
  */
 export const state = {
   config: null,
   teams: [],
   stats: null,
-  pricing: null,
   isNewTeam: true,
   selectedTeamId: null,
-  isAtCapacity: false,
-  paymentEnabled: false
+  isAtCapacity: false
 };
 
 /**
@@ -50,15 +46,6 @@ export function setTeams(teams) {
  */
 export function setStats(stats) {
   state.stats = stats;
-}
-
-/**
- * Update pricing
- * @param {object} pricing - Pricing object
- */
-export function setPricing(pricing) {
-  state.pricing = pricing;
-  state.paymentEnabled = pricing?.enabled ?? false;
 }
 
 /**

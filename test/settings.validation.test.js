@@ -85,9 +85,6 @@ describe('PUT /api/admin/settings - numeric bounds', () => {
     ['price_asso_member', 0, 100_000],
     ['price_non_member', 0, 100_000],
     ['price_late', 0, 100_000],
-    ['price_tier1', 0, 100_000],
-    ['price_tier2', 0, 100_000],
-    ['tier1_cutoff_days', 1, 365],
     ['gdpr_retention_years', 1, 10]
   ];
 
@@ -139,27 +136,30 @@ describe('PUT /api/admin/settings - numeric bounds', () => {
 
 describe('PUT /api/admin/settings - scalar settings', () => {
   it.each([
-    [true, 'true'],
-    [false, 'false'],
-    ['true', 'true'],
-    ['false', 'false']
-  ])('payment_enabled accepts %j', async (value, expected) => {
-    expect((await put({ payment_enabled: value })).status).toBe(200);
-    expect(await stored('payment_enabled')).toBe(expected);
+    ['payment_enabled', true],
+    ['price_tier1', 500],
+    ['price_tier2', 700],
+    ['tier1_cutoff_days', 7],
+    ['registration_deadline', '2031-06-15T20:00:00.000Z']
+  ])('tolerates the retired key %s (an old cached admin page still sends it) and never stores it', async (key, value) => {
+    const response = await put({ [key]: value, max_team_size: 9 });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ success: true, updated: ['max_team_size'] });
+    expect(await stored(key)).toBeNull();
+    expect(await stored('max_team_size')).toBe('9');
   });
 
-  it.each(['yes', 'TRUE', 1, 0, null, 'on', {}])('payment_enabled rejects %j', async (value) => {
-    expect((await put({ payment_enabled: value })).status).toBe(400);
-    expect(await stored('payment_enabled')).toBeNull();
+  it('drops retired keys even when their value would have been invalid, and accepts a body made of retired keys only', async () => {
+    const response = await put({ payment_enabled: 'yes', price_tier1: 'abc', registration_deadline: 'not a date' });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ success: true, updated: [] });
+    expect(await countRows('settings')).toBe(0);
   });
 
-  it.each(['', '2031-06-15T20:00:00.000Z', '2031-06-15'])('registration_deadline accepts %j', async (value) => {
-    expect((await put({ registration_deadline: value })).status).toBe(200);
-    expect(await stored('registration_deadline')).toBe(value);
-  });
-
-  it.each(['not a date', 12_345, null, true, []])('registration_deadline rejects %j', async (value) => {
-    expect((await put({ registration_deadline: value })).status).toBe(400);
+  it('still reports unknown keys next to retired ones', async () => {
+    const response = await put({ payment_enabled: true, evil_key: 1 });
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toBe('Clés inconnues : evil_key');
   });
 
   it.each(['00:00', '09:30', '19:00', '23:59'])('late_cutoff_time accepts %s', async (value) => {
@@ -185,9 +185,11 @@ describe('PUT /api/admin/settings - scalar settings', () => {
 
 describe('PUT /api/admin/settings - pizza list', () => {
   const pizza = (overrides = {}) => ({ id: 'reine', name: 'Reine', description: 'Tomate, jambon', ...overrides });
+  // The catalogue must always contain the "Aucune" (no pizza) entry
+  const aucune = { id: '0-rien', name: 'Aucune', description: '' };
 
   it('stores a valid list as JSON and GET returns it parsed', async () => {
-    const list = [pizza(), pizza({ id: 'none', name: 'Aucune', description: undefined })];
+    const list = [pizza(), aucune];
     expect((await put({ pizzas: list })).status).toBe(200);
 
     expect(JSON.parse(await stored('pizzas'))).toEqual(JSON.parse(JSON.stringify(list)));
@@ -195,9 +197,17 @@ describe('PUT /api/admin/settings - pizza list', () => {
     expect(settings.pizzas).toEqual(JSON.parse(JSON.stringify(list)));
   });
 
-  it('accepts an empty list', async () => {
-    expect((await put({ pizzas: [] })).status).toBe(200);
-    expect(await stored('pizzas')).toBe('[]');
+  it('rejects a list without the "Aucune" (0-rien) entry, including an empty list', async () => {
+    for (const list of [[], [pizza()]]) {
+      const response = await put({ pizzas: list });
+      expect(response.status).toBe(400);
+      expect((await response.json()).error).toContain('0-rien');
+    }
+    expect(await stored('pizzas')).toBeNull();
+  });
+
+  it('accepts a list that only contains the "Aucune" entry', async () => {
+    expect((await put({ pizzas: [aucune] })).status).toBe(200);
   });
 
   it.each([
@@ -223,6 +233,8 @@ describe('PUT /api/admin/settings - pizza list', () => {
     ['empty name', [{ id: 'a', name: '' }]],
     ['numeric name', [{ id: 'a', name: 7 }]],
     ['numeric description', [{ id: 'a', name: 'A', description: 7 }]],
+    ['blank name', [{ id: 'a', name: '   ' }]],
+    ['duplicate ids', [pizza(), pizza({ name: 'Autre' })]],
     ['second entry invalid', [pizza(), { id: 'b' }]]
   ])('rejects a list with a %s with a 400 (never a 500)', async (_label, list) => {
     const response = await put({ pizzas: list });
@@ -232,20 +244,44 @@ describe('PUT /api/admin/settings - pizza list', () => {
 
   it('names the index of the first bad entry', async () => {
     const response = await put({ pizzas: [pizza(), pizza({ id: 'x' }), { id: 'bad' }] });
-    expect((await response.json()).error).toContain('index 2');
+    expect((await response.json()).error).toContain('Pizza n°3');
   });
 
   it('keeps hostile text as text', async () => {
     const hostile = pizza({ id: 'x', name: '"><img src=x onerror=alert(1)>', description: "'; DROP TABLE settings; --" });
-    expect((await put({ pizzas: [hostile] })).status).toBe(200);
-    expect(JSON.parse(await stored('pizzas'))).toEqual([hostile]);
+    expect((await put({ pizzas: [hostile, aucune] })).status).toBe(200);
+    expect(JSON.parse(await stored('pizzas'))).toEqual([hostile, aucune]);
     expect(await countRows('settings')).toBe(1);
   });
 
+  it('answers in French for an invalid list', async () => {
+    const duplicate = await (await put({ pizzas: [pizza(), pizza()] })).json();
+    expect(duplicate.error).toBe("Valeur invalide pour pizzas : Pizza n°2 : l'identifiant « reine » est déjà utilisé");
+    const noName = await (await put({ pizzas: [{ id: 'a' }] })).json();
+    expect(noName.error).toBe('Valeur invalide pour pizzas : Pizza n°1 : le nom est requis');
+    const noObject = await (await put({ pizzas: [5] })).json();
+    expect(noObject.error).toBe('Valeur invalide pour pizzas : Pizza n°1 : doit être un objet');
+    const levels = await (await put({ bac_levels: [{ value: 'x', label: 'y' }] })).json();
+    expect(levels.error).toBe('Valeur invalide pour bac_levels : Niveau de BAC n°1 : la valeur (value) doit être un nombre');
+  });
+
+  it('is updated on its own: a partial PUT carrying only pizzas leaves every other setting untouched', async () => {
+    await put({ max_team_size: 9, school_name: 'Test School', price_late: 1200 });
+    const before = (await adminFetch('/api/admin/settings').then(r => r.json())).raw.filter(r => r.key !== 'pizzas');
+
+    const response = await put({ pizzas: [pizza(), aucune] });
+    expect(await response.json()).toEqual({ success: true, updated: ['pizzas'] });
+    expect((await put({ pizzas: [aucune] })).status).toBe(200);
+
+    const after = (await adminFetch('/api/admin/settings').then(r => r.json())).raw.filter(r => r.key !== 'pizzas');
+    expect(after).toEqual(before);
+    expect(JSON.parse(await stored('pizzas'))).toEqual([aucune]);
+  });
+
   it('feeds the public config endpoint', async () => {
-    await put({ pizzas: [pizza({ id: 'only-one', name: 'Only One' })] });
+    await put({ pizzas: [pizza({ id: 'only-one', name: 'Only One' }), aucune] });
     const { config } = await (await SELF.fetch(`${BASE}/api/config`)).json();
-    expect(config.pizzas.map(p => p.id)).toEqual(['only-one']);
+    expect(config.pizzas.map(p => p.id)).toEqual(['only-one', '0-rien']);
   });
 });
 
@@ -278,11 +314,24 @@ describe('GET /api/admin/settings', () => {
   });
 
   it('returns every stored value as a string, plus the raw rows', async () => {
-    await put({ max_team_size: 8, payment_enabled: true, school_name: 'Test School' });
+    await put({ max_team_size: 8, school_name: 'Test School' });
 
     const data = await (await adminFetch('/api/admin/settings')).json();
-    expect(data.settings).toMatchObject({ max_team_size: '8', payment_enabled: 'true', school_name: 'Test School' });
-    expect(data.raw.map(r => r.key)).toEqual(['max_team_size', 'payment_enabled', 'school_name']);
+    expect(data.settings).toMatchObject({ max_team_size: '8', school_name: 'Test School' });
+    expect(data.raw.map(r => r.key)).toEqual(['max_team_size', 'school_name']);
+  });
+
+  it('does not return the retired keys still present in D1', async () => {
+    await put({ max_team_size: 8 });
+    for (const key of ['payment_enabled', 'price_tier1', 'price_tier2', 'tier1_cutoff_days', 'registration_deadline']) {
+      await env.DB.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').bind(key, 'x').run();
+    }
+
+    const response = await adminFetch('/api/admin/settings');
+    const data = await response.json();
+    expect(Object.keys(data.settings)).toEqual(['max_team_size']);
+    expect(data.raw.map(r => r.key)).toEqual(['max_team_size']);
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
   });
 
   it('returns invalid stored JSON for list settings as the raw string instead of failing', async () => {

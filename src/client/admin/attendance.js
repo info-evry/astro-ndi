@@ -204,8 +204,9 @@ export function renderAttendance() {
     let paymentBadge = '<span class="badge badge-muted">-</span>';
 
     if (m.payment_status === 'paid') {
+      // Historical rows paid online (no new ones are created)
       const tierLabels = { 'tier1': 'Anticipé', 'tier2': 'Standard' };
-      const tierLabel = tierLabels[m.registration_tier] || 'En ligne';
+      const tierLabel = Object.hasOwn(tierLabels, m.registration_tier) ? tierLabels[m.registration_tier] : 'En ligne';
       const amount = m.payment_amount ? formatCurrency(m.payment_amount) : '';
       paymentBadge = `<span class="badge badge-success"><span class="sf-symbol">@sfs:creditcard@</span> ${tierLabel}</span>`;
       if (amount) {
@@ -272,19 +273,13 @@ export async function handleCheckIn(memberId, api, loadData) {
   const member = attendanceData.find(m => m.id === memberId);
   if (!member) return;
 
-  // If member already paid online, skip the payment modal
+  // Historical row already marked paid (former online payments): check in
+  // without payment info, so the stored payment fields are left untouched.
   if (member.payment_status === 'paid') {
     try {
-      await api(`/admin/attendance/check-in/${memberId}`, {
-        method: 'POST',
-        body: JSON.stringify({
-          paymentTier: member.registration_tier === 'tier1' ? PAYMENT_TIER.ONLINE_TIER1 : PAYMENT_TIER.ONLINE_TIER2,
-          paymentAmount: member.payment_amount ?? 0,
-          skipPayment: true
-        })
-      });
+      await api(`/admin/attendance/check-in/${memberId}`, { method: 'POST', body: JSON.stringify({}) });
       await loadData();
-      toastSuccess(`${member.first_name} ${member.last_name} enregistré(e) (déjà payé en ligne)`);
+      toastSuccess(`${member.first_name} ${member.last_name} enregistré(e) (paiement déjà enregistré)`);
     } catch (error) {
       console.error('Error checking in:', error);
       toastError(error.message || 'Erreur lors de l\'enregistrement');

@@ -219,7 +219,7 @@ describe('handleImport', () => {
     click(document.querySelector('[data-action="copy-import-passwords"]'));
     await flush(2);
 
-    expect(document.querySelector('.toast.error').textContent).toBe('Impossible de copier les mots de passe');
+    expect(document.querySelector('.toast.error').textContent).toBe('Impossible de copier les codes secrets');
   });
 
   it('shows an escaped error and restores the button when the API fails', async () => {

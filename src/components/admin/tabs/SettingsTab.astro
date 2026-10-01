@@ -4,10 +4,13 @@
  * Initial values come from src/shared/constants.js (the same defaults the API uses).
  */
 import {
+  DEFAULT_GDPR_RETENTION_YEARS,
   DEFAULT_LATE_CUTOFF_TIME,
+  DEFAULT_MAX_TEAM_SIZE,
+  DEFAULT_MAX_TOTAL_PARTICIPANTS,
+  DEFAULT_MIN_TEAM_SIZE,
   DEFAULT_PRICES,
-  DEFAULT_SCHOOL_NAME,
-  DEFAULT_TIER1_CUTOFF_DAYS
+  DEFAULT_SCHOOL_NAME
 } from '../../../shared/constants.js';
 
 const euros = (cents: number) => (cents / 100).toFixed(2);
@@ -16,9 +19,12 @@ const euros = (cents: number) => (cents / 100).toFixed(2);
 <div id="panel-settings" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-settings">
   <div class="settings-header">
     <h2>Paramètres</h2>
-    <button type="button" id="save-settings-btn" class="btn btn-primary" disabled>
-      Enregistrer les modifications
-    </button>
+    <div class="settings-header-actions">
+      <span id="settings-dirty-hint" class="form-hint hidden" role="status">Modifications non enregistrées</span>
+      <button type="button" id="save-settings-btn" class="btn btn-primary" disabled>
+        Enregistrer
+      </button>
+    </div>
   </div>
 
   <!-- General Settings -->
@@ -40,15 +46,15 @@ const euros = (cents: number) => (cents / 100).toFixed(2);
         <div class="settings-grid">
           <div class="form-group">
             <label for="setting-max-team">Taille max d'équipe</label>
-            <input type="number" id="setting-max-team" min="1" max="100" value="15">
+            <input type="number" id="setting-max-team" min="1" max="100" value={DEFAULT_MAX_TEAM_SIZE}>
           </div>
           <div class="form-group">
             <label for="setting-max-participants">Participants max</label>
-            <input type="number" id="setting-max-participants" min="1" max="10000" value="200">
+            <input type="number" id="setting-max-participants" min="1" max="10000" value={DEFAULT_MAX_TOTAL_PARTICIPANTS}>
           </div>
           <div class="form-group">
             <label for="setting-min-team">Taille min d'équipe</label>
-            <input type="number" id="setting-min-team" min="1" max="50" value="1">
+            <input type="number" id="setting-min-team" min="1" max="50" value={DEFAULT_MIN_TEAM_SIZE}>
           </div>
         </div>
       </div>
@@ -63,6 +69,10 @@ const euros = (cents: number) => (cents / 100).toFixed(2);
     <div class="disclosure-body">
       <div class="settings-card">
         <h3>Gestion des pizzas</h3>
+        <p class="settings-description">
+          Chaque ajout, modification ou suppression est enregistré immédiatement
+          (sans passer par « Enregistrer »). La pizza « Aucune » (pas de pizza) ne peut pas être supprimée.
+        </p>
         <div id="pizzas-list" class="pizzas-list"></div>
 
         <div id="pizza-add-form" class="pizza-add-form">
@@ -84,58 +94,6 @@ const euros = (cents: number) => (cents / 100).toFixed(2);
             </div>
             <button type="submit" class="btn btn-secondary btn-sm"><span class="sf-symbol">@sfs:plus@</span> Ajouter</button>
           </form>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Online Payment Settings -->
-  <div class="disclosure-group open" data-disclosure="settings-payment">
-    <div class="disclosure-header" data-action="toggle-disclosure">
-      <h2><span class="disclosure-chevron sf-symbol">@sfs:chevron.right@</span> Paiement en ligne</h2>
-    </div>
-    <div class="disclosure-body">
-      <div class="settings-card">
-        <h3>Activation</h3>
-        <p class="settings-description">Activer ou désactiver le paiement en ligne lors de l'inscription.</p>
-        <div class="form-group">
-          <label class="toggle-label">
-            <input type="checkbox" id="setting-payment-enabled">
-            <span class="toggle-switch"></span>
-            <span>Paiement en ligne activé</span>
-          </label>
-        </div>
-      </div>
-
-      <div class="settings-card">
-        <h3>Tarifs d'inscription</h3>
-        <p class="settings-description">Prix de l'inscription en ligne selon la période.</p>
-        <div class="settings-grid">
-          <div class="form-group">
-            <label for="setting-price-tier1">Prix anticipé (€)</label>
-            <input type="number" id="setting-price-tier1" min="0" max="100" step="0.01" value={euros(DEFAULT_PRICES.tier1)}>
-            <span class="form-hint">Inscription avant la date limite</span>
-          </div>
-          <div class="form-group">
-            <label for="setting-price-tier2">Prix dernière semaine (€)</label>
-            <input type="number" id="setting-price-tier2" min="0" max="100" step="0.01" value={euros(DEFAULT_PRICES.tier2)}>
-            <span class="form-hint">Inscription dans les derniers jours</span>
-          </div>
-          <div class="form-group">
-            <label for="setting-tier1-cutoff-days">Jours avant deadline pour tarif anticipé</label>
-            <input type="number" id="setting-tier1-cutoff-days" min="1" max="30" value={DEFAULT_TIER1_CUTOFF_DAYS}>
-            <span class="form-hint">Nombre de jours avant la deadline</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-card">
-        <h3>Date limite d'inscription</h3>
-        <p class="settings-description">Date et heure de clôture des inscriptions en ligne.</p>
-        <div class="form-group">
-          <label for="setting-registration-deadline">Date et heure limite</label>
-          <input type="datetime-local" id="setting-registration-deadline" value="">
-          <span class="form-hint">Les inscriptions seront fermées à cette date</span>
         </div>
       </div>
     </div>
@@ -202,7 +160,7 @@ const euros = (cents: number) => (cents / 100).toFixed(2);
         </p>
         <div class="form-group">
           <label for="setting-gdpr-retention">Durée de rétention (années)</label>
-          <input type="number" id="setting-gdpr-retention" min="1" max="10" value="3">
+          <input type="number" id="setting-gdpr-retention" min="1" max="10" value={DEFAULT_GDPR_RETENTION_YEARS}>
           <span class="form-hint">Les archives plus anciennes seront anonymisées</span>
         </div>
         <button type="button" id="check-expiration-btn" class="btn btn-secondary">

@@ -35,7 +35,7 @@ function parseTeamExtras(data) {
   if (data.password !== undefined && data.password !== '') {
     const password = normalizeTeamPassword(data.password);
     if (typeof data.password !== 'string' || !password) {
-      return { response: badRequest('Mot de passe invalide', CODE_VALIDATION) };
+      return { response: badRequest('Code secret invalide', CODE_VALIDATION) };
     }
     extras.password = password;
   }

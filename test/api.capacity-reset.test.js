@@ -93,6 +93,23 @@ describe('POST /api/admin/reset keeps the Organisation team', () => {
     expect(await countRows('payment_events')).toBe(0);
   });
 
+  it('never touches the pizza catalogue nor the other settings', async () => {
+    await seedEvent();
+    const pizzas = [
+      { id: '0-rien', name: 'Aucune', description: '' },
+      { id: 'reine', name: 'Reine', description: 'Tomate, jambon' }
+    ];
+    expect((await adminFetch('/api/admin/settings', { method: 'PUT', body: { pizzas, max_team_size: 9, school_name: 'Test School' } })).status).toBe(200);
+    const snapshot = async () => (await env.DB.prepare('SELECT key, value FROM settings ORDER BY key').all()).results;
+    const before = await snapshot();
+
+    expect((await reset({ confirmation: 'SUPPRIMER', force: true, createArchiveFirst: true })).status).toBe(200);
+
+    expect(await snapshot()).toEqual(before);
+    const { config } = await json(await SELF.fetch(`${BASE}/api/config`));
+    expect(config.pizzas).toEqual(pizzas);
+  });
+
   it('the Organisation team is not event data: the safety check ignores it', async () => {
     await seedTeam({ name: 'Organisation', password: '', members: 0 });
 

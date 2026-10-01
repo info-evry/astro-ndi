@@ -5,6 +5,11 @@
 import { json } from 'astro-core/router';
 import { serverError } from 'astro-core/http';
 import * as settingsDb from '../database/db.settings.js';
+import {
+  DEFAULT_MAX_TEAM_SIZE,
+  DEFAULT_MAX_TOTAL_PARTICIPANTS,
+  DEFAULT_MIN_TEAM_SIZE
+} from '../shared/constants.js';
 
 // Default configuration embedded in worker
 const DEFAULT_CONFIG = {
@@ -123,9 +128,9 @@ async function loadKVSettings(config, env) {
  * Apply default capacity values from environment
  */
 function applyDefaultCapacity(config, env) {
-  if (!config.maxTeamSize) config.maxTeamSize = Number.parseInt(env.MAX_TEAM_SIZE, 10) || 15;
-  if (!config.maxTotalParticipants) config.maxTotalParticipants = Number.parseInt(env.MAX_TOTAL_PARTICIPANTS, 10) || 200;
-  if (!config.minTeamSize) config.minTeamSize = Number.parseInt(env.MIN_TEAM_SIZE, 10) || 1;
+  if (!config.maxTeamSize) config.maxTeamSize = Number.parseInt(env.MAX_TEAM_SIZE, 10) || DEFAULT_MAX_TEAM_SIZE;
+  if (!config.maxTotalParticipants) config.maxTotalParticipants = Number.parseInt(env.MAX_TOTAL_PARTICIPANTS, 10) || DEFAULT_MAX_TOTAL_PARTICIPANTS;
+  if (!config.minTeamSize) config.minTeamSize = Number.parseInt(env.MIN_TEAM_SIZE, 10) || DEFAULT_MIN_TEAM_SIZE;
 }
 
 /**
@@ -160,13 +165,20 @@ export async function getConfiguredPizzaIds(env) {
   return pizzas.flatMap(pizza => (typeof pizza?.id === 'string' ? [pizza.id] : []));
 }
 
+const NO_STORE = 'no-store';
+
 /**
  * GET /api/config - Get public configuration
+ *
+ * Never cached (browser, proxy or CDN): the organisers edit the pizza
+ * catalogue and the capacity live, and the form must show what is stored.
  */
 export async function getConfig(request, env) {
   try {
-    return json({ config: await loadConfig(env) });
+    return json({ config: await loadConfig(env) }, 200, { 'Cache-Control': NO_STORE });
   } catch (error_) {
-    return serverError('Error fetching config:', error_);
+    const failure = serverError('Error fetching config:', error_);
+    failure.headers.set('Cache-Control', NO_STORE);
+    return failure;
   }
 }

@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest';
 import {
   validateRegistration,
   validateMember,
+  validateMemberUpdate,
   validateTeamName,
   sanitizeString,
   isValidEmail
@@ -104,7 +105,7 @@ describe('validateMember', () => {
       email: 'john@example.com'
     });
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('First name is required');
+    expect(result.errors).toContain('Le prénom est requis');
   });
 
   it('should reject missing last name', () => {
@@ -113,7 +114,7 @@ describe('validateMember', () => {
       email: 'john@example.com'
     });
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('Last name is required');
+    expect(result.errors).toContain('Le nom est requis');
   });
 
   it('should reject invalid email', () => {
@@ -123,7 +124,7 @@ describe('validateMember', () => {
       email: 'invalid'
     });
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('Invalid email format');
+    expect(result.errors).toContain("L'adresse e-mail est invalide");
   });
 
   it('should reject invalid BAC level', () => {
@@ -134,7 +135,7 @@ describe('validateMember', () => {
       bacLevel: 15
     });
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('Invalid BAC level');
+    expect(result.errors).toContain("Le niveau d'études est invalide");
   });
 });
 
@@ -163,7 +164,7 @@ describe('validateRegistration', () => {
     }, defaultConfig);
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('Team selection is required');
+    expect(result.errors).toContain('Sélectionnez une équipe');
   });
 
   it('should require at least one member', () => {
@@ -174,7 +175,7 @@ describe('validateRegistration', () => {
     }, defaultConfig);
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('At least one member is required');
+    expect(result.errors).toContain('Au moins un membre est requis');
   });
 
   it('should reject exceeding max team size', () => {
@@ -191,7 +192,7 @@ describe('validateRegistration', () => {
     }, defaultConfig);
 
     expect(result.valid).toBe(false);
-    expect(result.errors.some(e => e.includes('Maximum'))).toBe(true);
+    expect(result.errors.some(e => e.includes('plus de 15 membres'))).toBe(true);
   });
 
   it('should require leader for new team', () => {
@@ -204,7 +205,7 @@ describe('validateRegistration', () => {
     }, defaultConfig);
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain('New team must have at least one leader');
+    expect(result.errors).toContain("Une nouvelle équipe doit avoir au moins un chef d'équipe");
   });
 
   it('should detect duplicate members', () => {
@@ -218,6 +219,68 @@ describe('validateRegistration', () => {
     }, defaultConfig);
 
     expect(result.valid).toBe(false);
-    expect(result.errors.some(e => e.includes('Duplicate'))).toBe(true);
+    expect(result.errors.some(e => e.includes('est en double'))).toBe(true);
+  });
+});
+
+describe('validation messages are French', () => {
+  const FRENCH_ACCENT = /[éèêàùçôîïœ]/;
+  const FRENCH_WORDS = ['est', 'sont', 'doit', 'doivent', 'requis', 'requise', 'invalide', 'trop', 'entre', 'au moins',
+    'sélectionnez', 'la', 'le', 'les', 'un', 'une', 'de', 'du', 'des', "d'"];
+  const FRENCH_WORD = new RegExp(String.raw`(^|\s)(${FRENCH_WORDS.join('|')})(\s|$)`, 'i');
+  const isFrench = (message) => FRENCH_ACCENT.test(message) || FRENCH_WORD.test(message);
+  const ENGLISH = /\b(is|are|invalid|required|must|should|least|member|team|first|last|name|duplicate|maximum|leader|selection|format)\b/i;
+
+  const member = { firstName: 'Ada', lastName: 'Lovelace', email: 'ada@example.com' };
+  const bad = (overrides) => ({ ...member, ...overrides });
+  const teamOf = (members, extra = {}) => ({ createNewTeam: true, teamName: 'Les Lambdas', members, ...extra });
+
+  /** Every message produced for a matrix of invalid payloads. */
+  function messages() {
+    const config = { maxTeamSize: 2, pizzaIds: ['reine'] };
+    const out = [];
+    for (const name of ['', '   ', 'a', null, 42]) out.push(validateTeamName(name).error);
+    for (const invalid of [
+      null, [], 'text', bad({ firstName: '' }), bad({ lastName: undefined }), bad({ email: '' }), bad({ email: 'nope' }),
+      bad({ email: `${'x'.repeat(260)}@example.com` }), bad({ bacLevel: 99 }), bad({ bacLevel: 'abc' }),
+      bad({ foodDiet: 'inconnue' }), bad({ foodDiet: 5 }), { firstName: 1, lastName: 2, email: 3 }
+    ]) {
+      out.push(...validateMember(invalid, { pizzaIds: ['reine'] }).errors);
+    }
+    out.push(...validateMemberUpdate({ firstName: ' ', lastName: '', email: 'x', bacLevel: -1, foodDiet: 'z' }, { pizzaIds: ['reine'] }).errors);
+    for (const registration of [
+      { createNewTeam: false, members: [member] },
+      { createNewTeam: false, teamId: 'abc', members: [member] },
+      teamOf([]),
+      teamOf(null),
+      teamOf([member], { teamName: '' }),
+      teamOf([member], { teamName: 'x' }),
+      teamOf([bad({ isLeader: false })]),
+      teamOf([bad({ isLeader: true }), bad({ isLeader: true }), bad({ isLeader: true })]),
+      teamOf([bad({ isLeader: true }), bad({ email: 'other@example.com' })]),
+      teamOf([bad({ isLeader: true, email: 'broken' })])
+    ]) {
+      out.push(...validateRegistration(registration, config).errors);
+    }
+    return out;
+  }
+
+  it('has no English message left in any validator output', () => {
+    const all = messages();
+    expect(all.length).toBeGreaterThan(30);
+    for (const message of all) {
+      expect(isFrench(message), message).toBe(true);
+      expect(message, message).not.toMatch(ENGLISH);
+    }
+  });
+
+  it('keeps the wording consistent', () => {
+    expect(validateTeamName('x').error).toBe("Le nom d'équipe doit contenir entre 2 et 128 caractères");
+    expect(validateTeamName('').error).toBe("Le nom d'équipe est requis");
+    expect(validateMember(bad({ email: '' })).errors).toEqual(["L'adresse e-mail est requise"]);
+    expect(validateMember(bad({ firstName: '' })).errors).toEqual(['Le prénom est requis']);
+    expect(validateRegistration(teamOf([]), { maxTeamSize: 2 }).errors).toEqual(['Au moins un membre est requis']);
+    expect(validateRegistration(teamOf([bad({ email: 'broken', isLeader: true })]), { maxTeamSize: 2 }).errors)
+      .toEqual(["Membre 1 : L'adresse e-mail est invalide"]);
   });
 });

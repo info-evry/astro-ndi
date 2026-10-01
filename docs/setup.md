@@ -12,7 +12,7 @@ This guide walks you through setting up the NDI registration platform from scrat
 
 This project lives as a package inside the maestro Bun workspace and relies on
 sibling workspace packages (`astro-core`, `@info-evry/astro-design`,
-`@info-evry/knowledge`, `astro-payments`) instead of git submodules.
+`@info-evry/knowledge`) instead of git submodules.
 
 ```bash
 # Clone the maestro repo
@@ -56,7 +56,7 @@ id = "YOUR_KV_ID"
 
 ### Create KV Namespace for Rate Limiting
 
-Rate limiting on public/admin/payment endpoints requires a `RATE_LIMIT` KV
+Rate limiting on public/admin endpoints requires a `RATE_LIMIT` KV
 namespace. It is optional - without it, rate limiting fails open - but is
 strongly recommended for production deployments.
 

@@ -31,15 +31,10 @@ const PAGE = `
     <select name="bacLevel" id="member-bac-level"></select>
     <div id="pizza-options"></div>
     <div id="leader-toggle-container"><input type="checkbox" name="isLeader" id="member-is-leader"></div>
-    <input type="radio" name="paymentMethod" value="delayed" checked>
     <button type="submit" id="submit-btn">S'inscrire</button>
   </form>
   <div id="form-errors" class="hidden"></div>
   <div id="success-modal" class="hidden"><p id="success-message"></p></div>
-
-  <div id="payment-section"><span id="current-price"></span><span id="current-tier-label"></span>
-    <p id="pricing-deadline-note"></p><p id="payment-disabled" class="hidden"></p>
-    <div class="payment-method"></div></div>
 
   <div id="team-view-modal" class="hidden">
     <div id="team-view-auth"><input id="team-view-password"><p id="team-view-error" class="hidden"></p>
@@ -84,21 +79,19 @@ describe('registration api client', () => {
     expect(fetchMock.mock.calls[0][1].headers.Accept).toBe('application/json');
   });
 
-  it('unwraps teams, stats and pricing', async () => {
-    const bodies = { '/teams': { teams: [{ id: 1 }] }, '/stats': { stats: { total_teams: 1 } }, '/payment/pricing': { enabled: true } };
+  it('unwraps teams and stats', async () => {
+    const bodies = { '/teams': { teams: [{ id: 1 }] }, '/stats': { stats: { total_teams: 1 } } };
     mockFetch((url) => ({ body: bodies[url.replace('/api', '')] }));
     api.initApi('');
 
     expect(await api.loadTeams()).toEqual([{ id: 1 }]);
     expect(await api.loadStats()).toEqual({ total_teams: 1 });
-    expect(await api.loadPricing()).toEqual({ enabled: true });
   });
 
-  it('pricing is optional: a failure resolves to null', async () => {
-    mockFetch(() => ({ status: 500, body: { error: 'nope' } }));
-    vi.spyOn(console, 'log').mockImplementation(() => {});
-    api.initApi('');
-    expect(await api.loadPricing()).toBeNull();
+  it('has no online payment / pricing client any more', () => {
+    expect(api.loadPricing).toBeUndefined();
+    expect(render.renderPricing).toBeUndefined();
+    expect(state.setPricing).toBeUndefined();
   });
 
   it('submitRegistration POSTs the payload and surfaces the server error message', async () => {
@@ -285,40 +278,6 @@ describe('member form initialisation', () => {
   });
 });
 
-describe('renderPricing', () => {
-  const pricing = (overrides = {}) => ({
-    enabled: true,
-    currentTier: 'tier1',
-    currentPriceFormatted: '5.00 €',
-    daysUntilDeadline: 20,
-    registrationDeadline: '2031-06-15T00:00:00Z',
-    tier2: { priceFormatted: '7.00 €' },
-    ...overrides
-  });
-
-  it('hides the whole payment section without pricing', () => {
-    render.renderPricing(null);
-    expect(byId('payment-section').classList.contains('hidden')).toBe(true);
-  });
-
-  it('shows the early-bird price with the date it is valid until', () => {
-    render.renderPricing(pricing());
-    expect(byId('current-price').textContent).toBe('5.00 €');
-    expect(byId('current-tier-label').textContent).toBe('Inscription anticipée');
-    expect(byId('pricing-deadline-note').textContent).toContain('7.00 €');
-    expect(byId('payment-disabled').classList.contains('hidden')).toBe(true);
-    expect(document.querySelector('.payment-method').classList.contains('hidden')).toBe(false);
-  });
-
-  it('shows the standard label, the deadline-passed note and the disabled notice', () => {
-    render.renderPricing(pricing({ enabled: false, currentTier: 'tier2', daysUntilDeadline: -2 }));
-    expect(byId('current-tier-label').textContent).toBe('Inscription standard');
-    expect(byId('pricing-deadline-note').textContent).toBe('Date limite de pré-inscription dépassée.');
-    expect(byId('payment-disabled').classList.contains('hidden')).toBe(false);
-    expect(document.querySelector('.payment-method').classList.contains('hidden')).toBe(true);
-  });
-});
-
 describe('registration form', () => {
   const fill = (values) => {
     for (const [name, value] of Object.entries(values)) {
@@ -342,7 +301,6 @@ describe('registration form', () => {
 
     expect(form.collectFormData()).toEqual({
       createNewTeam: true,
-      paymentMethod: 'delayed',
       teamName: 'Alpha',
       teamDescription: 'about',
       teamPassword: 'secret',
@@ -373,25 +331,25 @@ describe('registration form', () => {
     state.setTeamMode(true);
     expect(form.validateForm()).toEqual([
       "Le nom de l'équipe est requis",
-      "Le mot de passe de l'équipe est requis",
+      "Le code secret de l'équipe est requis",
       'Prénom requis',
       'Nom requis',
       'Email requis'
     ]);
   });
 
-  it('enforces a 4 character team password and a plausible email', () => {
+  it('enforces a 4 character team secret code and a plausible email', () => {
     state.setTeamMode(true);
     validNewTeam();
     fill({ teamPassword: 'abc', email: 'not-an-email' });
 
-    expect(form.validateForm()).toEqual(['Le mot de passe doit faire au moins 4 caractères', 'Email invalide']);
+    expect(form.validateForm()).toEqual(['Le code secret doit faire au moins 4 caractères', 'Email invalide']);
   });
 
-  it('requires a team and a password when joining', () => {
+  it('requires a team and a secret code when joining', () => {
     state.setTeamMode(false);
     fill({ firstName: 'Bob', lastName: 'Two', email: 'bob@example.com' });
-    expect(form.validateForm()).toEqual(['Veuillez sélectionner une équipe', "Le mot de passe de l'équipe est requis"]);
+    expect(form.validateForm()).toEqual(['Veuillez sélectionner une équipe', "Le code secret de l'équipe est requis"]);
   });
 
   it('submit shows escaped validation errors and does not call the API', async () => {
@@ -497,14 +455,14 @@ describe('team view modal', () => {
     expect(state.state.selectedTeamId).toBeNull();
   });
 
-  it('asks for a password before calling the API', async () => {
+  it('asks for the secret code before calling the API', async () => {
     const fetchMock = mockFetch(() => ({ body: {} }));
     modals.openTeamViewModal(6);
     byId('team-view-password').value = '   ';
 
     await modals.handleTeamViewSubmit();
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(byId('team-view-error').textContent).toBe('Veuillez entrer le mot de passe');
+    expect(byId('team-view-error').textContent).toBe('Veuillez entrer le code secret');
     expect(byId('team-view-error').classList.contains('hidden')).toBe(false);
   });
 
@@ -546,12 +504,12 @@ describe('team view modal', () => {
   });
 
   it('shows the server error for a wrong password and keeps the auth form', async () => {
-    mockFetch(() => ({ status: 403, body: { error: 'Mot de passe incorrect' } }));
+    mockFetch(() => ({ status: 403, body: { error: 'Code secret incorrect' } }));
     modals.openTeamViewModal(6);
     byId('team-view-password').value = 'wrong';
 
     await modals.handleTeamViewSubmit();
-    expect(byId('team-view-error').textContent).toBe('Mot de passe incorrect');
+    expect(byId('team-view-error').textContent).toBe('Code secret incorrect');
     expect(byId('team-view-error').classList.contains('hidden')).toBe(false);
     expect(byId('team-view-content').classList.contains('hidden')).toBe(true);
     expect(byId('team-view-submit').textContent).toBe('Voir les membres');

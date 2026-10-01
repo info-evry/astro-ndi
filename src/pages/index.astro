@@ -1,10 +1,19 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Badge from '@info-evry/astro-design/components/Badge.astro';
-import ndiEvent from '@info-evry/knowledge/ndi/event';
+import { env } from 'cloudflare:workers';
+import baseNdiEvent from '@info-evry/knowledge/ndi/event';
+import { currentNdiEvent } from '@info-evry/knowledge/ndi/date';
 import ndiInfoEvry from '@info-evry/knowledge/ndi/info-evry';
+import { getOnsitePrices } from '../database/db.settings.js';
+import { formatPriceEuros } from '../shared/pricing.js';
 
 const baseUrl = import.meta.env.BASE_URL;
+
+// SSR: edition, dates and deadlines come from the clock of each request, and
+// the prices from the admin settings (D1), so neither goes stale between deploys.
+const ndiEvent = currentNdiEvent(baseNdiEvent);
+const prices = await getOnsitePrices(env.DB);
 ---
 
 <BaseLayout title="Nuit de l'Info - Inscription - Asso Info Evry">
@@ -102,7 +111,7 @@ const baseUrl = import.meta.env.BASE_URL;
 
         <!-- Stats from last year -->
         <div class="last-year-stats">
-          <p class="stats-label">Édition {ndiEvent.stats.sinceYear + (2024 - 2007)} :</p>
+          <p class="stats-label">Édition {ndiEvent.stats.statsYear} : derniers chiffres nationaux publiés</p>
           <div class="stats-row">
             <span><strong>{ndiEvent.stats.participants2024.toLocaleString('fr-FR')}</strong> participants</span>
             <span class="stats-sep">•</span>
@@ -148,12 +157,12 @@ const baseUrl = import.meta.env.BASE_URL;
         <h2>Tarifs</h2>
         <div class="pricing-grid">
           <div class="pricing-card glass-card">
-            <div class="pricing-amount">{ndiInfoEvry.registration.prices.member.amount}€</div>
+            <div class="pricing-amount">{formatPriceEuros(prices.assoMember)}</div>
             <div class="pricing-label">Adhérent</div>
             <p>Membre de l'association Info Evry</p>
           </div>
-          <div class="pricing-card glass-card featured">
-            <div class="pricing-amount">{ndiInfoEvry.registration.prices.nonMember.amount}€</div>
+          <div class="pricing-card glass-card">
+            <div class="pricing-amount">{formatPriceEuros(prices.nonMember)}</div>
             <div class="pricing-label">Non-adhérent</div>
             <p>Accès complet avec goodies</p>
           </div>
@@ -209,8 +218,9 @@ const baseUrl = import.meta.env.BASE_URL;
                 <textarea id="team-desc" name="teamDescription" maxlength="256" rows="2"></textarea>
               </div>
               <div class="form-group">
-                <label for="team-password">Mot de passe de l'équipe *</label>
-                <input type="password" id="team-password" name="teamPassword" maxlength="64" placeholder="Les autres membres en auront besoin pour rejoindre">
+                <label for="team-password">Code secret de l'équipe *</label>
+                <input type="password" id="team-password" name="teamPassword" maxlength="64" autocomplete="off" aria-describedby="team-password-help">
+                <p id="team-password-help" class="field-help">Choisissez un code secret : il servira à vos coéquipiers pour rejoindre l'équipe. Aucun compte à créer.</p>
               </div>
             </div>
 
@@ -222,8 +232,9 @@ const baseUrl = import.meta.env.BASE_URL;
                 </select>
               </div>
               <div class="form-group">
-                <label for="join-password">Mot de passe de l'équipe *</label>
-                <input type="password" id="join-password" name="joinPassword" maxlength="64" placeholder="Demandez-le au chef d'équipe">
+                <label for="join-password">Code secret de l'équipe *</label>
+                <input type="password" id="join-password" name="joinPassword" maxlength="64" autocomplete="off" aria-describedby="join-password-help">
+                <p id="join-password-help" class="field-help">Demandez le code secret à votre chef d'équipe. Aucun compte à créer.</p>
               </div>
             </div>
           </div>
@@ -275,45 +286,6 @@ const baseUrl = import.meta.env.BASE_URL;
             </div>
           </div>
 
-          <!-- Payment Section -->
-          <div class="form-card" id="payment-section">
-            <h3 class="form-card-title">Paiement</h3>
-
-            <!-- Dynamic pricing display -->
-            <div id="pricing-info" class="pricing-info">
-              <div class="price-display">
-                <span class="price-amount" id="current-price">-</span>
-                <span class="price-tier" id="current-tier-label">-</span>
-              </div>
-              <p class="pricing-note" id="pricing-deadline-note"></p>
-            </div>
-
-            <!-- Payment method selection -->
-            <div class="payment-methods">
-              <label class="payment-method selected">
-                <input type="radio" name="paymentMethod" value="online" checked>
-                <span class="method-content">
-                  <span class="method-icon">&#128179;</span>
-                  <span class="method-title">Payer maintenant</span>
-                  <span class="method-desc">Paiement sécurisé par carte bancaire</span>
-                </span>
-              </label>
-              <label class="payment-method">
-                <input type="radio" name="paymentMethod" value="delayed">
-                <span class="method-content">
-                  <span class="method-icon">&#128197;</span>
-                  <span class="method-title">Payer sur place</span>
-                  <span class="method-desc">Le jour de l'événement (espèces ou carte)</span>
-                </span>
-              </label>
-            </div>
-
-            <!-- Payment disabled message -->
-            <div id="payment-disabled" class="payment-disabled hidden">
-              <p>Le paiement en ligne n'est pas encore activé. Votre inscription sera enregistrée et vous pourrez payer sur place.</p>
-            </div>
-          </div>
-
           <div id="form-errors" class="errors hidden"></div>
 
           <button type="submit" id="submit-btn" class="btn btn-primary btn-lg">
@@ -339,10 +311,10 @@ const baseUrl = import.meta.env.BASE_URL;
     <div class="modal-content modal-lg">
       <div id="team-view-auth" class="team-view-section">
         <h3 id="team-view-title">Voir l'équipe</h3>
-        <p class="team-view-desc">Entrez le mot de passe de l'équipe pour voir ses membres.</p>
+        <p class="team-view-desc">Entrez le code secret de l'équipe pour voir ses membres.</p>
         <div class="form-group">
-          <label for="team-view-password">Mot de passe</label>
-          <input type="password" id="team-view-password" placeholder="Mot de passe de l'équipe">
+          <label for="team-view-password">Code secret de l'équipe</label>
+          <input type="password" id="team-view-password" autocomplete="off" placeholder="Code secret">
         </div>
         <p id="team-view-error" class="error-text hidden"></p>
         <div class="modal-actions">
@@ -577,11 +549,6 @@ const baseUrl = import.meta.env.BASE_URL;
     transform: translateY(-4px);
   }
 
-  .pricing-card.featured {
-    border-color: var(--color-primary);
-    background: rgba(0, 27, 165, 0.1);
-  }
-
   .pricing-amount {
     font-size: var(--text-3xl);
     font-weight: 700;
@@ -629,111 +596,10 @@ const baseUrl = import.meta.env.BASE_URL;
     font-weight: 600;
   }
 
-  /* Payment Section Styles */
-  .pricing-info {
-    text-align: center;
-    padding: var(--space-4);
-    background: rgba(0, 27, 165, 0.05);
-    border: 1px solid rgba(0, 27, 165, 0.1);
-    border-radius: var(--radius);
-    margin-bottom: var(--space-4);
-  }
-
-  .price-display {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-3);
-    margin-bottom: var(--space-2);
-  }
-
-  .price-amount {
-    font-size: var(--text-3xl);
-    font-weight: 700;
-    color: var(--color-primary);
-  }
-
-  .price-tier {
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
-    padding: var(--space-1) var(--space-2);
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: var(--radius-sm);
-  }
-
-  .pricing-note {
+  .field-help {
     font-size: var(--text-sm);
     color: var(--color-text-muted);
-    margin: 0;
-  }
-
-  .payment-methods {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-
-  .payment-method {
-    display: flex;
-    cursor: pointer;
-    padding: var(--space-4);
-    background: rgba(255, 255, 255, 0.02);
-    border: 2px solid var(--border-subtle);
-    border-radius: var(--radius);
-    transition: all var(--transition-base);
-  }
-
-  .payment-method:hover {
-    border-color: var(--color-primary);
-    background: rgba(0, 27, 165, 0.05);
-  }
-
-  .payment-method.selected {
-    border-color: var(--color-primary);
-    background: rgba(0, 27, 165, 0.1);
-  }
-
-  .payment-method input {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .method-content {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    flex: 1;
-  }
-
-  .method-icon {
-    font-size: 1.5rem;
-  }
-
-  .method-title {
-    font-weight: 600;
-    color: var(--color-text);
-    display: block;
-  }
-
-  .method-desc {
-    font-size: var(--text-sm);
-    color: var(--color-text-muted);
-    display: block;
-  }
-
-  .payment-disabled {
-    padding: var(--space-4);
-    background: rgba(255, 193, 7, 0.1);
-    border: 1px solid rgba(255, 193, 7, 0.3);
-    border-radius: var(--radius);
-    text-align: center;
-  }
-
-  .payment-disabled p {
-    margin: 0;
-    color: var(--color-text-secondary);
-    font-size: var(--text-sm);
+    margin: var(--space-1) 0 0;
   }
 
   /* Member grid layout */

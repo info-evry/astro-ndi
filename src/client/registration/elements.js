@@ -38,14 +38,6 @@ export const elements = {
   get leaderToggle() { return document.getElementById('leader-toggle-container'); },
   get memberIsLeader() { return document.getElementById('member-is-leader'); },
 
-  // Payment elements
-  get paymentSection() { return document.getElementById('payment-section'); },
-  get pricingInfo() { return document.getElementById('pricing-info'); },
-  get currentPrice() { return document.getElementById('current-price'); },
-  get currentTierLabel() { return document.getElementById('current-tier-label'); },
-  get pricingDeadlineNote() { return document.getElementById('pricing-deadline-note'); },
-  get paymentDisabled() { return document.getElementById('payment-disabled'); },
-
   // Team view modal elements
   get teamViewModal() { return document.getElementById('team-view-modal'); },
   get teamViewAuth() { return document.getElementById('team-view-auth'); },

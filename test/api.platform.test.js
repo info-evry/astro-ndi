@@ -1,15 +1,12 @@
 /**
  * Platform wiring: CORS on every API response (router errors included), the
- * admin guard installed by createRouter(), the rate-limit rules, and the
- * pricing tier pinned to astro-payments.
+ * admin guard installed by createRouter() and the rate-limit rules.
  */
 
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { env, SELF } from 'cloudflare:test';
 import { json } from 'astro-core/router';
-import { calculateTier, getPrice } from 'astro-payments';
 import { createRouter } from '../src/routes.js';
-import { DEFAULT_PRICES } from '../src/shared/constants.js';
 import { setupSchema, clearAllTables, postJson, adminFetch, ADMIN_HEADERS, JSON_HEADERS, BASE } from './helpers.js';
 
 beforeAll(setupSchema);
@@ -91,62 +88,18 @@ describe('createRouter(): the admin guard and the rate-limit rules', () => {
     }
   });
 
-  it('rate limits only the payment endpoints that start or check a payment', async () => {
+  it('has no rate-limit rule for the removed payment endpoints (they are plain 404s)', async () => {
     const headers = { 'CF-Connecting-IP': testIp(8, 8) };
-    for (const path of ['checkout', 'verify', 'delayed']) {
-      for (let i = 0; i < 7; i++) await postJson(`/api/payment/${path}`, {}, headers);
+    for (let i = 0; i < 25; i++) {
+      expect((await postJson('/api/payment/verify', {}, headers)).status).toBe(404);
     }
-    // 21 requests from this IP on the rate-limited paths: the next one is refused...
-    expect((await postJson('/api/payment/verify', {}, headers)).status).toBe(429);
-    // ...while pricing and the webhook are exempt by rule, not by an inline exception
-    expect((await fetchFrom('/api/payment/pricing', { ip: testIp(8, 8) })).status).toBe(200);
-    expect((await postJson('/api/payment/callback', {}, headers)).status).toBe(200);
   });
 });
 
-describe('the pricing tier is the one of astro-payments', () => {
-  const HOUR = 3_600_000;
-  const DAY = 24 * HOUR;
-
-  const priceWith = async (settings) => {
-    for (const [key, value] of Object.entries(settings)) {
-      await env.DB.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').bind(key, String(value)).run();
-    }
-    return (await SELF.fetch(`${BASE}/api/payment/pricing`)).json();
-  };
-
-  it.each([
-    ['exactly the cut-off days before the deadline, plus a few hours (7 full days left)', 7 * DAY + 2 * HOUR, 'tier2'],
-    ['a day more (8 full days left)', 8 * DAY + 2 * HOUR, 'tier1'],
-    ['less than 8 days (7 full days and 23 hours left)', 7 * DAY + 23 * HOUR, 'tier2'],
-    ['the deadline is past', -DAY, 'tier2']
-  ])('%s -> %s, exactly like calculateTier', async (_label, offsetMs, expected) => {
-    const deadline = new Date(Date.now() + offsetMs).toISOString();
-    const pricing = await priceWith({ registration_deadline: deadline, tier1_cutoff_days: 7 });
-
-    expect(pricing.currentTier).toBe(calculateTier(deadline, 7));
-    expect(pricing.currentTier).toBe(expected);
-    expect(pricing.currentPrice).toBe(getPrice(expected, { tier1: DEFAULT_PRICES.tier1, tier2: DEFAULT_PRICES.tier2 }));
-  });
-
-  it('an invalid deadline is tier2, and prices default to the shared constants', async () => {
-    const pricing = await priceWith({ registration_deadline: 'not a date' });
-    expect(pricing.currentTier).toBe('tier2');
-    expect(pricing.daysUntilDeadline).toBeNull();
-    expect(pricing.tier1.price).toBe(DEFAULT_PRICES.tier1);
-    expect(pricing.tier2.price).toBe(DEFAULT_PRICES.tier2);
-  });
-
-  it('a corrupt stored price or cut-off falls back to the defaults instead of NaN', async () => {
-    const pricing = await priceWith({ price_tier1: 'abc', price_tier2: '', tier1_cutoff_days: 'x' });
-    expect(pricing).toMatchObject({ tierCutoffDays: 7 });
-    expect(pricing.tier1.price).toBe(DEFAULT_PRICES.tier1);
-    expect(pricing.tier2.price).toBe(DEFAULT_PRICES.tier2);
-  });
-
-  it('the settings endpoint refuses a price above the payment cap', async () => {
-    expect((await adminFetch('/api/admin/settings', { method: 'PUT', body: { price_tier1: 100_001 } })).status).toBe(400);
-    expect((await adminFetch('/api/admin/settings', { method: 'PUT', body: { price_tier1: 100_000 } })).status).toBe(200);
+describe('admin settings: price cap', () => {
+  it('refuses a price above the payment cap', async () => {
+    expect((await adminFetch('/api/admin/settings', { method: 'PUT', body: { price_late: 100_001 } })).status).toBe(400);
+    expect((await adminFetch('/api/admin/settings', { method: 'PUT', body: { price_late: 100_000 } })).status).toBe(200);
   });
 });
 
@@ -159,7 +112,11 @@ describe('admin page', () => {
     expect(html).toMatch(/id="setting-price-asso-member"[^>]*value="5.00"/);
     expect(html).toMatch(/id="setting-price-late"[^>]*value="10.00"/);
     expect(html).toMatch(/id="setting-late-cutoff"[^>]*value="19:00"/);
-    expect(html).toMatch(/id="setting-tier1-cutoff-days"[^>]*value="7"/);
+    expect(html).toMatch(/id="setting-max-team"[^>]*value="15"/);
+    expect(html).toMatch(/id="setting-max-participants"[^>]*value="200"/);
+    expect(html).toMatch(/id="setting-gdpr-retention"[^>]*value="3"/);
+    // No online payment settings any more
+    expect(html).not.toMatch(/setting-(payment-enabled|price-tier|tier1-cutoff-days|registration-deadline)/);
     expect(html).toMatch(/id="setting-school-name"[^>]*value="Université d&#39;Evry"|id="setting-school-name"[^>]*value="Université d'Evry"/);
   });
 });

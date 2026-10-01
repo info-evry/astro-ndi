@@ -26,6 +26,20 @@ describe('GET /api/config', () => {
     expect(data.config.minTeamSize).toBe(1);
   });
 
+  it('is never cached, so the form shows the stored pizza catalogue at once', async () => {
+    const response = await SELF.fetch('http://localhost/api/config');
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+
+    await env.DB.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('pizzas', ?)")
+      .bind(JSON.stringify([{ id: 'solo', name: 'Solo', description: '' }])).run();
+    try {
+      const { config } = await (await SELF.fetch('http://localhost/api/config')).json();
+      expect(config.pizzas.map(p => p.id)).toEqual(['solo']);
+    } finally {
+      await env.DB.prepare("DELETE FROM settings WHERE key = 'pizzas'").run();
+    }
+  });
+
   it('should include all required config fields', async () => {
     const response = await SELF.fetch('http://localhost/api/config');
     const data = await response.json();

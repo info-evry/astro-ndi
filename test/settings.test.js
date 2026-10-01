@@ -106,7 +106,8 @@ describe('PUT /api/admin/settings', () => {
   it('should update pizzas array', async () => {
     const newPizzas = [
       { id: 'margherita', name: 'Margherita', description: 'Classic' },
-      { id: 'pepperoni', name: 'Pepperoni', description: 'Spicy' }
+      { id: 'pepperoni', name: 'Pepperoni', description: 'Spicy' },
+      { id: '0-rien', name: 'Aucune', description: '' }
     ];
 
     const response = await SELF.fetch('http://localhost/api/admin/settings', {
@@ -128,7 +129,7 @@ describe('PUT /api/admin/settings', () => {
       }
     });
     const getData = await getResponse.json();
-    expect(getData.settings.pizzas).toHaveLength(2);
+    expect(getData.settings.pizzas).toHaveLength(3);
     expect(getData.settings.pizzas[0].id).toBe('margherita');
   });
 
@@ -234,7 +235,8 @@ describe('Config uses D1 settings', () => {
       body: JSON.stringify({
         pizzas: [
           { id: 'custom1', name: 'Custom Pizza 1', description: 'Test 1' },
-          { id: 'custom2', name: 'Custom Pizza 2', description: 'Test 2' }
+          { id: 'custom2', name: 'Custom Pizza 2', description: 'Test 2' },
+          { id: '0-rien', name: 'Aucune', description: '' }
         ]
       })
     });

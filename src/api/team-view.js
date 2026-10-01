@@ -24,7 +24,7 @@ export async function viewTeamMembers(request, env, ctx, params) {
     // Same trim / length policy as when the password was set
     const password = normalizeTeamPassword(data.password);
     if (!password) {
-      return badRequest('Mot de passe requis', 'password_required');
+      return badRequest('Code secret requis', 'password_required');
     }
 
     const team = await db.getTeamById(env.DB, teamId);
@@ -37,7 +37,7 @@ export async function viewTeamMembers(request, env, ctx, params) {
     const isValid = await verifyPassword(password, team.password_hash);
 
     if (!isValid) {
-      return forbidden('Mot de passe incorrect');
+      return forbidden('Code secret incorrect');
     }
 
     // Upgrade legacy hash to new format on successful login

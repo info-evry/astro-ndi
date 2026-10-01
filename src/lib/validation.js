@@ -12,9 +12,23 @@ export { sanitizeString, isValidEmail };
 /** Highest accepted BAC level (BAC+10). */
 const MAX_BAC_LEVEL = 10;
 
-const ERR_EMAIL_FORMAT = 'Invalid email format';
-const ERR_BAC_LEVEL = 'Invalid BAC level';
-const ERR_FOOD_CHOICE = 'Invalid food choice';
+/** Shortest accepted team name. */
+const MIN_TEAM_NAME_LENGTH = 2;
+
+// User-visible validation messages (French). The wording is shared by the public
+// form, the admin forms and the CSV import.
+const ERR_EMAIL_REQUIRED = "L'adresse e-mail est requise";
+const ERR_EMAIL_FORMAT = "L'adresse e-mail est invalide";
+const ERR_BAC_LEVEL = "Le niveau d'études est invalide";
+const ERR_FOOD_CHOICE = 'Le choix de pizza est invalide';
+const ERR_FIRST_NAME = 'Le prénom';
+const ERR_LAST_NAME = 'Le nom';
+const ERR_MEMBER_DATA = 'Les données du membre sont invalides';
+const ERR_TEAM_NAME_REQUIRED = "Le nom d'équipe est requis";
+const ERR_TEAM_NAME_LENGTH = `Le nom d'équipe doit contenir entre ${MIN_TEAM_NAME_LENGTH} et ${LIMITS.teamName} caractères`;
+const ERR_TEAM_REQUIRED = 'Sélectionnez une équipe';
+const ERR_MEMBERS_REQUIRED = 'Au moins un membre est requis';
+const ERR_LEADER_REQUIRED = "Une nouvelle équipe doit avoir au moins un chef d'équipe";
 
 /**
  * Normalise a team password: trimmed and capped at LIMITS.teamPassword.
@@ -55,8 +69,8 @@ export function normalizeTeamDescription(value) {
  */
 export function validateTeamName(name) {
   const sanitized = sanitizeString(name, LIMITS.teamName);
-  if (!sanitized) return { valid: false, error: 'Team name is required' };
-  if (sanitized.length < 2) return { valid: false, error: 'Team name must be at least 2 characters' };
+  if (!sanitized) return { valid: false, error: ERR_TEAM_NAME_REQUIRED };
+  if (sanitized.length < MIN_TEAM_NAME_LENGTH) return { valid: false, error: ERR_TEAM_NAME_LENGTH };
   return { valid: true, value: sanitized };
 }
 
@@ -66,12 +80,12 @@ export function validateTeamName(name) {
 
 function nameField(value, label) {
   const name = sanitizeString(value, LIMITS.name);
-  return name ? { value: name } : { error: `${label} is required` };
+  return name ? { value: name } : { error: `${label} est requis` };
 }
 
 function emailField(value) {
   const raw = typeof value === 'string' ? value.trim() : '';
-  if (!raw) return { error: 'Email is required' };
+  if (!raw) return { error: ERR_EMAIL_REQUIRED };
   // Over-long addresses are rejected rather than truncated into another address.
   if (isTooLong(raw, LIMITS.email)) return { error: ERR_EMAIL_FORMAT };
   const email = raw.toLowerCase();
@@ -114,12 +128,12 @@ function foodDietField(value, pizzaIds) {
  */
 export function validateMember(member, { pizzaIds } = {}) {
   if (!member || typeof member !== 'object' || Array.isArray(member)) {
-    return { valid: false, errors: ['Invalid member data'] };
+    return { valid: false, errors: [ERR_MEMBER_DATA] };
   }
 
   const fields = {
-    firstName: nameField(member.firstName, 'First name'),
-    lastName: nameField(member.lastName, 'Last name'),
+    firstName: nameField(member.firstName, ERR_FIRST_NAME),
+    lastName: nameField(member.lastName, ERR_LAST_NAME),
     email: emailField(member.email),
     bacLevel: bacLevelField(member.bacLevel),
     foodDiet: foodDietField(member.foodDiet, pizzaIds)
@@ -152,8 +166,8 @@ export function validateMember(member, { pizzaIds } = {}) {
  */
 export function validateMemberUpdate(updates, { pizzaIds } = {}) {
   const rules = {
-    firstName: (v) => nameField(v, 'First name'),
-    lastName: (v) => nameField(v, 'Last name'),
+    firstName: (v) => nameField(v, ERR_FIRST_NAME),
+    lastName: (v) => nameField(v, ERR_LAST_NAME),
     email: emailField,
     bacLevel: bacLevelField,
     foodDiet: (v) => foodDietField(v, pizzaIds)
@@ -187,7 +201,7 @@ function validateTeamInfo(data, errors) {
       errors.push(teamValidation.error);
     }
   } else if (parsePositiveId(data.teamId) === null) {
-    errors.push('Team selection is required');
+    errors.push(ERR_TEAM_REQUIRED);
   }
 }
 
@@ -201,13 +215,13 @@ function validateMembersList(members, errors, options) {
   for (const [i, member] of members.entries()) {
     const memberValidation = validateMember(member, options);
     if (!memberValidation.valid) {
-      errors.push(`Member ${i + 1}: ${memberValidation.errors.join(', ')}`);
+      errors.push(`Membre ${i + 1} : ${memberValidation.errors.join(', ')}`);
       continue;
     }
 
     const nameKey = `${memberValidation.value.firstName.toLowerCase()}|${memberValidation.value.lastName.toLowerCase()}`;
     if (seenNames.has(nameKey)) {
-      errors.push(`Duplicate member: ${memberValidation.value.firstName} ${memberValidation.value.lastName}`);
+      errors.push(`Le membre « ${memberValidation.value.firstName} ${memberValidation.value.lastName} » est en double`);
     } else {
       seenNames.add(nameKey);
       validatedMembers.push(memberValidation.value);
@@ -229,16 +243,16 @@ export function validateRegistration(data, config) {
   validateTeamInfo(data, errors);
 
   if (!Array.isArray(data.members) || data.members.length === 0) {
-    errors.push('At least one member is required');
+    errors.push(ERR_MEMBERS_REQUIRED);
     return { valid: false, errors };
   }
 
   if (data.members.length > maxTeamSize) {
-    errors.push(`Maximum ${maxTeamSize} members allowed`);
+    errors.push(`Une équipe ne peut pas compter plus de ${maxTeamSize} membres`);
   }
 
   if (data.createNewTeam && !data.members.some(m => m?.isLeader)) {
-    errors.push('New team must have at least one leader');
+    errors.push(ERR_LEADER_REQUIRED);
   }
 
   // A hostile request cannot make us validate more members than a team may hold.

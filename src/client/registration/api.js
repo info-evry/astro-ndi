@@ -56,19 +56,6 @@ export async function loadStats() {
 }
 
 /**
- * Load pricing information
- * @returns {Promise<object|null>}
- */
-export async function loadPricing() {
-  try {
-    return await api('/payment/pricing');
-  } catch (error) {
-    console.log('Pricing not available:', error.message);
-    return null;
-  }
-}
-
-/**
  * Submit registration
  * @param {object} data - Registration data
  * @returns {Promise<object>}
@@ -78,9 +65,9 @@ export async function submitRegistration(data) {
 }
 
 /**
- * View team members (with password)
+ * View team members (with the team's secret code)
  * @param {number} teamId - Team ID
- * @param {string} password - Team password
+ * @param {string} password - Team secret code (API field name: `password`)
  * @returns {Promise<object>}
  */
 export async function viewTeamMembers(teamId, password) {

@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  DEFAULT_PRICES, MAX_PAYMENT_AMOUNT_CENTS, NO_PIZZA, NO_PIZZA_VALUES, ONSITE_PAYMENT_TIERS, PAYMENT_STATUSES,
+  DEFAULT_PRICES, MAX_PAYMENT_AMOUNT_CENTS, NO_PIZZA, NO_PIZZA_VALUES,
   PAYMENT_TIER, PAYMENT_TIERS, isNoPizza, isOrganisationTeamName, isPaymentTier
 } from '../src/shared/constants.js';
 
@@ -24,24 +24,16 @@ describe('isNoPizza', () => {
 });
 
 describe('payment constants', () => {
-  it('lists every payment tier the check-in, the admin client and the online payment write', () => {
-    expect([...PAYMENT_TIERS].sort()).toEqual(
-      ['asso_member', 'late', 'non_member', 'online_tier1', 'online_tier2', 'organisation', 'tier1', 'tier2']
-    );
-    expect(ONSITE_PAYMENT_TIERS).toEqual(['asso_member', 'non_member', 'late', 'organisation']);
-    expect(PAYMENT_TIERS).toEqual(expect.arrayContaining(Object.values(PAYMENT_TIER)));
+  it('lists only the on-site tiers the admin picks at check-in (nothing writes the former online tiers any more)', () => {
+    expect([...PAYMENT_TIERS]).toEqual(['asso_member', 'non_member', 'late', 'organisation']);
+    expect(PAYMENT_TIERS).toEqual(Object.values(PAYMENT_TIER));
   });
 
-  it('isPaymentTier only accepts exact tier strings', () => {
+  it('isPaymentTier only accepts exact on-site tier strings', () => {
     expect(isPaymentTier('late')).toBe(true);
-    expect(isPaymentTier('online_tier2')).toBe(true);
-    for (const value of ['LATE', ' late', 'free', '', null, undefined, 1, ['late'], { toString: () => 'late' }]) {
+    for (const value of ['online_tier1', 'online_tier2', 'tier1', 'tier2', 'LATE', ' late', 'free', '', null, undefined, 1, ['late'], { toString: () => 'late' }]) {
       expect(isPaymentTier(value)).toBe(false);
     }
-  });
-
-  it('knows the five payment statuses', () => {
-    expect(PAYMENT_STATUSES).toEqual(['unpaid', 'pending', 'paid', 'delayed', 'refunded']);
   });
 
   it('keeps the default prices below the payment cap', () => {

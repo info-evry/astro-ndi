@@ -10,8 +10,7 @@
  * - every error (status >= 400) is JSON of the shape `{ error: string, code: string }`.
  *
  * Routes that cannot be driven to a 500 by input alone are not listed anywhere:
- * the only 500s of the API are real failures (broken D1, missing SumUp
- * credentials, ...), covered by the "broken database" test below.
+ * the only 500s of the API are real failures (broken D1, ...), covered by the "broken database" test below.
  */
 
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
@@ -59,8 +58,8 @@ const HOSTILE_VALUES = [
 const BODY_FIELDS = [
   'memberId', 'memberIds', 'teamId', 'teamIds', 'assignments', 'room', 'csv', 'name', 'description', 'password',
   'teamName', 'teamDescription', 'teamPassword', 'joinPassword', 'createNewTeam', 'members', 'firstName', 'lastName',
-  'email', 'bacLevel', 'isLeader', 'foodDiet', 'paymentTier', 'paymentAmount', 'skipPayment', 'year', 'confirmation',
-  'force', 'createArchiveFirst', 'checkoutId', 'checkout_reference', 'id', 'status',
+  'email', 'bacLevel', 'isLeader', 'foodDiet', 'paymentTier', 'paymentAmount', 'paymentMethod', 'skipPayment', 'year', 'confirmation',
+  'force', 'createArchiveFirst',
   'max_team_size', 'max_total_participants', 'min_team_size', 'pizzas', 'bac_levels', 'school_name', 'price_asso_member',
   'price_non_member', 'price_late', 'late_cutoff_time', 'price_tier1', 'price_tier2', 'tier1_cutoff_days',
   'payment_enabled', 'registration_deadline', 'gdpr_retention_years'
@@ -122,8 +121,7 @@ function nearMissBodies(ids) {
     { csv: 'firstName,lastName,email,teamName\n"unterminated,quote' },
     { csv: 'only-a-header' },
     { csv: '\u0000\u0000;;;\n\n\n' },
-    { checkoutId: 'x'.repeat(500) },
-    { id: { $ne: 1 }, checkout_reference: ['x'] },
+    { paymentMethod: { $ne: 'online' }, createNewTeam: true },
     { max_team_size: '10abc' },
     { price_late: 1e30 },
     { registration_deadline: 'not a date' },
@@ -191,13 +189,15 @@ beforeEach(async () => {
 
 describe('router introspection', () => {
   it('finds every registered route with its parameters', () => {
-    expect(ROUTES.length).toBeGreaterThanOrEqual(45);
+    expect(ROUTES.length).toBeGreaterThanOrEqual(40);
     for (const route of ROUTES) {
       expect(route.path).toMatch(/^\/api\/[\w/:-]+$/);
     }
     expect(ROUTES).toContainEqual({ method: 'PUT', path: '/api/admin/members/:id' });
     expect(ROUTES).toContainEqual({ method: 'GET', path: '/api/admin/archives/:year/export' });
-    expect(ROUTES).toContainEqual({ method: 'POST', path: '/api/payment/callback' });
+    expect(ROUTES).toContainEqual({ method: 'POST', path: '/api/register' });
+    // no online payment route is registered any more
+    expect(ROUTES.filter(route => route.path.startsWith('/api/payment'))).toEqual([]);
   });
 });
 
@@ -251,7 +251,7 @@ describe('broken database', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const paths = ['/api/admin/stats', '/api/admin/members', '/api/admin/attendance', '/api/admin/pizza', '/api/admin/rooms',
-      '/api/admin/archives', '/api/admin/export', '/api/teams', '/api/stats', '/api/payment/pricing'];
+      '/api/admin/archives', '/api/admin/export', '/api/teams', '/api/stats'];
     for (const path of paths) {
       const request = new Request(`${BASE}/nuit-de-linfo${path}`, { headers: { Authorization: 'Bearer broken-db-token' } });
       const response = await createRouter().handle(request, brokenEnv);

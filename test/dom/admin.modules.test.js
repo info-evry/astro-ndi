@@ -279,7 +279,10 @@ describe('attendance module', () => {
       member({ id: 2, first_name: 'B', payment_status: 'delayed' }),
       member({ id: 3, first_name: 'C', payment_status: 'pending' }),
       member({ id: 4, first_name: 'D', payment_tier: 'constructor' }),
-      member({ id: 5, first_name: 'E' })
+      member({ id: 5, first_name: 'E' }),
+      // historical rows written by the former online payment are still displayed safely
+      member({ id: 6, first_name: 'F', payment_tier: 'online_tier1<b>', payment_amount: 500 }),
+      member({ id: 7, first_name: 'G', payment_status: 'paid', registration_tier: 'constructor' })
     ]);
     attendance.renderAttendance();
 
@@ -289,6 +292,9 @@ describe('attendance module', () => {
     expect(cell(3)).toContain('En cours');
     expect(cell(4)).toContain('constructor');
     expect(cell(5).trim()).toBe('-');
+    expect(cell(6)).toContain('online_tier1<b>');
+    expect(byId('attendance-tbody').querySelector('b')).toBeNull();
+    expect(cell(7)).toContain('En ligne');
   });
 
   it('filters by presence and by search term', () => {
@@ -360,7 +366,7 @@ describe('attendance module', () => {
     expect(byId('checkin-member-name').textContent).toBe('Ann Alpha (paiement sur place)');
   });
 
-  it('a member who already paid online is checked in without the payment modal', async () => {
+  it('a historical member already marked paid is checked in without the modal and without touching the stored payment', async () => {
     state.setAttendanceData([member({ id: 9, payment_status: 'paid', registration_tier: 'tier2', payment_amount: 700 })]);
     const api = vi.fn().mockResolvedValue({});
     const loadData = vi.fn();
@@ -370,7 +376,7 @@ describe('attendance module', () => {
     expect(byId('checkin-modal').classList.contains('hidden')).toBe(true);
     expect(api).toHaveBeenCalledWith('/admin/attendance/check-in/9', {
       method: 'POST',
-      body: JSON.stringify({ paymentTier: 'online_tier2', paymentAmount: 700, skipPayment: true })
+      body: JSON.stringify({})
     });
     expect(loadData).toHaveBeenCalled();
   });
@@ -547,7 +553,7 @@ describe('settings module', () => {
     const api = vi.fn().mockResolvedValue({
       settings: {
         max_team_size: '8', max_total_participants: '120', min_team_size: '2', school_name: 'Test School',
-        pizzas: [{ id: 'a', name: 'A' }], payment_enabled: 'true', price_tier1: '600', gdpr_retention_years: '5'
+        pizzas: [{ id: 'a', name: 'A' }], price_late: '1200', gdpr_retention_years: '5'
       }
     });
 
@@ -556,13 +562,14 @@ describe('settings module', () => {
       maxTeamSize: 8, maxTotalParticipants: 120, minTeamSize: 2, schoolName: 'Test School', gdprRetentionYears: 5, isDirty: false
     });
     expect(state.settingsState.pizzas).toEqual([{ id: 'a', name: 'A' }]);
-    expect(state.pricingSettings).toMatchObject({ paymentEnabled: true, priceTier1: 600, priceTier2: 700, tier1CutoffDays: 7 });
+    expect(state.pricingSettings).toEqual({ priceAssoMember: 500, priceNonMember: 800, priceLate: 1200, lateCutoffTime: '19:00' });
+    expect(state.pizzasConfig).toEqual([{ id: 'a', name: 'A' }]);
   });
 
   it('loadSettings falls back to defaults for empty or invalid values', async () => {
-    await settings.loadSettings(vi.fn().mockResolvedValue({ settings: { max_team_size: 'abc', payment_enabled: 'false' } }));
+    await settings.loadSettings(vi.fn().mockResolvedValue({ settings: { max_team_size: 'abc' } }));
     expect(state.settingsState).toMatchObject({ maxTeamSize: 15, maxTotalParticipants: 200, minTeamSize: 1, gdprRetentionYears: 3 });
-    expect(state.pricingSettings.paymentEnabled).toBe(false);
+    expect(state.pricingSettings.priceLate).toBe(1000);
   });
 });
 

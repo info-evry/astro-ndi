@@ -19,7 +19,6 @@ export function collectFormData() {
   const formData = new FormData(elements.form);
   const data = {
     createNewTeam: state.isNewTeam,
-    paymentMethod: formData.get('paymentMethod') || 'delayed',
     members: []
   };
 
@@ -58,16 +57,16 @@ export function validateForm() {
       errors.push("Le nom de l'équipe est requis");
     }
     if (!data.teamPassword?.trim()) {
-      errors.push("Le mot de passe de l'équipe est requis");
+      errors.push("Le code secret de l'équipe est requis");
     } else if (data.teamPassword.length < 4) {
-      errors.push("Le mot de passe doit faire au moins 4 caractères");
+      errors.push("Le code secret doit faire au moins 4 caractères");
     }
   } else {
     if (!data.teamId) {
       errors.push("Veuillez sélectionner une équipe");
     }
     if (!data.teamPassword?.trim()) {
-      errors.push("Le mot de passe de l'équipe est requis");
+      errors.push("Le code secret de l'équipe est requis");
     }
   }
 

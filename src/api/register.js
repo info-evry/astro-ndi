@@ -75,7 +75,7 @@ async function joinExistingTeam(database, teamId, password, memberCount, limits)
 
   const passwordValid = await verifyPassword(password, team.password_hash);
   if (!passwordValid) {
-    return { response: forbidden('Mot de passe incorrect') };
+    return { response: forbidden('Code secret incorrect') };
   }
 
   // Upgrade legacy hash to new format on successful verification
@@ -201,13 +201,14 @@ export async function register(request, env) {
     const pizzaIds = await getConfiguredPizzaIds(env);
     const validation = validateRegistration(data, { maxTeamSize, minTeamSize, pizzaIds });
     if (!validation.valid) {
-      return badRequest(validation.errors.join('; '), 'validation_error');
+      // `error` (joined) stays for existing clients; `errors` lets a form list them one by one
+      return json({ error: validation.errors.join('; '), code: 'validation_error', errors: validation.errors }, 400);
     }
 
-    // Validate password
+    // Validate the team secret code (API field: `teamPassword`; there is no user account)
     const password = normalizeTeamPassword(data.teamPassword);
     if (!password) {
-      return badRequest("Le mot de passe de l'équipe est requis", 'password_required');
+      return badRequest("Le code secret de l'équipe est requis", 'password_required');
     }
 
     // Handle team creation or joining
@@ -238,7 +239,7 @@ export async function register(request, env) {
 
     return json({
       success: true,
-      message: `Successfully registered ${addedMembers.length} member(s) to team "${teamName}"`,
+      message: `Inscription enregistrée : ${addedMembers.length} membre(s) dans l'équipe « ${teamName} »`,
       team: { id: targetTeamId, name: teamName, isNew: isNewTeam },
       members: addedMembers.map(m => ({ id: m.id, firstName: m.firstName, lastName: m.lastName }))
     });

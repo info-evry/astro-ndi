@@ -196,7 +196,7 @@ describe('Capacity limits', () => {
     const sixteen = Array.from({ length: 16 }, (_, i) => memberPayload({ isLeader: i === 0 }));
     const rejected = await register(newTeamBody({ members: sixteen }));
     expect(rejected.status).toBe(400);
-    expect((await rejected.json()).error).toContain('Maximum 15');
+    expect((await rejected.json()).error).toContain('plus de 15 membres');
   });
 
   it('refuses to join a full team and says how many spots are left', async () => {
@@ -240,7 +240,7 @@ describe('Capacity limits', () => {
     const three = Array.from({ length: 3 }, (_, i) => memberPayload({ isLeader: i === 0 }));
     const rejected = await register(newTeamBody({ members: three }));
     expect(rejected.status).toBe(400);
-    expect((await rejected.json()).error).toContain('Maximum 2');
+    expect((await rejected.json()).error).toContain('plus de 2 membres');
 
     const two = await register(newTeamBody({ members: three.slice(0, 2) }));
     expect(two.status).toBe(200);
@@ -274,7 +274,7 @@ describe('Duplicates', () => {
     }));
 
     expect(response.status).toBe(400);
-    expect((await response.json()).error).toContain('Duplicate member');
+    expect((await response.json()).error).toContain('est en double');
   });
 
   it('rejects a member name that is already registered and leaves no empty team behind', async () => {
@@ -326,7 +326,7 @@ describe('Field length caps', () => {
     for (const foodDiet of ['f'.repeat(200), 'not-a-pizza', 12, ['reine']]) {
       const response = await register(newTeamBody({ members: [memberPayload({ isLeader: true, foodDiet })] }));
       expect(response.status).toBe(400);
-      expect((await response.json()).error).toContain('Invalid food choice');
+      expect((await response.json()).error).toContain('Le choix de pizza est invalide');
     }
     expect(await countRows('teams')).toBe(0);
   });

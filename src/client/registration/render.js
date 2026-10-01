@@ -166,42 +166,6 @@ export function initMemberForm() {
 }
 
 /**
- * Render pricing information
- * @param {object|null} pricing - Pricing object
- */
-export function renderPricing(pricing) {
-  if (!pricing) {
-    elements.paymentSection.classList.add('hidden');
-    return;
-  }
-
-  // Update price display
-  elements.currentPrice.textContent = pricing.currentPriceFormatted;
-  elements.currentTierLabel.textContent = pricing.currentTier === 'tier1'
-    ? 'Inscription anticipée'
-    : 'Inscription standard';
-
-  // Update deadline note
-  if (pricing.daysUntilDeadline !== null && pricing.currentTier === 'tier1') {
-    elements.pricingDeadlineNote.textContent =
-      `Prix valable jusqu'au ${new Date(pricing.registrationDeadline).toLocaleDateString('fr-FR')}. Après cette date : ${pricing.tier2.priceFormatted}`;
-  } else if (pricing.daysUntilDeadline !== null && pricing.daysUntilDeadline <= 0) {
-    elements.pricingDeadlineNote.textContent = 'Date limite de pré-inscription dépassée.';
-  } else {
-    elements.pricingDeadlineNote.textContent = '';
-  }
-
-  // Show/hide payment options based on enabled state
-  if (pricing.enabled) {
-    elements.paymentDisabled.classList.add('hidden');
-    for (const el of document.querySelectorAll('.payment-method')) el.classList.remove('hidden');
-  } else {
-    elements.paymentDisabled.classList.remove('hidden');
-    for (const el of document.querySelectorAll('.payment-method')) el.classList.add('hidden');
-  }
-}
-
-/**
  * Update leader toggle visibility based on team mode
  */
 export function updateLeaderToggle() {

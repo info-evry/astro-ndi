@@ -182,11 +182,11 @@ describe('import: row errors and limits', () => {
     const { stats } = await json(await importCsv(lines.join('\n')));
     expect(stats).toMatchObject({ membersImported: 1, membersSkipped: 5, errorCount: 5, totalRows: 6 });
     expect(stats.errors).toHaveLength(5);
-    expect(stats.errors[0]).toMatch(/^Ligne 3 : Invalid email format/);
-    expect(stats.errors[1]).toMatch(/^Ligne 4 : Invalid BAC level/);
-    expect(stats.errors[2]).toMatch(/^Ligne 5 : Invalid food choice/);
-    expect(stats.errors[3]).toMatch(/^Ligne 6 : First name is required/);
-    expect(stats.errors[4]).toMatch(/^Ligne 7 : Team name must be at least 2 characters/);
+    expect(stats.errors[0]).toMatch(/^Ligne 3 : L'adresse e-mail est invalide/);
+    expect(stats.errors[1]).toMatch(/^Ligne 4 : Le niveau d'études est invalide/);
+    expect(stats.errors[2]).toMatch(/^Ligne 5 : Le choix de pizza est invalide/);
+    expect(stats.errors[3]).toMatch(/^Ligne 6 : Le prénom est requis/);
+    expect(stats.errors[4]).toMatch(/^Ligne 7 : Le nom d'équipe doit contenir entre 2 et 128 caractères/);
     // the team of the rejected rows is not created for nothing
     expect(await countRows('teams')).toBe(1);
   });

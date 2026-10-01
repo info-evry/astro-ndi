@@ -48,12 +48,22 @@ describe('check-in: payment info', () => {
     expect((await memberRow(memberId)).checked_in).toBe(0);
   });
 
-  it.each(['asso_member', 'non_member', 'late', 'organisation', 'online_tier1', 'online_tier2', 'tier1', 'tier2'])(
+  it.each(['asso_member', 'non_member', 'late', 'organisation'])(
     'accepts the tier %s with a valid amount',
     async (paymentTier) => {
       const response = await checkIn({ paymentTier, paymentAmount: 0 });
       expect(response.status).toBe(200);
       expect(await memberRow(memberId)).toMatchObject({ checked_in: 1, payment_tier: paymentTier, payment_amount: 0 });
+    }
+  );
+
+  it.each(['online_tier1', 'online_tier2', 'tier1', 'tier2'])(
+    'no longer accepts the former online tier %s (nothing writes it any more)',
+    async (paymentTier) => {
+      const response = await checkIn({ paymentTier, paymentAmount: 0 });
+      expect(response.status).toBe(400);
+      expect((await json(response)).code).toBe('invalid_payment_tier');
+      expect((await memberRow(memberId)).checked_in).toBe(0);
     }
   );
 
@@ -331,18 +341,6 @@ describe('team password policy: one normalisation everywhere (trim, 64 character
     expect((await adminFetch(`/api/admin/teams/${team.id}`, { method: 'PUT', body: { password: '', description: 'x' } })).status).toBe(200);
     expect((await postJson(`/api/teams/${team.id}/view`, { password: longPassword })).status).toBe(200);
   });
-
-  it('the payment endpoints accept the team password in its normalised form', async () => {
-    await env.DB.exec(`INSERT OR REPLACE INTO settings (key, value) VALUES ('payment_enabled', 'true')`);
-    const { team } = await json(await adminFetch('/api/admin/teams', { method: 'POST', body: { name: uniq('Pay'), password: longPassword } }));
-    const { member } = await json(await adminFetch('/api/admin/members', {
-      method: 'POST', body: { teamId: team.id, firstName: uniq('P'), lastName: uniq('Q'), email: 'pay@example.com' }
-    }));
-
-    const response = await postJson('/api/payment/delayed', { memberId: member.id, teamPassword: `  ${longPassword}  ` });
-    expect(response.status).toBe(200);
-    expect((await postJson('/api/payment/delayed', { memberId: member.id, teamPassword: 'nope' })).status).toBe(403);
-  });
 });
 
 describe('food choice: validated against the configured pizzas', () => {
@@ -360,7 +358,7 @@ describe('food choice: validated against the configured pizzas', () => {
     for (const foodDiet of ['regina', 'x'.repeat(65), 5, ['reine'], {}]) {
       const response = await add(foodDiet);
       expect(response.status, JSON.stringify(foodDiet)).toBe(400);
-      expect((await json(response)).error).toContain('Invalid food choice');
+      expect((await json(response)).error).toContain('Le choix de pizza est invalide');
     }
   });
 

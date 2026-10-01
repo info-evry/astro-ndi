@@ -40,13 +40,6 @@ import {
 import { getSettings, updateSettings } from './features/admin/admin.settings.js';
 import { importCSV } from './features/admin/admin.import.js';
 import {
-  createCheckout,
-  verifyPayment,
-  markPaymentDelayed,
-  getPricing,
-  paymentCallback
-} from './features/payment/payment.api.js';
-import {
   listArchives,
   getArchive,
   createArchive,
@@ -79,16 +72,6 @@ export function createRouter() {
         methods: ['POST'],
         match: pathPattern(/^\/api\/teams\/[^/]+\/view$/),
         limit: 10,
-        windowSec: 600
-      },
-      {
-        // The endpoints that start or check a payment. GET /api/payment/pricing
-        // and the SumUp webhook (POST /api/payment/callback) are deliberately
-        // not listed: they are never rate limited.
-        name: 'payment',
-        methods: ['POST'],
-        match: pathPattern(/^\/api\/payment\/(?:checkout|verify|delayed)$/),
-        limit: 20,
         windowSec: 600
       },
       ADMIN_RATE_LIMIT
@@ -149,13 +132,6 @@ export function createRouter() {
   router.get('/api/admin/rooms', getRooms);
   router.put('/api/admin/rooms/:teamId', setRoom);
   router.post('/api/admin/rooms/batch', setRoomsBatch);
-
-  // Payment API routes
-  router.get('/api/payment/pricing', getPricing);
-  router.post('/api/payment/checkout', createCheckout);
-  router.post('/api/payment/verify', verifyPayment);
-  router.post('/api/payment/delayed', markPaymentDelayed);
-  router.post('/api/payment/callback', paymentCallback);
 
   // Admin API routes - Archives
   router.get('/api/admin/archives', listArchives);

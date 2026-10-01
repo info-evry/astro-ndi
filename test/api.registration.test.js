@@ -141,7 +141,7 @@ describe('POST /api/register - New Team Creation', () => {
 
     expect(response.status).toBe(400);
     const data = await response.json();
-    expect(data.error).toContain('leader');
+    expect(data.error).toContain("chef d'équipe");
   });
 
   it('should create team with description', async () => {
@@ -519,6 +519,31 @@ describe('Input Validation Edge Cases', () => {
     });
 
     expect(response.status).toBe(400);
+  });
+
+  it('lists every validation problem in French, as `errors` and as the joined `error`', async () => {
+    const response = await SELF.fetch('http://localhost/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        createNewTeam: true,
+        teamName: 'Many Problems',
+        teamPassword: 'testpass',
+        members: [
+          { firstName: '', lastName: 'Email', email: 'notanemail', isLeader: false }
+        ]
+      })
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: "Une nouvelle équipe doit avoir au moins un chef d'équipe; Membre 1 : Le prénom est requis, L'adresse e-mail est invalide",
+      code: 'validation_error',
+      errors: [
+        "Une nouvelle équipe doit avoir au moins un chef d'équipe",
+        "Membre 1 : Le prénom est requis, L'adresse e-mail est invalide"
+      ]
+    });
   });
 
   it('should accept mixed case email addresses', async () => {

@@ -38,12 +38,12 @@ export function closeTeamViewModal() {
 }
 
 /**
- * Handle team view password submission
+ * Handle team view secret code submission
  */
 export async function handleTeamViewSubmit() {
   const password = elements.teamViewPassword.value.trim();
   if (!password) {
-    elements.teamViewError.textContent = 'Veuillez entrer le mot de passe';
+    elements.teamViewError.textContent = 'Veuillez entrer le code secret';
     elements.teamViewError.classList.remove('hidden');
     return;
   }
@@ -110,7 +110,7 @@ export function setupModalListeners() {
   elements.teamViewCancel?.addEventListener('click', closeTeamViewModal);
   elements.teamViewClose?.addEventListener('click', closeTeamViewModal);
 
-  // Allow Enter key to submit password
+  // Allow Enter key to submit the secret code
   elements.teamViewPassword?.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();

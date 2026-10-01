@@ -30,9 +30,10 @@ CREATE TABLE IF NOT EXISTS archives (
 CREATE INDEX IF NOT EXISTS idx_archives_year ON archives(event_year);
 CREATE INDEX IF NOT EXISTS idx_archives_expired ON archives(is_expired);
 
--- Add event_year setting (for identifying current event)
-INSERT OR IGNORE INTO settings (key, value, description) VALUES
-    ('event_year', '2024', 'Current event year for the NDI event');
+-- NOTE: no `event_year` seed here any more. It used to be seeded with the
+-- stale value '2024', which pinned every archive to 2024 (see migrate-009).
+-- Without the setting the edition is derived from the NDI date; an admin can
+-- still set it explicitly.
 
 -- Add GDPR retention period setting
 INSERT OR IGNORE INTO settings (key, value, description) VALUES

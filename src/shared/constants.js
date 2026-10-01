@@ -21,6 +21,17 @@ export function isOrganisationTeamName(name) {
 export const DEFAULT_SCHOOL_NAME = "Université d'Evry";
 
 // ---------------------------------------------------------------------------
+// Capacity and retention defaults (used when neither D1 nor the environment sets them)
+// ---------------------------------------------------------------------------
+
+export const DEFAULT_MAX_TEAM_SIZE = 15;
+export const DEFAULT_MAX_TOTAL_PARTICIPANTS = 200;
+export const DEFAULT_MIN_TEAM_SIZE = 1;
+
+/** Years the personal data of an archive is kept before it is anonymised. */
+export const DEFAULT_GDPR_RETENTION_YEARS = 3;
+
+// ---------------------------------------------------------------------------
 // Pizza
 // ---------------------------------------------------------------------------
 
@@ -28,6 +39,9 @@ export const DEFAULT_SCHOOL_NAME = "Université d'Evry";
  * `food_diet` values meaning "no pizza": the empty value, the default config id
  * (`none`) and the id used by the production D1 migration (`0-rien`).
  */
+/** Catalogue id of the "Aucune" (no pizza) choice; always present, not deletable. */
+export const NO_PIZZA_ID = '0-rien';
+
 export const NO_PIZZA_VALUES = Object.freeze(['', 'none', '0-rien']);
 
 /** Value the registration form sends when no pizza is wanted. */
@@ -50,46 +64,23 @@ export const MAX_FOOD_DIET_LENGTH = 64;
 
 // ---------------------------------------------------------------------------
 // Payments
+//
+// Everything is paid on the day, on site: the admin picks a tier in the
+// check-in modal. There is no online payment any more. The database keeps the
+// historical online columns (`payment_status`, `checkout_id`, ...) and rows
+// written by the former online flow (`tier1`, `tier2`, `online_tier1`, ...);
+// they are only ever read (and escaped) for display, never written.
 // ---------------------------------------------------------------------------
 
-/** `members.payment_status` values. */
-export const PAYMENT_STATUS = Object.freeze({
-  UNPAID: 'unpaid',
-  PENDING: 'pending',
-  PAID: 'paid',
-  DELAYED: 'delayed',
-  REFUNDED: 'refunded'
-});
-
-export const PAYMENT_STATUSES = Object.freeze(Object.values(PAYMENT_STATUS));
-
-/**
- * `members.payment_tier` values.
- * - on-site tiers are chosen by the admin in the check-in modal;
- * - `online_tier1` / `online_tier2` are written by the admin client when it
- *   checks in a member who already paid online;
- * - `tier1` / `tier2` are written when an online payment is verified.
- */
+/** `members.payment_tier` values accepted on check-in (chosen by the admin). */
 export const PAYMENT_TIER = Object.freeze({
   ASSO_MEMBER: 'asso_member',
   NON_MEMBER: 'non_member',
   LATE: 'late',
-  ORGANISATION: 'organisation',
-  ONLINE_TIER1: 'online_tier1',
-  ONLINE_TIER2: 'online_tier2',
-  TIER1: 'tier1',
-  TIER2: 'tier2'
+  ORGANISATION: 'organisation'
 });
 
-/** Tiers the admin picks for an on-site payment. */
-export const ONSITE_PAYMENT_TIERS = Object.freeze([
-  PAYMENT_TIER.ASSO_MEMBER,
-  PAYMENT_TIER.NON_MEMBER,
-  PAYMENT_TIER.LATE,
-  PAYMENT_TIER.ORGANISATION
-]);
-
-/** Every value accepted for `paymentTier` on check-in. */
+/** Every value accepted for `paymentTier` on check-in (the on-site tiers). */
 export const PAYMENT_TIERS = Object.freeze(Object.values(PAYMENT_TIER));
 
 const PAYMENT_TIER_SET = new Set(PAYMENT_TIERS);
@@ -106,13 +97,8 @@ export function isPaymentTier(value) {
 export const DEFAULT_PRICES = Object.freeze({
   assoMember: 500,
   nonMember: 800,
-  late: 1000,
-  tier1: 500,
-  tier2: 700
+  late: 1000
 });
-
-/** Days before the registration deadline during which tier 1 applies. */
-export const DEFAULT_TIER1_CUTOFF_DAYS = 7;
 
 /** On-site arrivals after this time (HH:MM) pay the "late" price. */
 export const DEFAULT_LATE_CUTOFF_TIME = '19:00';

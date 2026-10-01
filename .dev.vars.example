@@ -4,6 +4,5 @@
 
 ADMIN_TOKEN=dev-admin-token
 
-# Optional: set these to test email sending / online payments locally.
+# Optional: set this to test email sending locally.
 # RESEND_API_KEY=your-resend-api-key-here
-# SUMUP_API_KEY=your-sumup-api-key-here

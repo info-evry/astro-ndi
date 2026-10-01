@@ -25,8 +25,7 @@
     "@astrojs/cloudflare": "^14.3.2",
     "astro-core": "workspace:*",
     "@info-evry/astro-design": "workspace:*",
-    "@info-evry/knowledge": "workspace:*",
-    "astro-payments": "workspace:*"
+    "@info-evry/knowledge": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.1.13",

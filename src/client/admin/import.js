@@ -234,13 +234,13 @@ function renderImportPasswords(passwords) {
     <div class="import-passwords">
       <p class="import-passwords-warning">
         <span class="sf-symbol">@sfs:exclamationmark.triangle@</span>
-        Ces mots de passe ne seront affichés qu'une seule fois. Notez-les ou copiez-les maintenant.
+        Ces codes secrets ne seront affichés qu'une seule fois. Notez-les ou copiez-les maintenant.
       </p>
       <table class="import-passwords-table">
         <thead>
           <tr>
             <th>Équipe</th>
-            <th>Mot de passe</th>
+            <th>Code secret</th>
           </tr>
         </thead>
         <tbody>
@@ -269,7 +269,7 @@ function attachCopyPasswordsListener(container, passwords) {
       toastSuccess('Mots de passe copiés');
     } catch (error) {
       console.error('Failed to copy passwords:', error);
-      toastError('Impossible de copier les mots de passe');
+      toastError('Impossible de copier les codes secrets');
     }
   });
 }

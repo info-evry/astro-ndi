@@ -2,6 +2,14 @@
  * Settings database operations
  */
 
+import {
+  DEFAULT_MAX_TEAM_SIZE,
+  DEFAULT_MAX_TOTAL_PARTICIPANTS,
+  DEFAULT_MIN_TEAM_SIZE,
+  DEFAULT_PRICES,
+  MAX_PAYMENT_AMOUNT_CENTS
+} from '../shared/constants.js';
+
 /**
  * Get a single setting value
  * @param {D1Database} db
@@ -109,9 +117,9 @@ export async function deleteSetting(db, key) {
  * @returns {Promise<{maxTeamSize: number, maxTotalParticipants: number, minTeamSize: number}>}
  */
 export async function getCapacitySettings(db, env) {
-  let maxTeamSize = Number.parseInt(env.MAX_TEAM_SIZE, 10) || 15;
-  let maxTotalParticipants = Number.parseInt(env.MAX_TOTAL_PARTICIPANTS, 10) || 200;
-  let minTeamSize = Number.parseInt(env.MIN_TEAM_SIZE, 10) || 1;
+  let maxTeamSize = Number.parseInt(env.MAX_TEAM_SIZE, 10) || DEFAULT_MAX_TEAM_SIZE;
+  let maxTotalParticipants = Number.parseInt(env.MAX_TOTAL_PARTICIPANTS, 10) || DEFAULT_MAX_TOTAL_PARTICIPANTS;
+  let minTeamSize = Number.parseInt(env.MIN_TEAM_SIZE, 10) || DEFAULT_MIN_TEAM_SIZE;
 
   try {
     const dbMaxTeam = await getSetting(db, 'max_team_size');
@@ -128,6 +136,36 @@ export async function getCapacitySettings(db, env) {
   }
 
   return { maxTeamSize, maxTotalParticipants, minTeamSize };
+}
+
+/**
+ * Parse a stored price (cents). Anything that is not a plain non-negative
+ * integer within bounds is treated as missing.
+ * @param {string|null} value
+ * @returns {number|null}
+ */
+function parsePriceCents(value) {
+  if (typeof value !== 'string' || !/^\s*\d+\s*$/.test(value)) return null;
+  const cents = Number.parseInt(value, 10);
+  return cents <= MAX_PAYMENT_AMOUNT_CENTS ? cents : null;
+}
+
+/**
+ * On-site prices (cents) the organisers set in the admin settings
+ * (`price_asso_member`, `price_non_member`), falling back to the defaults when
+ * the table, the key or the value is missing or invalid.
+ * @param {D1Database} db
+ * @returns {Promise<{assoMember: number, nonMember: number}>}
+ */
+export async function getOnsitePrices(db) {
+  const prices = { assoMember: DEFAULT_PRICES.assoMember, nonMember: DEFAULT_PRICES.nonMember };
+  try {
+    prices.assoMember = parsePriceCents(await getSetting(db, 'price_asso_member')) ?? prices.assoMember;
+    prices.nonMember = parsePriceCents(await getSetting(db, 'price_non_member')) ?? prices.nonMember;
+  } catch (error) {
+    console.error('Error reading on-site prices from DB:', error);
+  }
+  return prices;
 }
 
 /**

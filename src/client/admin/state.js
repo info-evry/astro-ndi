@@ -3,10 +3,13 @@
  */
 
 import {
+  DEFAULT_GDPR_RETENTION_YEARS,
   DEFAULT_LATE_CUTOFF_TIME,
+  DEFAULT_MAX_TEAM_SIZE,
+  DEFAULT_MAX_TOTAL_PARTICIPANTS,
+  DEFAULT_MIN_TEAM_SIZE,
   DEFAULT_PRICES,
-  DEFAULT_SCHOOL_NAME,
-  DEFAULT_TIER1_CUTOFF_DAYS
+  DEFAULT_SCHOOL_NAME
 } from '../../shared/constants.js';
 
 // Teams and members data
@@ -16,27 +19,22 @@ export let pizzasConfig = [];
 
 // Settings state
 export const settingsState = {
-  maxTeamSize: 15,
-  maxTotalParticipants: 200,
-  minTeamSize: 1,
+  maxTeamSize: DEFAULT_MAX_TEAM_SIZE,
+  maxTotalParticipants: DEFAULT_MAX_TOTAL_PARTICIPANTS,
+  minTeamSize: DEFAULT_MIN_TEAM_SIZE,
   schoolName: DEFAULT_SCHOOL_NAME,
   pizzas: [],
   bacLevels: [],
   isDirty: false,
-  gdprRetentionYears: 3
+  gdprRetentionYears: DEFAULT_GDPR_RETENTION_YEARS
 };
 
-// Pricing settings
+// On-site pricing settings (everything is paid on the day)
 export const pricingSettings = {
   priceAssoMember: DEFAULT_PRICES.assoMember,
   priceNonMember: DEFAULT_PRICES.nonMember,
   priceLate: DEFAULT_PRICES.late,
-  lateCutoffTime: DEFAULT_LATE_CUTOFF_TIME,
-  paymentEnabled: false,
-  priceTier1: DEFAULT_PRICES.tier1,
-  priceTier2: DEFAULT_PRICES.tier2,
-  tier1CutoffDays: DEFAULT_TIER1_CUTOFF_DAYS,
-  registrationDeadline: ''
+  lateCutoffTime: DEFAULT_LATE_CUTOFF_TIME
 };
 
 // Import state

@@ -174,8 +174,8 @@ describe('CSV import - duplicates and invalid rows', () => {
     expect(data.stats.membersImported).toBe(0);
     expect(data.stats.membersSkipped).toBe(2);
     expect(data.stats.errors).toHaveLength(2);
-    expect(data.stats.errors[0]).toMatch(/^Ligne 2 : .*Email is required/);
-    expect(data.stats.errors[1]).toMatch(/^Ligne 3 : .*First name is required/);
+    expect(data.stats.errors[0]).toMatch(/^Ligne 2 : .*L'adresse e-mail est requise/);
+    expect(data.stats.errors[1]).toMatch(/^Ligne 3 : .*Le prénom est requis/);
   });
 
   it('caps the reported errors at 10', async () => {

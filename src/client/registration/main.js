@@ -9,10 +9,10 @@
  */
 /* eslint-env browser */
 
-import { initApi, loadConfig, loadTeams, loadStats, loadPricing } from './api.js';
-import { state, setConfig, setTeams, setStats, setPricing, setTeamMode } from './state.js';
+import { initApi, loadConfig, loadTeams, loadStats } from './api.js';
+import { state, setConfig, setTeams, setStats, setTeamMode } from './state.js';
 import { elements } from './elements.js';
-import { renderStats, renderTeams, renderTeamSelect, renderPricing, initMemberForm, updateLeaderToggle } from './render.js';
+import { renderStats, renderTeams, renderTeamSelect, initMemberForm, updateLeaderToggle } from './render.js';
 import { handleSubmit, showErrors } from './form.js';
 import { openTeamViewModal, setupModalListeners } from './modals.js';
 
@@ -39,14 +39,6 @@ function setupEventListeners() {
     });
   }
 
-  // Payment method selection
-  for (const radio of document.querySelectorAll('input[name="paymentMethod"]')) {
-    radio.addEventListener('change', (e) => {
-      for (const m of document.querySelectorAll('.payment-method')) m.classList.remove('selected');
-      e.target.closest('.payment-method').classList.add('selected');
-    });
-  }
-
   // Form submission
   elements.form?.addEventListener('submit', handleSubmit);
 
@@ -69,24 +61,21 @@ async function init() {
 
   try {
     // Load data in parallel
-    const [config, teams, stats, pricing] = await Promise.all([
+    const [config, teams, stats] = await Promise.all([
       loadConfig(),
       loadTeams(),
-      loadStats(),
-      loadPricing()
+      loadStats()
     ]);
 
     // Store data in state
     setConfig(config);
     setTeams(teams);
     setStats(stats);
-    setPricing(pricing);
 
     // Render UI
     renderStats(stats);
     renderTeams(teams, openTeamViewModal);
     renderTeamSelect(teams);
-    renderPricing(pricing);
 
     // Initialize member form if not at capacity
     if (!state.isAtCapacity) {

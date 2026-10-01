@@ -7,9 +7,11 @@ Registration platform for the "Nuit de l'Info" event organized by Asso Info Evry
 ## Features
 
 ### Public
-- Team registration with password protection
-- Join existing teams with team password
-- View team members (password protected)
+- Team registration, protected by a team secret code (no account to create)
+- Join existing teams with the team secret code
+- View team members (secret code required)
+- Tariffs read from the admin settings; payment is **on site only**, on the day
+- Edition, dates and deadlines computed per request from the clock (SSR)
 - Real-time capacity and team statistics
 - Mobile-responsive glassmorphism design
 - SF Symbols icons
@@ -50,11 +52,9 @@ astro-ndi/
 │   │   └── team-view.js      # View team members
 │   ├── database/             # Database helpers
 │   │   ├── db.settings.js    # Settings queries (incl. atomic multi-write)
-│   │   ├── db.payments.js    # Online payment queries
 │   │   └── db.archives.js    # Archives, GDPR expiry, data reset
 │   ├── features/
-│   │   ├── admin/            # admin.import.js (CSV import), admin.settings.js (settings schema)
-│   │   └── payment/          # SumUp checkout / verify / webhook
+│   │   └── admin/            # admin.import.js (CSV import), admin.settings.js (settings schema)
 │   ├── lib/
 │   │   ├── db.js             # Teams, members, attendance, pizza, rooms (the one place)
 │   │   ├── validation.js     # Member / team / registration validation, normalizeTeamPassword
@@ -79,10 +79,10 @@ The site keeps no private copy of what the platform provides:
 |---------|--------|
 | Error bodies, `serverError`, JSON body / id parsing, D1 batches, admin auth, CSV, settings validation, CORS route, rate limits | `astro-core` (`http`, `request`, `ids`, `d1`, `auth`, `csv`, `settings`, `api-route`, `ratelimit`) |
 | Login flow, event delegation, downloads, confirm modal, public API client, `escapeHtml`, `numberOrNull` | `@info-evry/astro-design/scripts/*` |
-| Pricing tier (`calculateTier`, `getPrice`), SumUp | `astro-payments` |
+| NDI edition / dates / deadlines for a given clock (`currentNdiEvent`) | `@info-evry/knowledge/ndi/date` |
 
 `src/shared/constants.js` is the single source of the site's own constants
-(Organisation team name, `isNoPizza`, payment statuses and tiers, default
+(Organisation team name, `isNoPizza`, the on-site payment tiers, default
 prices, request caps). The server and the browser bundles import the same file.
 
 ### Error contract
@@ -115,8 +115,8 @@ team, all members and all payment events, but keeps the Organisation team.
 ### Installation
 
 This project is a package in the maestro Bun workspace and depends on the
-shared `astro-core`, `@info-evry/astro-design`, `@info-evry/knowledge`, and
-`astro-payments` packages from that workspace (no git submodules involved).
+shared `astro-core`, `@info-evry/astro-design` and `@info-evry/knowledge`
+packages from that workspace (no git submodules involved).
 
 ```bash
 # Clone the maestro repo, which contains this project as a workspace package
@@ -168,7 +168,7 @@ For detailed development and deployment instructions, see [maestro docs](../../d
 |---------|------|-------------|
 | `DB` | D1 Database | SQLite database for teams/members |
 | `CONFIG` | KV Namespace | Dynamic configuration storage |
-| `RATE_LIMIT` | KV Namespace | Fixed-window rate limiting counters for public/admin/payment endpoints. Optional: if missing, rate limiting fails open (requests are allowed through) and a warning is logged. |
+| `RATE_LIMIT` | KV Namespace | Fixed-window rate limiting counters for public/admin endpoints. Optional: if missing, rate limiting fails open (requests are allowed through) and a warning is logged. |
 
 ### Environment Variables
 
@@ -198,7 +198,6 @@ client IP:
 |------|-------|-------|
 | `register` | `POST /api/register` | 5 requests / 10 min |
 | `team-view` | `POST /api/teams/:id/view` | 10 requests / 10 min |
-| `payment` | `POST /api/payment/checkout`, `/verify`, `/delayed` (`GET /pricing` and the SumUp webhook `POST /callback` are never limited) | 20 requests / 10 min |
 | `admin` | any method under `/api/admin/` (`ADMIN_RATE_LIMIT` of astro-core) | 60 requests / 1 min |
 
 Paths match on a whole segment (`/api/registerX` is not `/api/register`).
@@ -218,30 +217,25 @@ If the `RATE_LIMIT` KV binding is not configured, rate limiting fails open
 | `GET` | `/api/teams` | List all teams with member counts |
 | `GET` | `/api/stats` | Registration statistics |
 | `POST` | `/api/register` | Register new team or join existing |
-| `POST` | `/api/teams/:id/view` | View team members (requires password) |
-| `GET` | `/api/payment/pricing` | Current pricing tier information |
+| `POST` | `/api/teams/:id/view` | View team members (requires the team secret code, body field `password`) |
 
-### Payment (admin bearer token OR team password required)
+### Payment: on site only
 
-These endpoints act on behalf of a specific member's team. Authorize a
-request either with an admin `Authorization: Bearer <ADMIN_TOKEN>` header,
-or by including the member's team password as `teamPassword` in the JSON
-body. Requests without either are rejected with `403`.
+There is no online payment: everything is paid on the day, on site, and
+recorded by an admin in the check-in modal (see "Check-in payment" below). The
+former `/api/payment/*` endpoints (checkout, verify, delayed, callback,
+pricing) and the SumUp integration were removed; they answer `404`. A stale
+cached client that still sends `paymentMethod` in `POST /api/register` is not
+rejected: the field is ignored.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/payment/checkout` | Create a SumUp checkout for a member (`{ memberId, teamPassword? }`) |
-| `POST` | `/api/payment/verify` | Verify payment completion for a checkout (`{ checkoutId, teamPassword? }`) |
-| `POST` | `/api/payment/delayed` | Mark a member's payment as delayed/pay-at-event (`{ memberId, teamPassword? }`); rejected with `409` if the member has already paid |
+The database keeps the historical online columns (`payment_status`,
+`payment_method`, `checkout_id`, `transaction_id`, `registration_tier`) and the
+`payment_events` table, and the admin screens still display such rows
+(escaped); nothing writes them any more.
 
-The `/api/payment/callback` webhook (called by SumUp, not by end users) answers
-`400 invalid_body` for a body that is not a JSON object. Otherwise it always
-answers `200`: it never mutates the database unless `SUMUP_API_KEY` is
-configured (`{ received: true, processed: false }`), and a processing failure
-is logged and reported as `processed: false`, never with the error message.
-
-Team passwords are normalised the same way everywhere (register, join, view,
-payment, admin create / update): trimmed and capped at 64 characters
+The team secret code is the API field `password` / `teamPassword` (the field
+names are unchanged). It is normalised the same way everywhere (register, join,
+view, admin create / update): trimmed and capped at 64 characters
 (`normalizeTeamPassword`).
 
 ### Admin (Bearer token required)
@@ -255,7 +249,7 @@ payment, admin create / update): trimmed and capped at 64 characters
 | `DELETE` | `/api/admin/members/:id` | Delete a member |
 | `POST` | `/api/admin/members/delete-batch` | Delete members (`{ memberIds }`, 1 to 1000 ids) |
 | `POST` | `/api/admin/teams` | Create a team (`409` if the name exists) |
-| `PUT` | `/api/admin/teams/:id` | Update a team (name, description, password) |
+| `PUT` | `/api/admin/teams/:id` | Update a team (name, description, secret code in `password`) |
 | `DELETE` | `/api/admin/teams/:id` | Delete a team and its members (not the Organisation team) |
 | `GET` | `/api/admin/settings` | Get all settings |
 | `PUT` | `/api/admin/settings` | Update settings (validated against a schema, written atomically) |
@@ -282,9 +276,19 @@ payment, admin create / update): trimmed and capped at 64 characters
 #### Check-in payment
 
 `paymentTier` must be one of `asso_member`, `non_member`, `late`,
-`organisation` (on-site, chosen in the check-in modal), `online_tier1`,
-`online_tier2` (a member who already paid online) or `tier1`, `tier2`;
-`paymentAmount` is an integer number of cents between 0 and 100000.
+`organisation` (chosen in the check-in modal; prices come from the settings
+`price_asso_member`, `price_non_member`, `price_late`, `late_cutoff_time`);
+`paymentAmount` is an integer number of cents between 0 and 100000. The former
+online tiers (`online_tier1`, `online_tier2`, `tier1`, `tier2`) are no longer
+accepted for new check-ins (nothing writes them any more) but historical rows
+holding them are still displayed.
+
+#### Public tariffs
+
+The tariff cards of the public page show `price_asso_member` and
+`price_non_member` (cents, read per request from the settings; the defaults of
+`src/shared/constants.js` apply when a key is missing or invalid), formatted
+`5€` or `7,50€`. "Gratuit" stays as is. The three cards look identical.
 
 #### CSV import and export
 
