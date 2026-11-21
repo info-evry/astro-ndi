@@ -246,27 +246,43 @@ async function persistPizzas(api, nextPizzas, successMessage) {
   setPizzaSaving(true);
 
   try {
-    await api(SETTINGS_PATH, { method: 'PUT', body: JSON.stringify({ pizzas: nextPizzas }) });
+    // `pizzas_expected`: the list this change was made from. The server refuses
+    // the save when the stored list is no longer that one (another tab or
+    // organiser changed it), instead of silently undoing their change.
+    await api(SETTINGS_PATH, { method: 'PUT', body: JSON.stringify({ pizzas: nextPizzas, pizzas_expected: previous }) });
   } catch (error) {
     console.error('Error saving pizzas:', error);
     settingsState.pizzas = previous;
+    if (error?.code === 'stale_pizzas') {
+      await reloadPizzas(api);
+      setPizzaSaving(false);
+      toastError('La liste des pizzas a été modifiée entre-temps (autre onglet ou autre organisateur) : elle a été rechargée, refaites votre modification.');
+      return false;
+    }
     setPizzaSaving(false);
     toastError(error?.message ? `Pizzas non enregistrées : ${error.message}` : 'Erreur lors de l\'enregistrement des pizzas');
     return false;
   }
 
+  await reloadPizzas(api);
+  setPizzaSaving(false);
+  toastSuccess(successMessage);
+  return true;
+}
+
+/**
+ * Show the catalogue the server stores (after a save, or after a refused one).
+ * A failed read keeps what is on screen.
+ * @param {Function} api - API function
+ */
+async function reloadPizzas(api) {
   try {
     const { settings } = await api(SETTINGS_PATH, { method: 'GET' });
     if (Array.isArray(settings?.pizzas)) settingsState.pizzas = settings.pizzas;
   } catch (error) {
-    // The change is stored: keep showing it even though it could not be read back
     console.error('Error reloading pizzas:', error);
   }
-
-  setPizzaSaving(false);
   setPizzasConfig(settingsState.pizzas);
-  toastSuccess(successMessage);
-  return true;
 }
 
 /**

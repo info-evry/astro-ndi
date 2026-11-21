@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { env, SELF } from 'cloudflare:test';
+import { currentPizzas } from './helpers.js';
 
 // Initialize database schema before tests
 beforeAll(async () => {
@@ -117,7 +118,7 @@ describe('PUT /api/admin/settings', () => {
         'Authorization': 'Bearer test-admin-token',
         'Origin': 'http://localhost'
       },
-      body: JSON.stringify({ pizzas: newPizzas })
+      body: JSON.stringify({ pizzas: newPizzas, pizzas_expected: await currentPizzas() })
     });
 
     expect(response.status).toBe(200);
@@ -233,6 +234,7 @@ describe('Config uses D1 settings', () => {
         'Origin': 'http://localhost'
       },
       body: JSON.stringify({
+        pizzas_expected: await currentPizzas(),
         pizzas: [
           { id: 'custom1', name: 'Custom Pizza 1', description: 'Test 1' },
           { id: 'custom2', name: 'Custom Pizza 2', description: 'Test 2' },

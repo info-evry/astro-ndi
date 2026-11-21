@@ -31,6 +31,10 @@ function intSetting(min, max) {
   };
 }
 
+/** Same caps as the admin form's inputs. */
+const MAX_PIZZA_NAME_LENGTH = 100;
+const MAX_PIZZA_DESCRIPTION_LENGTH = 256;
+
 /** `true`, `false`, "true" or "false" (stored as the text "true" / "false"). */
 function booleanSetting(value) {
   return typeof value === 'boolean' || value === 'true' || value === 'false' || 'Doit être vrai ou faux';
@@ -54,8 +58,14 @@ function pizzaEntryError(pizza, index, seenIds) {
   if (!pizza.name || typeof pizza.name !== 'string' || pizza.name.trim() === '') {
     return `${label} : le nom est requis`;
   }
+  if (pizza.name.length > MAX_PIZZA_NAME_LENGTH) {
+    return `${label} : le nom ne doit pas dépasser ${MAX_PIZZA_NAME_LENGTH} caractères`;
+  }
   if (pizza.description !== undefined && typeof pizza.description !== 'string') {
     return `${label} : la description doit être un texte`;
+  }
+  if (pizza.description && pizza.description.length > MAX_PIZZA_DESCRIPTION_LENGTH) {
+    return `${label} : la description ne doit pas dépasser ${MAX_PIZZA_DESCRIPTION_LENGTH} caractères`;
   }
   return null;
 }
@@ -180,7 +190,8 @@ export const updateSettings = adminOnly(async (request, env) => {
     const { data: updates, response } = await readBody(request);
     if (response) return response;
 
-    const current = Object.fromEntries(Object.entries(updates).filter(([key]) => !RETIRED_KEYS.has(key)));
+    const { pizzas_expected: expectedPizzas, ...rest } = updates;
+    const current = Object.fromEntries(Object.entries(rest).filter(([key]) => !RETIRED_KEYS.has(key)));
     const result = validateSettings(current, SETTINGS_SCHEMA);
     if (!result.ok) {
       const problems = [
@@ -190,13 +201,69 @@ export const updateSettings = adminOnly(async (request, env) => {
       return badRequest(problems.join(' ; '), 'invalid_settings');
     }
 
-    await settingsDb.setSettings(
-      env.DB,
-      result.entries.map(([key, value]) => [key, toStoredValue(key, value)])
-    );
+    const entries = result.entries.map(([key, value]) => [key, toStoredValue(key, value)]);
+    let unchanged;
+    if (Object.hasOwn(current, 'pizzas')) {
+      const check = await checkPizzasBase(env.DB, expectedPizzas);
+      if (check.response) return check.response;
+      unchanged = { key: 'pizzas', value: check.raw };
+    }
+
+    try {
+      await settingsDb.setSettings(env.DB, entries, { unchanged });
+    } catch (error_) {
+      // Another save changed the catalogue between our read and our write
+      if (unchanged && await settingsDb.getRawSetting(env.DB, 'pizzas') !== unchanged.value) {
+        return stalePizzas(env.DB);
+      }
+      throw error_;
+    }
 
     return json({ success: true, updated: result.entries.map(([key]) => key) });
   } catch (error_) {
     return serverError('Error updating settings:', error_);
   }
 });
+
+/** The stored catalogue as the admin page shows it: an array, `[]` when absent or unreadable. */
+function parseStoredPizzas(raw) {
+  if (raw === null) return [];
+  try {
+    const value = JSON.parse(raw);
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+
+async function stalePizzas(database) {
+  const pizzas = parseStoredPizzas(await settingsDb.getRawSetting(database, 'pizzas'));
+  return json({
+    error: "La liste des pizzas a été modifiée entre-temps (autre onglet ou autre organisateur) : elle a été rechargée, refaites votre modification.",
+    code: 'stale_pizzas',
+    pizzas
+  }, 409, NO_STORE);
+}
+
+/**
+ * A catalogue save carries the list it was made from (`pizzas_expected`); it is
+ * refused when that is no longer the stored list, so a page opened earlier
+ * cannot silently undo someone else's change.
+ * @returns {Promise<{ raw: string|null, response?: Response }>}
+ */
+async function checkPizzasBase(database, expectedPizzas) {
+  if (!Array.isArray(expectedPizzas)) {
+    return {
+      raw: null,
+      response: badRequest(
+        "Rechargez la page d'administration : la liste des pizzas de départ manque à cet enregistrement.",
+        'pizzas_expected_required'
+      )
+    };
+  }
+  const raw = await settingsDb.getRawSetting(database, 'pizzas');
+  if (JSON.stringify(parseStoredPizzas(raw)) !== JSON.stringify(expectedPizzas)) {
+    return { raw, response: await stalePizzas(database) };
+  }
+  return { raw };
+}

@@ -74,14 +74,41 @@ export async function setSetting(db, key, value, description = '') {
 }
 
 /**
+ * Read the stored text of a setting as it is (null when absent), for an exact
+ * "unchanged since I read it" check (see `setSettings`).
+ * @param {D1Database} db
+ * @param {string} key
+ * @returns {Promise<string|null>}
+ */
+export async function getRawSetting(db, key) {
+  const result = await db.prepare('SELECT value FROM settings WHERE key = ?').bind(key).first();
+  return result ? result.value : null;
+}
+
+/**
+ * Fails the whole batch (NOT NULL on `value`) when the setting's stored text is
+ * no longer the one that was read: a write based on a stale read never lands.
+ */
+const UNCHANGED_GUARD_SQL = `
+  INSERT INTO settings (key, value)
+  SELECT '__changed_meanwhile__', NULL
+  WHERE (SELECT value FROM settings WHERE key = ?) IS NOT ?
+`;
+
+/**
  * Set several settings atomically (one D1 batch: all or none).
  * @param {D1Database} db
  * @param {Array<[string, string]>} entries - `[key, stringified value]` pairs
+ * @param {{ unchanged?: { key: string, value: string|null } }} [options] -
+ *   `unchanged`: write only if that setting still holds exactly `value`
+ *   (as read by `getRawSetting`); otherwise the batch throws and nothing is written.
  * @returns {Promise<number>} number of settings written
  */
-export async function setSettings(db, entries) {
+export async function setSettings(db, entries, { unchanged } = {}) {
   if (entries.length === 0) return 0;
-  await db.batch(entries.map(([key, value]) => db.prepare(UPSERT_SETTING_SQL).bind(key, value, '')));
+  const writes = entries.map(([key, value]) => db.prepare(UPSERT_SETTING_SQL).bind(key, value, ''));
+  const guard = unchanged ? [db.prepare(UNCHANGED_GUARD_SQL).bind(unchanged.key, unchanged.value)] : [];
+  await db.batch([...guard, ...writes]);
   return entries.length;
 }
 

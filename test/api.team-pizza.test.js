@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { env, SELF } from 'cloudflare:test';
 import {
-  setupSchema, clearAllTables, seedTeam, adminFetch, postJson, putJson, uniq
+  setupSchema, clearAllTables, seedTeam, adminFetch, postJson, putJson, uniq, withPizzasBase
 } from './helpers.js';
 
 beforeAll(setupSchema);
@@ -27,7 +27,7 @@ const foodOf = async (memberId) =>
   (await env.DB.prepare('SELECT food_diet FROM members WHERE id = ?').bind(memberId).first()).food_diet;
 
 async function setPizzas(pizzas) {
-  const response = await adminFetch('/api/admin/settings', { method: 'PUT', body: { pizzas } });
+  const response = await adminFetch('/api/admin/settings', { method: 'PUT', body: await withPizzasBase({ pizzas }) });
   expect(response.status).toBe(200);
 }
 

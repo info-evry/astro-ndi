@@ -91,7 +91,7 @@ describe('deleting a pizza', () => {
     expect(api.puts()).toHaveLength(1);
     const [path, options] = api.puts()[0];
     expect(path).toBe('/admin/settings');
-    expect(JSON.parse(options.body)).toEqual({ pizzas: [CATALOGUE[0], CATALOGUE[2]] });
+    expect(JSON.parse(options.body)).toEqual({ pizzas: [CATALOGUE[0], CATALOGUE[2]], pizzas_expected: CATALOGUE });
     expect(api.mock.calls.at(-1)).toEqual(['/admin/settings', { method: 'GET' }]);
     expect(ids()).toEqual(['0-rien', 'chevre']);
     expect(lastToast().textContent).toBe('Pizza supprimée');
@@ -193,7 +193,8 @@ describe('editing a pizza inline', () => {
 
     expect(api.puts()).toHaveLength(1);
     expect(JSON.parse(api.puts()[0][1].body)).toEqual({
-      pizzas: [CATALOGUE[0], { id: 'reine', name: 'Reine royale', description: 'Tomate, jambon, olives' }, CATALOGUE[2]]
+      pizzas: [CATALOGUE[0], { id: 'reine', name: 'Reine royale', description: 'Tomate, jambon, olives' }, CATALOGUE[2]],
+      pizzas_expected: CATALOGUE
     });
     expect(document.querySelector('.pizza-edit-name')).toBeNull();
     expect(document.querySelector('[data-pizza-id="reine"] .pizza-item-name').textContent).toBe('Reine royale');
@@ -289,7 +290,8 @@ describe('adding a pizza', () => {
 
     expect(api.puts()).toHaveLength(1);
     expect(JSON.parse(api.puts()[0][1].body)).toEqual({
-      pizzas: [...CATALOGUE, { id: 'quatre_saisons', name: '4 Saisons', description: 'Tout' }]
+      pizzas: [...CATALOGUE, { id: 'quatre_saisons', name: '4 Saisons', description: 'Tout' }],
+      pizzas_expected: CATALOGUE
     });
     expect(ids().at(-1)).toBe('quatre_saisons');
     expect(lastToast().textContent).toBe('Pizza ajoutée');

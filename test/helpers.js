@@ -66,6 +66,27 @@ export function postJson(path, body, headers = {}) {
   });
 }
 
+/** The stored pizza catalogue as the admin page sees it (`[]` when absent). */
+export async function currentPizzas() {
+  const row = await env.DB.prepare("SELECT value FROM settings WHERE key = 'pizzas'").first();
+  if (!row) return [];
+  try {
+    const value = JSON.parse(row.value);
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * A settings body as the admin page sends it: a pizza save carries the list it
+ * is based on (`pizzas_expected`, here the stored one).
+ */
+export async function withPizzasBase(body) {
+  if (!body || typeof body !== 'object' || !Object.hasOwn(body, 'pizzas') || Object.hasOwn(body, 'pizzas_expected')) return body;
+  return { ...body, pizzas_expected: await currentPizzas() };
+}
+
 /** PUT JSON to a public endpoint. */
 export function putJson(path, body, headers = {}) {
   return SELF.fetch(`${BASE}${path}`, {

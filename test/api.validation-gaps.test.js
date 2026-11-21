@@ -9,8 +9,7 @@ import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { env } from 'cloudflare:test';
 import { verifyPassword } from '../src/shared/crypto.js';
 import {
-  setupSchema, clearAllTables, seedTeam, adminFetch, postJson, register, memberPayload, countRows, uniq
-} from './helpers.js';
+  setupSchema, clearAllTables, seedTeam, adminFetch, postJson, register, memberPayload, countRows, uniq, withPizzasBase } from './helpers.js';
 
 beforeAll(setupSchema);
 beforeEach(clearAllTables);
@@ -365,7 +364,7 @@ describe('food choice: validated against the configured pizzas', () => {
   it('follows the pizza list edited in the settings', async () => {
     const team = await seedTeam({ members: 1 });
     expect((await adminFetch('/api/admin/settings', {
-      method: 'PUT', body: { pizzas: [{ id: '0-rien', name: 'Aucune' }, { id: 'custom', name: 'Custom' }] }
+      method: 'PUT', body: await withPizzasBase({ pizzas: [{ id: '0-rien', name: 'Aucune' }, { id: 'custom', name: 'Custom' }] })
     })).status).toBe(200);
 
     const add = (foodDiet) => addWithFood(team.id, foodDiet);

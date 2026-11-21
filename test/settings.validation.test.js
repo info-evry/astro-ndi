@@ -5,12 +5,12 @@
 
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { env, SELF } from 'cloudflare:test';
-import { setupSchema, clearAllTables, adminFetch, countRows, BASE, JSON_HEADERS } from './helpers.js';
+import { setupSchema, clearAllTables, adminFetch, countRows, BASE, JSON_HEADERS, withPizzasBase } from './helpers.js';
 
 beforeAll(setupSchema);
 beforeEach(clearAllTables);
 
-const put = (body) => adminFetch('/api/admin/settings', { method: 'PUT', body });
+const put = async (body) => adminFetch('/api/admin/settings', { method: 'PUT', body: await withPizzasBase(body) });
 const stored = async (key) => (await env.DB.prepare('SELECT value FROM settings WHERE key = ?').bind(key).first())?.value ?? null;
 
 describe('PUT /api/admin/settings - authorization and body', () => {

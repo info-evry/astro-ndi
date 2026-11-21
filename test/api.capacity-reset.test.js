@@ -7,8 +7,7 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { env, SELF } from 'cloudflare:test';
 import {
-  setupSchema, clearAllTables, seedTeam, adminFetch, register, memberPayload, countRows, uniq, BASE
-} from './helpers.js';
+  setupSchema, clearAllTables, seedTeam, adminFetch, register, memberPayload, countRows, uniq, BASE, withPizzasBase } from './helpers.js';
 
 beforeAll(setupSchema);
 beforeEach(clearAllTables);
@@ -83,7 +82,7 @@ describe('POST /api/admin/reset keeps the Organisation team', () => {
   it('deletes every member, payment event and other team, but not the Organisation team itself', async () => {
     const { org } = await seedEvent();
 
-    const response = await reset({ confirmation: 'SUPPRIMER', force: true });
+    const response = await reset({ confirmation: 'SUPPRIMER', force: true, createArchiveFirst: true });
     expect(response.status).toBe(200);
     expect((await json(response)).deleted).toEqual({ teams: 2, members: 5, payments: 1 });
 
@@ -99,7 +98,7 @@ describe('POST /api/admin/reset keeps the Organisation team', () => {
       { id: '0-rien', name: 'Aucune', description: '' },
       { id: 'reine', name: 'Reine', description: 'Tomate, jambon' }
     ];
-    expect((await adminFetch('/api/admin/settings', { method: 'PUT', body: { pizzas, max_team_size: 9, school_name: 'Test School' } })).status).toBe(200);
+    expect((await adminFetch('/api/admin/settings', { method: 'PUT', body: await withPizzasBase({ pizzas, max_team_size: 9, school_name: 'Test School' }) })).status).toBe(200);
     const snapshot = async () => (await env.DB.prepare('SELECT key, value FROM settings ORDER BY key').all()).results;
     const before = await snapshot();
 
@@ -126,7 +125,7 @@ describe('POST /api/admin/reset keeps the Organisation team', () => {
 
   it('after a reset the database counts as empty and a second reset deletes nothing', async () => {
     await seedEvent();
-    await reset({ confirmation: 'SUPPRIMER', force: true });
+    await reset({ confirmation: 'SUPPRIMER', force: true, createArchiveFirst: true });
 
     const check = await json(await adminFetch('/api/admin/reset/check'));
     expect(check).toMatchObject({ has_data: false, counts: { teams: 0, members: 0, payments: 0 } });
