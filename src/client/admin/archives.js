@@ -1,7 +1,6 @@
 /**
  * Archives module - Archive management and GDPR compliance
  */
-/* eslint-env browser */
 
 import { $, escapeHtml } from '@info-evry/astro-design/scripts/dom';
 import { toastSuccess, toastError } from '@info-evry/astro-design/scripts/toast';

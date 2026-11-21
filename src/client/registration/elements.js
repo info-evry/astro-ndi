@@ -2,7 +2,6 @@
  * Registration page DOM element references
  * Centralized element cache for better performance
  */
-/* eslint-env browser */
 
 /**
  * DOM element references

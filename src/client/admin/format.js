@@ -2,7 +2,6 @@
  * NDI-specific formatting helpers not covered by
  * @info-evry/astro-design/scripts/dom.
  */
-/* eslint-env browser */
 
 import { escapeHtml, truncateText } from '@info-evry/astro-design/scripts/dom';
 

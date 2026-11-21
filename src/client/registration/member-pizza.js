@@ -3,7 +3,6 @@
  * team's code secret while the organisers keep the changes open and the pizza
  * has not been handed out.
  */
-/* eslint-env browser */
 
 import { escapeHtml } from '@info-evry/astro-design/scripts/dom';
 import { NO_PIZZA_ID, isNoPizza } from '../../shared/constants.js';

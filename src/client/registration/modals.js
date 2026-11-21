@@ -2,7 +2,6 @@
  * Registration page modal handling
  * Team view modal functionality
  */
-/* eslint-env browser */
 
 import { escapeHtml } from '@info-evry/astro-design/scripts/dom';
 import { state, setSelectedTeam, setTeamSecret } from './state.js';

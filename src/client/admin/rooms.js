@@ -1,7 +1,6 @@
 /**
  * Rooms module - Room assignment management
  */
-/* eslint-env browser */
 
 import { $, escapeHtml, truncateText } from '@info-evry/astro-design/scripts/dom';
 import { toastSuccess, toastError } from '@info-evry/astro-design/scripts/toast';

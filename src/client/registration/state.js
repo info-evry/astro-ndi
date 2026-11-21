@@ -2,7 +2,6 @@
  * Registration form state management
  * Centralized state for the registration page
  */
-/* eslint-env browser */
 
 /**
  * Application state

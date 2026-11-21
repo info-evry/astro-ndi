@@ -1,7 +1,6 @@
 /**
  * Registrations module - Team and member management
  */
-/* eslint-env browser */
 
 import { $, escapeHtml, numberOrNull } from '@info-evry/astro-design/scripts/dom';
 import { formatTeamWithRoom, pizzaLabel } from './format.js';

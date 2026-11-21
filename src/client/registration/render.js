@@ -2,7 +2,6 @@
  * Registration page render functions
  * Handles all DOM rendering for stats, teams, and form initialization
  */
-/* eslint-env browser */
 
 import { escapeHtml } from '@info-evry/astro-design/scripts/dom';
 import { state, setAtCapacity } from './state.js';

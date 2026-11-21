@@ -9,7 +9,6 @@
  *   carrying only `{ pizzas }`, so a reload can never bring back a deleted
  *   pizza or lose an edit.
  */
-/* eslint-env browser */
 
 import { $, escapeHtml, numberOrNull } from '@info-evry/astro-design/scripts/dom';
 import { confirmAction } from '@info-evry/astro-design/scripts/confirm';

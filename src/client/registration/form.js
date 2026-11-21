@@ -2,7 +2,6 @@
  * Registration form handling
  * Form validation, submission, and UI helpers
  */
-/* eslint-env browser */
 
 import { isValidEmail } from 'astro-core/validation';
 import { NO_PIZZA } from '../../shared/constants.js';

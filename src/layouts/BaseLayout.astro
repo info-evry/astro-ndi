@@ -17,7 +17,6 @@ interface Props {
   title: string;
   description?: string;
   image?: string;
-  adminStyles?: boolean;
   showHeader?: boolean;
   showFooter?: boolean;
   noindex?: boolean;
@@ -32,7 +31,6 @@ const {
   title,
   description = `Inscription des équipes pour la ${ndiEvent.name} ${ndiEvent.year} - ${ndiEvent.edition}`,
   image = DEFAULT_IMAGE,
-  adminStyles = false,
   showHeader = true,
   showFooter = true,
   noindex = false

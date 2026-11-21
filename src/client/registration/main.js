@@ -7,7 +7,6 @@
  * 3. Loading all data
  * 4. Setting up event listeners
  */
-/* eslint-env browser */
 
 import { initApi, loadConfig, loadTeams, loadStats } from './api.js';
 import { state, setConfig, setTeams, setStats, setTeamMode } from './state.js';

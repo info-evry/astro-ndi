@@ -5,7 +5,6 @@
  * as the server (astro-core/csv + lib/members-csv.js), so what is previewed is
  * what the import will read: English or French (export) headers, `,` or `;`.
  */
-/* eslint-env browser */
 
 import { $, escapeHtml } from '@info-evry/astro-design/scripts/dom';
 import { toastSuccess, toastError } from '@info-evry/astro-design/scripts/toast';

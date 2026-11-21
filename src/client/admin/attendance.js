@@ -1,7 +1,6 @@
 /**
  * Attendance module - Check-in/check-out management
  */
-/* eslint-env browser */
 
 import { $, escapeHtml, formatCurrency } from '@info-evry/astro-design/scripts/dom';
 import { formatTeamWithRoom } from './format.js';

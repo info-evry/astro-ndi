@@ -1,7 +1,6 @@
 /**
  * Pizza module - Pizza distribution management
  */
-/* eslint-env browser */
 
 import { $, escapeHtml } from '@info-evry/astro-design/scripts/dom';
 import { formatTeamWithRoom, pizzaLabel } from './format.js';

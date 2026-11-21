@@ -8,7 +8,6 @@
  * 3. Initializing all modules
  * 4. Setting up event listeners (including delegated data-action/data-change handling)
  */
-/* eslint-env browser */
 
 // Shared design-system client scripts
 import { $ } from '@info-evry/astro-design/scripts/dom';

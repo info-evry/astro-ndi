@@ -69,7 +69,7 @@ describe('GET /api/teams/:id - public team info', () => {
     expect(await response.json()).toEqual({ error: 'Équipe introuvable', code: 'not_found' });
   });
 
-  it.each(['abc', '1.5', '-1', '0', '99999999999999999999', '%F0%9F%A5'])(
+  it.each(['abc', '1.5', '-1', '0', '99999999999999999999'])(
     'returns 400 invalid_id (not 500) for the non-id value %s',
     async (id) => {
       const response = await SELF.fetch(`${BASE}/api/teams/${id}`);
@@ -125,13 +125,18 @@ describe('Unknown paths answer 404, never 500', () => {
     '/a/%2e%2e/%2e%2e/etc/passwd',
     '/..%2f..%2fetc/passwd',
     '/api/%E2%9C%93',
-    '/api/%ZZ',
-    '/%ZZ',
     '/nonexistent?x=%ZZ&y=<script>',
     `/${'long-segment/'.repeat(100)}end`
   ])('GET %s', async (path) => {
     const response = await SELF.fetch(`${BASE}${path}`);
     expect(response.status).toBe(404);
+  });
+
+  // Astro (>= 7.4) refuses a path that does not decode before the app runs.
+  it.each(['/api/%ZZ', '/%ZZ', '/api/teams/%F0%9F%A5'])('GET %s (malformed escape) is a 400, never a 500', async (path) => {
+    const response = await SELF.fetch(`${BASE}${path}`);
+    expect(response.status).toBe(400);
+    await response.arrayBuffer();
   });
 
   it('answers 401 under /api/admin without a token (admin guard) and 404 with one', async () => {

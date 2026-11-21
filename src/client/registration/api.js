@@ -2,7 +2,6 @@
  * Registration API client
  * Handles all API calls for the registration page
  */
-/* eslint-env browser */
 
 import { createPublicClient } from '@info-evry/astro-design/scripts/public-client';
 

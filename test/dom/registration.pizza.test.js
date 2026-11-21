@@ -1,4 +1,4 @@
-/* global Element, document */
+/* global Element, Event, document */
 /**
  * Public team view: a team changes the pizza of its members with its code
  * secret (happy-dom). Server rules are covered by api.team-pizza.test.js.
