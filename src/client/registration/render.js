@@ -119,16 +119,29 @@ export function renderTeams(teams, onTeamClick) {
 }
 
 /**
+ * Text of a team in the join list.
+ * @param {object} team
+ * @returns {string}
+ */
+function teamOptionLabel(team) {
+  if (team.is_organisation) return `${team.name} (équipe des organisateurs, sans limite de places)`;
+  return `${team.name} (${team.available_slots} place${team.available_slots > 1 ? 's' : ''})`;
+}
+
+/**
  * Render team select dropdown
  * @param {Array} teams - Teams array
  */
 export function renderTeamSelect(teams) {
-  const availableTeams = teams.filter(t => !t.is_full && !t.is_organisation);
+  // The organisers' team is joined like any other (with its code secret): it is
+  // offered last, and never "full" since it has no size limit
+  const joinable = teams.filter(t => !t.is_full || t.is_organisation);
+  const ordered = [...joinable.filter(t => !t.is_organisation), ...joinable.filter(t => t.is_organisation)];
   elements.teamSelect.innerHTML = `
     <option value="">-- Choisir une équipe --</option>
-    ${availableTeams.map(team => `
+    ${ordered.map(team => `
       <option value="${team.id}">
-        ${escapeHtml(team.name)} (${team.available_slots} place${team.available_slots > 1 ? 's' : ''})
+        ${escapeHtml(teamOptionLabel(team))}
       </option>
     `).join('')}
   `;

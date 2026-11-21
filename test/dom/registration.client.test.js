@@ -220,16 +220,17 @@ describe('renderTeams', () => {
     expect(byId('teams-list').textContent).toContain('Aucune équipe inscrite');
   });
 
-  it('renderTeamSelect offers only joinable teams, with escaped names', () => {
+  it('renderTeamSelect offers the joinable teams, with escaped names, and the Organisation last', () => {
     render.renderTeamSelect([
+      team({ id: 3, name: 'Organisation', is_organisation: true, available_slots: null }),
       team({ id: 1, name: XSS_PAYLOAD }),
-      team({ id: 2, name: 'Full', is_full: true }),
-      team({ id: 3, name: 'Organisation', is_organisation: true })
+      team({ id: 2, name: 'Full', is_full: true })
     ]);
 
     const options = [...byId('team-select').querySelectorAll('option')];
-    expect(options.map(o => o.value)).toEqual(['', '1']);
+    expect(options.map(o => o.value)).toEqual(['', '1', '3']);
     expect(options[1].textContent.trim()).toBe(`${XSS_PAYLOAD} (13 places)`);
+    expect(options[2].textContent.trim()).toBe("Organisation (équipe des organisateurs, sans limite de places)");
     expect(byId('team-select').querySelector('img')).toBeNull();
   });
 });
