@@ -198,6 +198,7 @@ client IP:
 |------|-------|-------|
 | `register` | `POST /api/register` | 5 requests / 10 min |
 | `team-view` | `POST /api/teams/:id/view` | 10 requests / 10 min |
+| `team-pizza` | `PUT /api/teams/:id/members/:memberId/pizza` | 20 requests / 10 min |
 | `admin` | any method under `/api/admin/` (`ADMIN_RATE_LIMIT` of astro-core) | 60 requests / 1 min |
 
 Paths match on a whole segment (`/api/registerX` is not `/api/register`).
@@ -218,6 +219,20 @@ If the `RATE_LIMIT` KV binding is not configured, rate limiting fails open
 | `GET` | `/api/stats` | Registration statistics |
 | `POST` | `/api/register` | Register new team or join existing |
 | `POST` | `/api/teams/:id/view` | View team members (requires the team secret code, body field `password`) |
+| `PUT` | `/api/teams/:id/members/:memberId/pizza` | Change one member's pizza (body `{ password, foodDiet }`; the team secret code is the credential) |
+
+A team that has no secret code yet (the Organisation team until an organiser
+sets one in the admin) answers `403` with `code: "password_not_set"` on join,
+view and pizza change, instead of "Code secret incorrect".
+
+#### Changing a pizza after registering
+
+`foodDiet` must be an id of the catalogue (or a "no pizza" value). The change is
+refused with `403 pizza_changes_closed` while the admin setting
+`pizza_changes_open` is `false` (default: open; the switch in Paramètres › Pizzas
+saves at once; `GET /api/config` exposes it as `config.pizzaChangesOpen`), and
+with `409 pizza_already_given` once the pizza was handed out. Organisers can
+always change a pizza from the admin member form, whatever these two say.
 
 ### Payment: on site only
 
