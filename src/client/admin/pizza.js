@@ -11,8 +11,8 @@ import {
   setPizzaData,
   pizzaFilter,
   setPizzaFilter,
-  settingsState,
-  pizzasConfig
+  pizzasConfig,
+  pizzaNames
 } from './state.js';
 
 // Local state
@@ -20,7 +20,6 @@ let pizzaSearchTerm = '';
 let pizzaTypeFilter = '';
 let pizzaSortKey = 'name';
 let pizzaSortDir = 'asc';
-let pizzaTypes = {};
 
 /**
  * Load pizza data
@@ -76,7 +75,7 @@ export function renderPizzaStats(stats) {
       return `
         <div class="stat-card stat-card-sm">
           <div class="stat-value">${t.total}</div>
-          <div class="stat-label">${pizzaLabel(pizzaTypes, t.food_diet)}</div>
+          <div class="stat-label">${pizzaLabel(pizzaNames(), t.food_diet)}</div>
           <div class="stat-sublabel">${t.received} servis${toServe > 0 ? `, ${toServe} restants` : ''}</div>
         </div>
       `;
@@ -117,7 +116,7 @@ export function renderPizzaStats(stats) {
       return `
         <div class="stat-card stat-card-sm">
           <div class="stat-value">${t.total}</div>
-          <div class="stat-label">${pizzaLabel(pizzaTypes, t.food_diet)}</div>
+          <div class="stat-label">${pizzaLabel(pizzaNames(), t.food_diet)}</div>
           <div class="stat-sublabel">${toServe > 0 ? `${toServe} à servir` : 'Tous servis'}</div>
         </div>
       `;
@@ -129,6 +128,7 @@ export function renderPizzaStats(stats) {
  * Render pizza table
  */
 export function renderPizza() {
+  refreshTypeFilter();
   const tbody = $('pizza-tbody');
   if (!tbody) return;
 
@@ -219,7 +219,7 @@ export function renderPizza() {
       <tr class="member-row ${isPizzaReceived ? 'checked-in' : ''}" data-member-id="${m.id}">
         <td><strong>${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</strong></td>
         <td class="team-col" title="${escapeHtml(teamInfo.full)}">${escapeHtml(teamInfo.truncated)}</td>
-        <td>${pizzaLabel(pizzaTypes, m.food_diet) || '-'}</td>
+        <td>${pizzaLabel(pizzaNames(), m.food_diet) || '-'}</td>
         <td class="status-col">
           ${isCheckedIn
             ? '<span class="badge badge-success">Présent</span>'
@@ -287,26 +287,24 @@ export async function handleRevokePizza(memberId, api, loadData) {
 }
 
 /**
+ * Offer the catalogue in the type filter, keeping the chosen type. Redone on
+ * each render: the catalogue is not loaded yet when the tab is initialised.
+ */
+function refreshTypeFilter() {
+  const typeFilter = $('pizza-type-filter');
+  if (!typeFilter) return;
+  const chosen = typeFilter.value;
+  typeFilter.innerHTML = '<option value="">Toutes les pizzas</option>' +
+    pizzasConfig.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('');
+  typeFilter.value = chosen;
+}
+
+/**
  * Initialize pizza module
  * @param {Function} api - API function
  */
 export function initPizza(api) {
-  // Load pizza types from settings
-  if (settingsState.pizzas) {
-    for (const p of settingsState.pizzas) { pizzaTypes[p.id] = p.name; }
-  }
-
-  if (pizzasConfig && pizzasConfig.length > 0) {
-    for (const p of pizzasConfig) { pizzaTypes[p.id] = p.name; }
-  }
-
-  // Populate type filter
-  const typeFilter = $('pizza-type-filter');
-  if (typeFilter) {
-    const pizzaList = settingsState.pizzas || pizzasConfig || [];
-    typeFilter.innerHTML = '<option value="">Toutes les pizzas</option>' +
-      pizzaList.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('');
-  }
+  refreshTypeFilter();
 
   // Search
   const searchInput = $('pizza-search');

@@ -4,18 +4,19 @@
 /* eslint-env browser */
 
 import { $, escapeHtml, numberOrNull } from '@info-evry/astro-design/scripts/dom';
-import { formatTeamWithRoom } from './format.js';
+import { formatTeamWithRoom, pizzaLabel } from './format.js';
 import { toastSuccess, toastError } from '@info-evry/astro-design/scripts/toast';
 import { openModal, closeModal } from '@info-evry/astro-design/scripts/modal';
 import { confirmAction } from '@info-evry/astro-design/scripts/confirm';
 import { downloadFromApi } from '@info-evry/astro-design/scripts/download';
-import { isOrganisationTeamName } from '../../shared/constants.js';
+import { isNoPizza, isOrganisationTeamName } from '../../shared/constants.js';
 import { statCardHtml } from '@info-evry/astro-design/scripts/templates';
 import {
   teamsData,
   setTeamsData,
   selectedMembers,
   pizzasConfig,
+  pizzaNames,
   allParticipantsData,
   setAllParticipantsData,
   allParticipantsSearchTerm,
@@ -35,6 +36,11 @@ const EXPORT_OFFICIAL_DONE = 'Export officiel téléchargé';
 
 // Team sort state per team
 const teamSortState = {};
+
+/** Escaped, human label of a stored pizza choice: the catalogue's name, else the stored id. */
+function pizzaText(foodDiet) {
+  return pizzaLabel(pizzaNames(), foodDiet ?? '');
+}
 
 /**
  * Render registration statistics
@@ -56,7 +62,7 @@ export function renderStats(stats, statsGrid, foodStats) {
     foodStats.innerHTML = !stats.food_preferences || stats.food_preferences.length === 0 ? '<p>Aucune préférence enregistrée</p>' : stats.food_preferences
         .map(item => `
           <div class="food-item">
-            <span class="count">${item.count}</span> ${escapeHtml(item.food_diet)}
+            <span class="count">${item.count}</span> ${pizzaText(item.food_diet)}
           </div>
         `)
         .join('');
@@ -143,7 +149,7 @@ export function renderMembersTable(members, teamId) {
             <td>${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</td>
             <td><a href="mailto:${escapeHtml(m.email)}">${escapeHtml(m.email)}</a></td>
             <td><span class="badge badge-bac">BAC+${m.bac_level}</span></td>
-            <td>${escapeHtml(m.food_diet) || '-'}</td>
+            <td>${pizzaText(m.food_diet) || '-'}</td>
             <td>${m.is_leader ? '<span class="badge badge-leader">􀋀 Chef</span>' : ''}</td>
             <td class="actions-col">
               <div class="action-buttons">
@@ -172,14 +178,31 @@ export function updateTeamSelect() {
 }
 
 /**
- * Update pizza select dropdown
+ * Fill the pizza select of the member form from the current catalogue and
+ * select what the member has. A stored pizza that left the catalogue stays
+ * selectable (flagged), so it is neither lost nor silently replaced.
+ * @param {string|null} [current] - Stored `food_diet` of the member
  */
-export function updatePizzaSelect() {
+export function updatePizzaSelect(current = '') {
   const select = $(EL_MEMBER_FORM_FOOD);
   if (!select) return;
 
-  select.innerHTML = '<option value="">Aucune</option>' +
-    pizzasConfig.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('');
+  const options = pizzasConfig.map(p => ({ id: p.id, label: p.name }));
+  const noPizza = options.find(o => isNoPizza(o.id));
+  if (!noPizza) options.unshift({ id: '', label: 'Aucune' });
+
+  // "no pizza" has several spellings in stored data: all select the "Aucune" entry
+  let selected = isNoPizza(current) ? (noPizza?.id ?? '') : String(current);
+  if (!options.some(o => o.id === selected)) {
+    options.unshift({ id: selected, label: `${selected} (n'est plus proposée)` });
+  }
+
+  select.innerHTML = options
+    .map(o => `<option value="${escapeHtml(o.id)}">${escapeHtml(o.label)}</option>`)
+    .join('');
+  select.value = selected;
+  // What the form started with: an unchanged pizza is not sent back
+  select.dataset.original = selected;
 }
 
 /**
@@ -296,7 +319,7 @@ export function sortTeamMembers(teamId, sortKey, headerElement) {
       <td>${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</td>
       <td><a href="mailto:${escapeHtml(m.email)}">${escapeHtml(m.email)}</a></td>
       <td><span class="badge badge-bac">BAC+${m.bac_level}</span></td>
-      <td>${escapeHtml(m.food_diet) || '-'}</td>
+      <td>${pizzaText(m.food_diet) || '-'}</td>
       <td>${m.is_leader ? '<span class="badge badge-leader">􀋀 Chef</span>' : ''}</td>
       <td class="actions-col">
         <div class="action-buttons">
@@ -353,7 +376,7 @@ export function editMember(memberId, teamId) {
   $('member-form-lastname').value = member.last_name;
   $('member-form-email').value = member.email;
   $('member-form-bac').value = member.bac_level;
-  $(EL_MEMBER_FORM_FOOD).value = member.food_diet || '';
+  updatePizzaSelect(member.food_diet);
   $('member-form-leader').checked = !!member.is_leader;
   openModal('member-modal');
 }
@@ -369,7 +392,7 @@ export function openAddMemberModal() {
   $('member-form-lastname').value = '';
   $('member-form-email').value = '';
   $('member-form-bac').value = '0';
-  $(EL_MEMBER_FORM_FOOD).value = '';
+  updatePizzaSelect('');
   $('member-form-leader').checked = false;
   openModal('member-modal');
 }
@@ -451,14 +474,18 @@ export async function handleMemberSubmit(e, api, loadData) {
   const lastName = $('member-form-lastname').value;
   const email = $('member-form-email').value;
   const bacLevel = numberOrNull($('member-form-bac').value);
-  const foodDiet = $(EL_MEMBER_FORM_FOOD).value;
+  const foodSelect = $(EL_MEMBER_FORM_FOOD);
+  const foodDiet = foodSelect.value;
   const isLeader = $('member-form-leader').checked;
 
   try {
     if (id) {
+      const update = { teamId, firstName, lastName, email, bacLevel, foodDiet, isLeader };
+      // An untouched pizza is left out: a name fix must not fail on a pizza that left the catalogue
+      if (foodDiet === foodSelect.dataset.original) delete update.foodDiet;
       await api(`/admin/members/${id}`, {
         method: 'PUT',
-        body: JSON.stringify({ teamId, firstName, lastName, email, bacLevel, foodDiet, isLeader })
+        body: JSON.stringify(update)
       });
       toastSuccess('Membre mis à jour');
     } else {
@@ -650,7 +677,7 @@ export function renderAllParticipants() {
       <td><strong>${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</strong></td>
       <td><a href="mailto:${escapeHtml(m.email)}">${escapeHtml(m.email)}</a></td>
       <td class="team-col" title="${escapeHtml(teamInfo.full)}">${escapeHtml(teamInfo.truncated)}</td>
-      <td>${escapeHtml(m.food_diet) || '-'}</td>
+      <td>${pizzaText(m.food_diet) || '-'}</td>
       <td><span class="badge badge-bac">BAC+${m.bac_level || '?'}</span></td>
       <td>${m.is_leader ? '<span class="badge badge-leader">􀋀 Chef</span>' : '<span class="badge badge-muted">Membre</span>'}</td>
     </tr>

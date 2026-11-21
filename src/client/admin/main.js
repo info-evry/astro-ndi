@@ -22,8 +22,7 @@ import { buildActions } from './actions.js';
 
 // State management
 import {
-  selectedMembers,
-  setPizzasConfig
+  selectedMembers
 } from './state.js';
 
 // Domain modules
@@ -84,7 +83,9 @@ const { api } = client;
  * what a 401 or any other failure means (login screen, toast).
  */
 async function loadData() {
-  const data = await api('/admin/stats', { method: 'GET' });
+  // The settings come with the stats: they hold the pizza catalogue the lists
+  // below need to show pizza names (the stats alone only carry the stored ids).
+  const [data] = await Promise.all([api('/admin/stats', { method: 'GET' }), loadSettings(api)]);
 
   // Render stats
   const statsGrid = $('stats-grid');
@@ -97,18 +98,12 @@ async function loadData() {
     renderTeams(data.teams || [], teamsContainer);
   }
 
-  // Store pizzas config
-  if (data.pizzas) {
-    setPizzasConfig(data.pizzas);
-  }
-
   // Load other data in parallel
   await Promise.all([
     loadAttendanceData(api),
     loadPizzaData(api),
     loadRoomsData(api),
-    loadArchives(api),
-    loadSettings(api)
+    loadArchives(api)
   ]);
 }
 

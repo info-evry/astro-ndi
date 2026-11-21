@@ -134,6 +134,15 @@ export function setRoomFilter(filter) {
   roomFilter = filter;
 }
 
+/**
+ * Pizza id -> display name, from the catalogue as it is now. Built on each use:
+ * the catalogue is edited live and loaded after the tabs are initialised.
+ * @returns {Object<string, string>}
+ */
+export function pizzaNames() {
+  return Object.fromEntries(pizzasConfig.map(p => [p.id, p.name]));
+}
+
 export function setPizzasConfig(config) {
   pizzasConfig = config;
 }

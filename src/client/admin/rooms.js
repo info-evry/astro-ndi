@@ -11,8 +11,7 @@ import {
   setRoomsData,
   roomFilter,
   setRoomFilter,
-  settingsState,
-  pizzasConfig
+  pizzaNames
 } from './state.js';
 
 // Local state
@@ -20,7 +19,6 @@ let roomsSearchTerm = '';
 let roomsSortKey = 'name';
 let roomsSortDir = 'asc';
 let availableRooms = [];
-let pizzaTypes = {};
 
 /**
  * Load rooms data
@@ -46,14 +44,6 @@ export async function loadRoomsData(api) {
  * @param {Array} pizzaByRoom - Pizza breakdown by room
  */
 export function renderPizzaByRoom(pizzaByRoom) {
-  // Load pizza types
-  if (settingsState.pizzas) {
-    for (const p of settingsState.pizzas) { pizzaTypes[p.id] = p.name; }
-  }
-  if (pizzasConfig && pizzasConfig.length > 0) {
-    for (const p of pizzasConfig) { pizzaTypes[p.id] = p.name; }
-  }
-
   const container = $('room-pizza-container');
   if (!container) return;
 
@@ -73,7 +63,7 @@ export function renderPizzaByRoom(pizzaByRoom) {
         ${room.pizzas.map(p => `
           <div class="stat-card stat-card-sm">
             <div class="stat-value">${p.total}</div>
-            <div class="stat-label">${pizzaLabel(pizzaTypes, p.food_diet)}</div>
+            <div class="stat-label">${pizzaLabel(pizzaNames(), p.food_diet)}</div>
             <div class="stat-sublabel">${p.present} présents</div>
           </div>
         `).join('')}
