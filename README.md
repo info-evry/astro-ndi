@@ -267,7 +267,7 @@ view, admin create / update): trimmed and capped at 64 characters
 | `PUT` | `/api/admin/teams/:id` | Update a team (name, description, secret code in `password`) |
 | `DELETE` | `/api/admin/teams/:id` | Delete a team and its members (not the Organisation team) |
 | `GET` | `/api/admin/settings` | Get all settings |
-| `PUT` | `/api/admin/settings` | Update settings (validated against a schema, written atomically) |
+| `PUT` | `/api/admin/settings` | Update settings (validated against a schema, written atomically). A `pizzas` save must carry `pizzas_expected`, the list it was made from: `409 stale_pizzas` (with the stored `pizzas`) when it is no longer the stored one |
 | `GET` | `/api/admin/export`, `/export/:teamId` | Members CSV (`;`, French headers, UTF-8 BOM) |
 | `GET` | `/api/admin/export-official`, `/export-official/:teamId` | Official NDI CSV |
 | `POST` | `/api/admin/import` | Import members from CSV (see below) |
@@ -281,12 +281,30 @@ view, admin create / update): trimmed and capped at 64 characters
 | `GET` | `/api/admin/rooms` | Teams with rooms, statistics |
 | `PUT` | `/api/admin/rooms/:teamId` | Assign or clear a room (`{ room }`) |
 | `POST` | `/api/admin/rooms/batch` | Assign rooms (`{ assignments: [{ teamId, room }] }`, at most 1000; unknown teams are listed in `skipped`) |
-| `GET` / `POST` | `/api/admin/archives` | List / create the yearly archive |
+| `GET` / `POST` | `/api/admin/archives` | List / create the yearly archive (`{ year }`; `409 archive_exists` unless `replace: true`, which overwrites that year's archive with the current data) |
 | `GET` | `/api/admin/archives/:year`, `/archives/:year/export` | One archive (`year` between 2000 and 2100) |
 | `DELETE` | `/api/admin/archives/:year` | Delete an archive (development environment only) |
 | `POST` | `/api/admin/expiration-check` | GDPR expiry check |
 | `GET` | `/api/admin/event-year`, `/api/admin/reset/check` | Event year, reset safety check |
-| `POST` | `/api/admin/reset` | Reset the event data (`{ confirmation: "SUPPRIMER" }`), keeping the Organisation team |
+| `POST` | `/api/admin/reset` | Reset the event data (`{ confirmation: "SUPPRIMER" }`), keeping the Organisation team; see "Reset safety" |
+
+#### Reset safety
+
+A reset deletes data only when an archive holds **exactly** the current data
+(same teams, members and payment events, whatever year it was filed under).
+Otherwise it deletes nothing and answers `200` with `warning: "no_archive"`
+(no archive for the detected year) or `"archive_outdated"` (the year's archive
+was taken before later registrations or edits: replace it first). `force` no
+longer skips this; `createArchiveFirst` + `force` archives under the detected
+year first, unless that year already holds other data. `GET
+/api/admin/reset/check` reports `archiveCurrent` and `archiveYear`. A reset
+also deletes `pizza_changes_open`, so the next edition starts with pizza
+changes open.
+
+The detected edition (`/api/admin/event-year`, archive default) is the
+`event_year` setting when set, otherwise the edition of the latest
+registration outside the Organisation team (registered on or before NDI day:
+that year; after: the next), otherwise the last NDI that has started.
 
 #### Check-in payment
 
