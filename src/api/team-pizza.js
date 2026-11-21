@@ -59,6 +59,9 @@ export async function changeMemberPizza(request, env, ctx, params) {
       'UPDATE members SET food_diet = ? WHERE id = ? AND team_id = ? AND COALESCE(pizza_received, 0) = 0'
     ).bind(update.value.foodDiet, memberId, teamId).run();
     if (result.meta.changes === 0) {
+      // Removed or moved to another team meanwhile, or the pizza was just handed out
+      const now = await db.getMemberById(env.DB, memberId);
+      if (!now || now.team_id !== teamId) return notFound('Membre introuvable');
       return error('Cette pizza a déjà été remise : elle ne peut plus être changée', 409, CODE_ALREADY_GIVEN);
     }
 
