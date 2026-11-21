@@ -230,17 +230,39 @@ export async function createArchive(api, loadResetSafetyCheck) {
     });
 
     toastSuccess(`Archive ${year} créée avec succès`);
-    await loadArchives(api);
-    await loadResetSafetyCheck();
   } catch (error) {
-    // The admin api client only carries the HTTP status: 409 = already archived, 400 = nothing to archive
-    if (error.status === 409) {
-      toastError(`Une archive pour ${year} existe déjà`);
-    } else if (error.status === 400) {
-      toastError('Aucune donnée à archiver');
-    } else {
-      toastError('Erreur lors de la création de l\'archive');
+    if (error.status !== 409) {
+      // 400 = nothing to archive
+      toastError(error.status === 400 ? 'Aucune donnée à archiver' : 'Erreur lors de la création de l\'archive');
+      return;
     }
+    if (!await replaceArchive(api, year)) return;
+  }
+  await loadArchives(api);
+  await loadResetSafetyCheck();
+}
+
+/**
+ * The year already has an archive: offer to replace it with the current data
+ * (how an archive taken before the last registrations or check-ins is brought
+ * up to date). Resolves true when replaced.
+ * @param {Function} api - API function
+ * @param {number} year
+ * @returns {Promise<boolean>}
+ */
+async function replaceArchive(api, year) {
+  const accepted = confirm(
+    `Une archive existe déjà pour ${year}.\n\nVoulez-vous la remplacer par les données actuelles ? ` +
+    `Elle contiendra exactement ce qui est affiché aujourd'hui (l'ancienne version de cette archive sera remplacée).`
+  );
+  if (!accepted) return false;
+  try {
+    await api('/admin/archives', { method: 'POST', body: JSON.stringify({ year, replace: true }) });
+    toastSuccess(`Archive ${year} mise à jour avec les données actuelles`);
+    return true;
+  } catch (error) {
+    toastError(error.status === 400 ? 'Aucune donnée à archiver' : 'Erreur lors de la mise à jour de l\'archive');
+    return false;
   }
 }
 
@@ -301,6 +323,56 @@ export async function checkExpiration(api) {
 }
 
 /**
+ * What the reset card says for a `/admin/reset/check` answer (year,
+ * archiveExists, archiveCurrent, archiveYear, counts, has_data). The reset is
+ * only offered when an archive holds exactly the current data.
+ * @param {object} response
+ * @returns {{ tone: 'safe'|'warning', html: string, canReset: boolean }}
+ */
+function resetSafetyView(response) {
+  const teamsCount = response.counts?.teams || 0;
+  const membersCount = response.counts?.members || 0;
+  const year = escapeHtml(response.year);
+
+  if (!response.has_data) {
+    return {
+      tone: 'safe',
+      canReset: false,
+      html: `
+        <p><strong><span class="sf-symbol">@sfs:info.circle@</span> Aucune donnée</strong></p>
+        <p>La base de données est vide. Rien à réinitialiser.</p>`
+    };
+  }
+  if (response.archiveCurrent) {
+    return {
+      tone: 'safe',
+      canReset: true,
+      html: `
+        <p><strong><span class="sf-symbol">@sfs:checkmark.circle@</span> Prêt à réinitialiser</strong></p>
+        <p>L'archive ${escapeHtml(response.archiveYear)} contient toutes les données actuelles (${teamsCount} équipes, ${membersCount} participants).</p>`
+    };
+  }
+  if (response.archiveExists) {
+    return {
+      tone: 'warning',
+      canReset: false,
+      html: `
+        <p><strong><span class="sf-symbol">@sfs:exclamationmark.triangle@</span> Archive à mettre à jour</strong></p>
+        <p>L'archive ${year} ne contient pas les dernières modifications (inscriptions, présences…).</p>
+        <p>Recréez l'archive ${year} (« Créer l'archive », même année, puis « remplacer ») avant de réinitialiser.</p>`
+    };
+  }
+  return {
+    tone: 'warning',
+    canReset: false,
+    html: `
+      <p><strong><span class="sf-symbol">@sfs:exclamationmark.triangle@</span> Données non archivées</strong></p>
+      <p>Il y a actuellement ${teamsCount} équipes et ${membersCount} participants.</p>
+      <p>Créez une archive avant de réinitialiser pour ne pas perdre ces données.</p>`
+  };
+}
+
+/**
  * Load reset safety check
  * @param {Function} api - API function
  */
@@ -313,37 +385,13 @@ export async function loadResetSafetyCheck(api) {
   try {
     const response = await api('/admin/reset/check', { method: 'GET' });
 
-    // Response contains: year, archiveExists, counts, has_data, safe, message
-    const hasData = response.has_data;
-    const needsArchive = hasData && !response.archiveExists;
-    const teamsCount = response.counts?.teams || 0;
-    const membersCount = response.counts?.members || 0;
-
-    if (needsArchive) {
-      container.className = 'reset-safety-check warning';
-      container.innerHTML = `
-        <p><strong><span class="sf-symbol">@sfs:exclamationmark.triangle@</span> Données non archivées</strong></p>
-        <p>Il y a actuellement ${teamsCount} équipes et ${membersCount} participants.</p>
-        <p>Créez une archive avant de réinitialiser pour ne pas perdre ces données.</p>
-      `;
-      if (resetBtn) resetBtn.disabled = true;
-    } else if (hasData) {
-      container.className = 'reset-safety-check safe';
-      container.innerHTML = `
-        <p><strong><span class="sf-symbol">@sfs:checkmark.circle@</span> Prêt à réinitialiser</strong></p>
-        <p>Les données ont été archivées. Vous pouvez réinitialiser en toute sécurité.</p>
-        <p>Archive : ${response.year}</p>
-      `;
-      if (resetBtn) resetBtn.disabled = false;
-    } else {
-      container.className = 'reset-safety-check safe';
-      container.innerHTML = `
-        <p><strong><span class="sf-symbol">@sfs:info.circle@</span> Aucune donnée</strong></p>
-        <p>La base de données est vide. Rien à réinitialiser.</p>
-      `;
-      if (resetBtn) resetBtn.disabled = true;
-    }
+    const view = resetSafetyView(response);
+    container.className = `reset-safety-check ${view.tone}`;
+    container.innerHTML = view.html;
+    if (resetBtn) resetBtn.disabled = !view.canReset;
   } catch {
+    // Unknown state: never leave a reset button enabled by an earlier check
+    if (resetBtn) resetBtn.disabled = true;
     container.innerHTML = '<p>Erreur lors de la vérification</p>';
   }
 }
@@ -399,8 +447,9 @@ export async function resetData(api, loadData, loadSafetyCheck) {
       method: 'POST',
       body: JSON.stringify({ confirmation: confirmText })
     });
-    if (result?.warning === 'no_archive') {
-      toastError('Créez d\'abord une archive avant de réinitialiser');
+    if (result?.warning) {
+      // no_archive / archive_outdated: nothing was deleted
+      toastError(result.message || 'Créez d\'abord une archive avant de réinitialiser');
       await loadSafetyCheck();
       return;
     }

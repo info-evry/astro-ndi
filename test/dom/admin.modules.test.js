@@ -495,8 +495,9 @@ describe('archives module', () => {
     const fail = (status) => vi.fn().mockRejectedValue(Object.assign(new Error('x'), { status }));
     const lastToast = () => [...document.querySelectorAll('.toast.error')].at(-1).textContent;
 
+    // 409: the year already has an archive; replacing it (accepted) fails too
     await archives.createArchive(fail(409), vi.fn());
-    expect(lastToast()).toContain('existe déjà');
+    expect(lastToast()).toContain('mise à jour de l\'archive');
     await archives.createArchive(fail(400), vi.fn());
     expect(lastToast()).toContain('Aucune donnée');
     await archives.createArchive(fail(500), vi.fn());

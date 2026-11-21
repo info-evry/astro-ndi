@@ -29,9 +29,10 @@ export function parseJsonColumn(text, fallback) {
  * has started (first Thursday of December). Before this year's NDI the data
  * on screen is last year's; from NDI day on it is this year's.
  *
- * Registration dates are deliberately NOT used: once old teams are deleted
- * the surviving rows (e.g. the Organisation team) carry unrelated dates and
- * produced a wrongly labelled archive ("2024" in September 2026).
+ * It is the fallback when there is no registration: `detectEventYear` reads the
+ * edition from the registrations first (the Organisation team's are left out:
+ * they survive resets and carry unrelated dates, which once produced an
+ * archive labelled "2024" in September 2026).
  * @param {Date} [now]
  * @returns {number}
  */
@@ -43,8 +44,28 @@ export function defaultEventYear(now = new Date()) {
 }
 
 /**
- * Detect the current event year: the admin's `event_year` setting when set,
- * otherwise {@link defaultEventYear}.
+ * Edition a registration made at `date` is for: the NDI of that year when it
+ * was made on or before NDI day (first Thursday of December), otherwise the
+ * next year's. Dates are UTC, as D1 stores them.
+ * @param {Date} date
+ * @returns {number}
+ */
+export function editionForRegistration(date) {
+  const year = date.getUTCFullYear();
+  const december1 = new Date(Date.UTC(year, 11, 1));
+  const firstThursday = 1 + ((4 - december1.getUTCDay() + 7) % 7);
+  const endOfNdiDay = Date.UTC(year, 11, firstThursday + 1);
+  return date.getTime() < endOfNdiDay ? year : year + 1;
+}
+
+/**
+ * Detect the edition of the data currently in the database: the admin's
+ * `event_year` setting when set; otherwise the edition the most recent
+ * registration was made for (the Organisation team, permanent, is left out);
+ * otherwise, with no registration, {@link defaultEventYear}.
+ *
+ * Registrations open weeks before NDI day: in November the data on screen is
+ * already the coming edition's, which the calendar alone cannot tell.
  * @param {D1Database} db
  * @param {Date} [now]
  * @returns {Promise<number>}
@@ -54,6 +75,16 @@ export async function detectEventYear(db, now = new Date()) {
   const configuredYear = Number.parseInt(settingYear, 10);
   if (Number.isFinite(configuredYear)) {
     return configuredYear;
+  }
+
+  const latest = await db.prepare(`
+    SELECT MAX(m.created_at) AS created_at
+    FROM members m JOIN teams t ON t.id = m.team_id
+    WHERE t.name != ?
+  `).bind(ORGANISATION_TEAM_NAME).first();
+  const registeredAt = latest?.created_at ? new Date(`${String(latest.created_at).replace(' ', 'T')}Z`) : null;
+  if (registeredAt && !Number.isNaN(registeredAt.getTime())) {
+    return editionForRegistration(registeredAt);
   }
   return defaultEventYear(now);
 }
@@ -118,55 +149,68 @@ export async function getArchiveByYear(db, year) {
 }
 
 /**
- * Create a new archive for the specified year
+ * The event data as an archive stores it: the same rows, in the same order,
+ * serialised the same way. Two snapshots of unchanged data are identical.
+ * @param {D1Database} db
+ */
+async function snapshotCurrentData(db) {
+  const teams = await fetchTeamsForArchive(db);
+  const members = await fetchMembersForArchive(db);
+  const paymentEvents = await fetchPaymentEventsForArchive(db);
+  return {
+    teams,
+    members,
+    paymentEvents,
+    teamsJson: JSON.stringify(teams),
+    membersJson: JSON.stringify(members),
+    paymentEventsJson: JSON.stringify(paymentEvents)
+  };
+}
+
+/**
+ * The archive that holds exactly the current data (any year), or null. A reset
+ * is only safe when there is one: an archive taken before later registrations
+ * or edits does not cover them.
+ * @param {D1Database} db
+ * @returns {Promise<{event_year: number, archived_at: string}|null>}
+ */
+export async function findArchiveOfCurrentData(db) {
+  const current = await snapshotCurrentData(db);
+  const result = await db.prepare(`
+    SELECT event_year, archived_at FROM archives
+    WHERE teams_json = ? AND members_json = ? AND COALESCE(payment_events_json, '[]') = ?
+    ORDER BY event_year DESC LIMIT 1
+  `).bind(current.teamsJson, current.membersJson, current.paymentEventsJson).first();
+  return result ?? null;
+}
+
+/**
+ * Archive the current data under `year`.
+ *
+ * With `replace`, an existing archive of that year is overwritten by the
+ * current data (new date, new retention deadline); this is how an archive
+ * taken too early is brought up to date. Without it, inserting a year that
+ * already has an archive fails on the UNIQUE constraint.
  * @param {D1Database} db
  * @param {number} year
+ * @param {{ replace?: boolean }} [options]
  * @returns {Promise<object>}
  */
-export async function createArchive(db, year) {
+export async function createArchive(db, year, { replace = false } = {}) {
   // Get retention period from settings
   const retentionYears = Number.parseInt(await getSetting(db, 'gdpr_retention_years') || '3', 10);
-  
+
   // Calculate expiration date
   const expirationDate = new Date();
   expirationDate.setFullYear(expirationDate.getFullYear() + retentionYears);
 
-  // Fetch all data to archive
-  const teams = await fetchTeamsForArchive(db);
-  const members = await fetchMembersForArchive(db);
-  const paymentEvents = await fetchPaymentEventsForArchive(db);
-
-  // Calculate statistics
+  const { teams, members, paymentEvents, teamsJson, membersJson, paymentEventsJson } = await snapshotCurrentData(db);
   const stats = calculateStats(teams, members, paymentEvents);
-
-  // Calculate total revenue
   const totalRevenue = members.reduce((sum, m) => sum + (m.payment_amount || 0), 0);
-
-  // Prepare JSON data
-  const teamsJson = JSON.stringify(teams);
-  const membersJson = JSON.stringify(members);
-  const paymentEventsJson = JSON.stringify(paymentEvents);
   const statsJson = JSON.stringify(stats);
-
-  // Generate integrity hash
   const dataHash = generateDataHash({ teams, members, paymentEvents });
 
-  // Insert archive
-  const result = await db.prepare(`
-    INSERT INTO archives (
-      event_year,
-      expiration_date,
-      teams_json,
-      members_json,
-      payment_events_json,
-      stats_json,
-      total_teams,
-      total_participants,
-      total_revenue,
-      data_hash
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(
-    year,
+  const values = [
     expirationDate.toISOString(),
     teamsJson,
     membersJson,
@@ -176,7 +220,33 @@ export async function createArchive(db, year) {
     members.length,
     totalRevenue,
     dataHash
-  ).run();
+  ];
+
+  const result = replace
+    ? await db.prepare(`
+      INSERT INTO archives (
+        event_year, expiration_date, teams_json, members_json, payment_events_json, stats_json,
+        total_teams, total_participants, total_revenue, data_hash
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(event_year) DO UPDATE SET
+        archived_at = datetime('now'),
+        is_expired = 0,
+        expiration_date = excluded.expiration_date,
+        teams_json = excluded.teams_json,
+        members_json = excluded.members_json,
+        payment_events_json = excluded.payment_events_json,
+        stats_json = excluded.stats_json,
+        total_teams = excluded.total_teams,
+        total_participants = excluded.total_participants,
+        total_revenue = excluded.total_revenue,
+        data_hash = excluded.data_hash
+    `).bind(year, ...values).run()
+    : await db.prepare(`
+      INSERT INTO archives (
+        event_year, expiration_date, teams_json, members_json, payment_events_json, stats_json,
+        total_teams, total_participants, total_revenue, data_hash
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(year, ...values).run();
 
   return {
     id: result.meta.last_row_id,
@@ -488,10 +558,13 @@ export async function checkAllExpirations(db) {
  */
 export async function resetAllData(db) {
   // Delete in order to respect foreign keys
+  // One batch: all of it or none of it. The pizza-change switch is an
+  // edition's state, not a preference: the next edition starts open.
   const [paymentsResult, membersResult, teamsResult] = await db.batch([
     db.prepare('DELETE FROM payment_events'),
     db.prepare('DELETE FROM members'),
-    db.prepare('DELETE FROM teams WHERE name != ?').bind(ORGANISATION_TEAM_NAME)
+    db.prepare('DELETE FROM teams WHERE name != ?').bind(ORGANISATION_TEAM_NAME),
+    db.prepare("DELETE FROM settings WHERE key = 'pizza_changes_open'")
   ]);
 
   return {

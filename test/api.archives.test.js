@@ -3,18 +3,13 @@
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import { env, SELF } from 'cloudflare:test';
+import { setupSchema } from './helpers.js';
 
 // Setup database tables
 beforeAll(async () => {
-  // Core tables
-  await env.DB.exec(`CREATE TABLE IF NOT EXISTS teams (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, description TEXT DEFAULT '', password_hash TEXT DEFAULT '', room TEXT DEFAULT NULL, created_at TEXT DEFAULT (datetime('now')))`);
-  await env.DB.exec(`CREATE TABLE IF NOT EXISTS members (id INTEGER PRIMARY KEY AUTOINCREMENT, team_id INTEGER NOT NULL, first_name TEXT NOT NULL, last_name TEXT NOT NULL, email TEXT NOT NULL, bac_level INTEGER DEFAULT 0, is_leader INTEGER DEFAULT 0, food_diet TEXT DEFAULT '', checked_in INTEGER DEFAULT 0, checked_in_at TEXT DEFAULT NULL, created_at TEXT DEFAULT (datetime('now')), payment_status TEXT DEFAULT 'unpaid', payment_method TEXT DEFAULT NULL, checkout_id TEXT DEFAULT NULL, transaction_id TEXT DEFAULT NULL, registration_tier TEXT DEFAULT NULL, payment_amount INTEGER DEFAULT NULL, FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE, UNIQUE(first_name, last_name))`);
-  await env.DB.exec(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, description TEXT DEFAULT '', updated_at TEXT DEFAULT (datetime('now')))`);
-  await env.DB.exec(`CREATE TABLE IF NOT EXISTS payment_events (id INTEGER PRIMARY KEY AUTOINCREMENT, member_id INTEGER NOT NULL, checkout_id TEXT, event_type TEXT NOT NULL, amount INTEGER NOT NULL, tier TEXT NOT NULL, metadata TEXT, created_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE)`);
-  
-  // Archives table
-  await env.DB.exec(`CREATE TABLE IF NOT EXISTS archives (id INTEGER PRIMARY KEY AUTOINCREMENT, event_year INTEGER NOT NULL UNIQUE, archived_at TEXT NOT NULL DEFAULT (datetime('now')), expiration_date TEXT NOT NULL, is_expired INTEGER DEFAULT 0, teams_json TEXT NOT NULL, members_json TEXT NOT NULL, payment_events_json TEXT, stats_json TEXT NOT NULL, total_teams INTEGER NOT NULL, total_participants INTEGER NOT NULL, total_revenue INTEGER DEFAULT 0, data_hash TEXT NOT NULL)`);
-  
+  // The production schema (every migration): archives snapshot every member column
+  await setupSchema();
+
   // Default settings
   await env.DB.exec(`INSERT OR IGNORE INTO settings (key, value, description) VALUES ('event_year', '2024', 'Current event year')`);
   await env.DB.exec(`INSERT OR IGNORE INTO settings (key, value, description) VALUES ('gdpr_retention_years', '3', 'GDPR retention period')`);
@@ -194,21 +189,19 @@ describe('Archive API - GET /api/admin/archives/:year/export', () => {
     expect((await response.json()).code).toBe('invalid_year');
   });
 
-  it('should return export files if archive exists', async () => {
-    const response = await adminFetch('/api/admin/archives/2024/export');
-    
-    // Could be 200 (found) or 404 (not found)
-    expect([200, 404]).toContain(response.status);
-    
-    if (response.status === 200) {
-      const data = await response.json();
-      expect(data.files).toBeDefined();
-      expect(data.files['metadata.json']).toBeDefined();
-      expect(data.files['statistics.json']).toBeDefined();
-      expect(data.files['teams.csv']).toBeDefined();
-      expect(data.files['participants.csv']).toBeDefined();
-      expect(data.files['README.txt']).toBeDefined();
-    }
+  it('exports an existing archive as one JSON document', async () => {
+    const list = await (await adminFetch('/api/admin/archives')).json();
+    const year = list.archives[0]?.event_year;
+    expect(year).toBeDefined();
+
+    const response = await adminFetch(`/api/admin/archives/${year}/export`);
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.filename).toBe(`ndi-${year}-archive.json`);
+    expect(data.export.metadata.event_year).toBe(year);
+    expect(Array.isArray(data.export.teams)).toBe(true);
+    expect(Array.isArray(data.export.participants)).toBe(true);
+    expect(JSON.stringify(data)).not.toMatch(/password/i);
   });
 });
 
@@ -266,10 +259,10 @@ describe('Archive API - POST /api/admin/reset', () => {
     }
   });
 
-  it('should reset data when forced', async () => {
+  it('should reset data once it is archived (createArchiveFirst + force)', async () => {
     const response = await adminFetch('/api/admin/reset', {
       method: 'POST',
-      body: { confirmation: 'SUPPRIMER', force: true }
+      body: { confirmation: 'SUPPRIMER', force: true, createArchiveFirst: true }
     });
     expect(response.status).toBe(200);
     

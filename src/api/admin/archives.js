@@ -97,9 +97,11 @@ export const createArchive = adminOnly(async (request, env) => {
       year = await archivesDb.detectEventYear(env.DB);
     }
 
-    // Check if archive already exists
+    // An existing archive is only overwritten when asked for (`replace: true`),
+    // to bring an archive taken too early up to date
+    const replace = body?.replace === true;
     const exists = await archivesDb.archiveExists(env.DB, year);
-    if (exists) {
+    if (exists && !replace) {
       return error(`Une archive existe déjà pour ${year}`, 409, 'archive_exists');
     }
 
@@ -109,8 +111,8 @@ export const createArchive = adminOnly(async (request, env) => {
       return badRequest('Aucune donnée à archiver', 'no_data');
     }
 
-    // Create the archive
-    const archive = await archivesDb.createArchive(env.DB, year);
+    // Create (or replace) the archive
+    const archive = await archivesDb.createArchive(env.DB, year, { replace });
 
     return json({
       success: true,
@@ -197,8 +199,46 @@ export const getEventYear = adminOnly(async (request, env) => {
 });
 
 /**
- * POST /api/admin/reset - Reset all data with archive check.
- * The Organisation team is kept (see `resetAllData`).
+ * Where the current data stands against the archives: is there anything to
+ * lose, and does an archive hold exactly it.
+ * @param {D1Database} database
+ */
+async function resetState(database) {
+  const year = await archivesDb.detectEventYear(database);
+  const counts = await archivesDb.getDataCounts(database);
+  const hasData = counts.teams > 0 || counts.members > 0 || counts.payments > 0;
+  const current = hasData ? await archivesDb.findArchiveOfCurrentData(database) : null;
+  const archiveExists = await archivesDb.archiveExists(database, year);
+  return { year, counts, hasData, current, archiveExists };
+}
+
+/**
+ * Refusal of a reset whose data is in no archive: `no_archive` when the year
+ * has none, `archive_outdated` when it has one taken before later changes.
+ */
+function unarchivedWarning({ year, counts, archiveExists }) {
+  return archiveExists
+    ? {
+      warning: 'archive_outdated',
+      message: `L'archive ${year} ne contient pas les dernières modifications : remplacez-la par les données actuelles avant de réinitialiser.`,
+      archiveYear: year,
+      counts,
+      year
+    }
+    : {
+      warning: 'no_archive',
+      message: `Aucune archive ne contient les données actuelles : créez-en une avant de réinitialiser.`,
+      counts,
+      year
+    };
+}
+
+/**
+ * POST /api/admin/reset - Delete the event data (the Organisation team stays,
+ * see `resetAllData`). Only when an archive holds exactly the current data,
+ * whatever its year: nothing that is in no archive can be deleted, and `force`
+ * no longer skips that. `createArchiveFirst` + `force` archives the data under
+ * the detected year first (refused when that year already holds other data).
  */
 export const resetData = adminOnly(async (request, env) => {
   try {
@@ -206,81 +246,61 @@ export const resetData = adminOnly(async (request, env) => {
     if (response) return response;
     const body = data ?? {};
 
-    // Require confirmation
     if (body.confirmation !== 'SUPPRIMER') {
       return badRequest('Confirmation requise : tapez "SUPPRIMER"', 'confirmation_required');
     }
 
-    // Get current year
-    const year = await archivesDb.detectEventYear(env.DB);
+    const state = await resetState(env.DB);
+    let archiveCreated = false;
 
-    // Check if archive exists for current year
-    const archiveExists = await archivesDb.archiveExists(env.DB, year);
-
-    // If no archive and not forcing, suggest creating one
-    if (!archiveExists && !body.force) {
-      const counts = await archivesDb.getDataCounts(env.DB);
-      return json({
-        warning: 'no_archive',
-        message: `No archive exists for ${year}. Create one before resetting?`,
-        counts: counts,
-        year: year
-      }, 200);
-    }
-
-    // If createArchiveFirst is set, create archive before reset
-    if (body.createArchiveFirst && !archiveExists) {
-      const counts = await archivesDb.getDataCounts(env.DB);
-      if (counts.teams > 0 || counts.members > 0) {
-        await archivesDb.createArchive(env.DB, year);
+    if (state.hasData && !state.current) {
+      if (!(body.createArchiveFirst === true && body.force === true) || state.archiveExists) {
+        return json(unarchivedWarning(state), 200);
+      }
+      await archivesDb.createArchive(env.DB, state.year);
+      archiveCreated = true;
+      // The data may have changed between the snapshot and now: check again
+      if (!await archivesDb.findArchiveOfCurrentData(env.DB)) {
+        return json(unarchivedWarning({ ...state, archiveExists: true }), 200);
       }
     }
 
-    // Perform reset
     const result = await archivesDb.resetAllData(env.DB);
 
-    return json({
-      success: true,
-      deleted: result,
-      archiveCreated: body.createArchiveFirst && !archiveExists
-    });
+    return json({ success: true, deleted: result, archiveCreated });
   } catch (error_) {
     return serverError('Error resetting data:', error_);
   }
 });
 
 /**
- * GET /api/admin/reset/check - Check if reset is safe (archive exists)
+ * GET /api/admin/reset/check - Is a reset safe: no data, or an archive that
+ * holds exactly the current data (`archiveCurrent`, with its `archiveYear`).
  */
 export const checkResetSafety = adminOnly(async (request, env) => {
   try {
-    const year = await archivesDb.detectEventYear(env.DB);
-    const archiveExists = await archivesDb.archiveExists(env.DB, year);
-    const counts = await archivesDb.getDataCounts(env.DB);
+    const { year, counts, hasData, current, archiveExists } = await resetState(env.DB);
+    const archiveCurrent = Boolean(current);
+    const safeToReset = archiveCurrent || !hasData;
 
-    // Calculate if there's any data in the database
-    const hasData = counts.teams > 0 || counts.members > 0 || counts.payments > 0;
-
-    // Reset is safe if:
-    // 1. Archive exists for current year (data is backed up), OR
-    // 2. There's no data to lose
-    const safeToReset = archiveExists || !hasData;
-
-    // Build message based on state
     let message = 'La base de données est vide.';
-    if (hasData) {
-      message = archiveExists
-        ? `Une archive existe pour ${year}. Vous pouvez réinitialiser en toute sécurité.`
-        : `Attention: Il y a des données non archivées pour ${year}.`;
+    if (hasData && archiveCurrent) {
+      message = `L'archive ${current.event_year} contient toutes les données actuelles. Vous pouvez réinitialiser en toute sécurité.`;
+    } else if (hasData && archiveExists) {
+      message = `L'archive ${year} ne contient pas les dernières modifications : remplacez-la avant de réinitialiser.`;
+    } else if (hasData) {
+      message = `Attention : il y a des données non archivées pour ${year}.`;
     }
 
     return json({
-      year: year,
-      archiveExists: archiveExists,
-      counts: counts,
+      year,
+      archiveExists,
+      archiveCurrent,
+      archiveYear: current?.event_year ?? null,
+      counts,
       has_data: hasData,
       safe: safeToReset,
-      message: message
+      message
     });
   } catch (error_) {
     return serverError('Error checking reset safety:', error_);

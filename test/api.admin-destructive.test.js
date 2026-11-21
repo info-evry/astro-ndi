@@ -281,20 +281,18 @@ describe('Reset flow', () => {
     expect(await countRows('archives')).toBe(0);
   });
 
-  it('force deletes everything without creating an archive', async () => {
+  it('force alone no longer deletes unarchived data (nothing is lost that no archive holds)', async () => {
     await seedEvent();
 
     const response = await reset({ confirmation: 'SUPPRIMER', force: true });
     expect(response.status).toBe(200);
     const data = await response.json();
-    expect(data.success).toBe(true);
-    expect(data.deleted).toEqual({ teams: 1, members: 3, payments: 1 });
-    expect(data.archiveCreated).toBeFalsy();
+    expect(data.warning).toBe('no_archive');
+    expect(data.success).toBeUndefined();
 
-    expect(await countRows('members')).toBe(0);
-    expect(await countRows('teams')).toBe(0);
-    expect(await countRows('payment_events')).toBe(0);
-    expect(await countRows('archives')).toBe(0);
+    expect(await countRows('members')).toBe(3);
+    expect(await countRows('teams')).toBe(1);
+    expect(await countRows('payment_events')).toBe(1);
   });
 
   it('createArchiveFirst + force archives the event, then wipes it; the archive survives', async () => {
@@ -336,8 +334,8 @@ describe('Reset flow', () => {
     expect(list.archives[0].total_participants).toBe(3);
   });
 
-  it('resetting an empty database succeeds with zero counts when forced', async () => {
-    const response = await reset({ confirmation: 'SUPPRIMER', force: true });
+  it('resetting an empty database succeeds with zero counts, no archive needed', async () => {
+    const response = await reset({ confirmation: 'SUPPRIMER' });
     expect((await response.json()).deleted).toEqual({ teams: 0, members: 0, payments: 0 });
   });
 });

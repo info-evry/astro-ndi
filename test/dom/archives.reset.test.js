@@ -99,3 +99,85 @@ describe('createArchive', () => {
     expect(api).not.toHaveBeenCalled();
   });
 });
+
+describe('an archive taken too early', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `<div id="toast-container"></div><span id="current-event-year">2026</span>
+      <div id="reset-safety-check"></div><button id="reset-data-btn" disabled></button>`;
+  });
+
+  it('offers to replace an existing archive of that year with the current data', async () => {
+    vi.stubGlobal('prompt', () => '2026');
+    const confirm = vi.fn(() => true);
+    vi.stubGlobal('confirm', confirm);
+    const exists = Object.assign(new Error('Une archive existe déjà pour 2026'), { status: 409, code: 'archive_exists' });
+    const api = vi.fn()
+      .mockRejectedValueOnce(exists)
+      .mockResolvedValue({ success: true, archive: { event_year: 2026 } });
+
+    await archives.createArchive(api, vi.fn().mockResolvedValue());
+
+    expect(confirm.mock.calls[0][0]).toContain('remplacer');
+    const posts = api.mock.calls.filter(([endpoint, opts]) => endpoint === '/admin/archives' && opts?.method === 'POST');
+    expect(posts.map(([, opts]) => JSON.parse(opts.body))).toEqual([{ year: 2026 }, { year: 2026, replace: true }]);
+    expect(toasts().join(' ')).toContain('mise à jour');
+  });
+
+  it('replaces nothing when the organiser declines', async () => {
+    vi.stubGlobal('prompt', () => '2026');
+    vi.stubGlobal('confirm', () => false);
+    const exists = Object.assign(new Error('exists'), { status: 409, code: 'archive_exists' });
+    const api = vi.fn().mockRejectedValueOnce(exists);
+
+    await archives.createArchive(api, vi.fn());
+
+    expect(api).toHaveBeenCalledTimes(1);
+  });
+
+  it('the safety check says the archive misses the latest changes, and keeps the reset locked', async () => {
+    const api = vi.fn().mockResolvedValue({
+      year: 2026, archiveExists: true, archiveCurrent: false, archiveYear: null,
+      counts: { teams: 3, members: 12 }, has_data: true, safe: false
+    });
+
+    await archives.loadResetSafetyCheck(api);
+
+    expect(document.getElementById('reset-safety-check').textContent).toContain('dernières modifications');
+    expect(document.getElementById('reset-data-btn').disabled).toBe(true);
+  });
+
+  it('unlocks the reset only when an archive holds exactly the current data, and names it', async () => {
+    const api = vi.fn().mockResolvedValue({
+      year: 2026, archiveExists: false, archiveCurrent: true, archiveYear: 2025,
+      counts: { teams: 3, members: 12 }, has_data: true, safe: true
+    });
+
+    await archives.loadResetSafetyCheck(api);
+
+    expect(document.getElementById('reset-safety-check').textContent).toContain('2025');
+    expect(document.getElementById('reset-data-btn').disabled).toBe(false);
+  });
+
+  it('a reset refused because the archive is outdated says why, and reports no success', async () => {
+    vi.stubGlobal('confirm', () => true);
+    vi.stubGlobal('prompt', () => 'SUPPRIMER');
+    const api = vi.fn().mockResolvedValue({
+      warning: 'archive_outdated', message: "L'archive 2026 ne contient pas les dernières modifications", year: 2026
+    });
+    const loadData = vi.fn();
+
+    await archives.resetData(api, loadData, vi.fn().mockResolvedValue());
+
+    expect(loadData).not.toHaveBeenCalled();
+    expect(toasts().join(' ')).toContain('dernières modifications');
+    expect(toasts().join(' ')).not.toContain('succès');
+  });
+});
+
+describe('safety check failure', () => {
+  it('locks the reset when the check cannot be made', async () => {
+    document.body.innerHTML = '<div id="reset-safety-check"></div><button id="reset-data-btn"></button>';
+    await archives.loadResetSafetyCheck(vi.fn().mockRejectedValue(new Error('offline')));
+    expect(document.getElementById('reset-data-btn').disabled).toBe(true);
+  });
+});

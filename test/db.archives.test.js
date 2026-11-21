@@ -6,6 +6,7 @@ import { env } from 'cloudflare:test';
 import {
   detectEventYear,
   defaultEventYear,
+  editionForRegistration,
   archiveExists,
   getArchives,
   getArchiveByYear,
@@ -63,6 +64,20 @@ describe('defaultEventYear / detectEventYear', () => {
     expect(defaultEventYear(at(2028, 12, 7))).toBe(2028);
   });
 
+  it('without a setting, takes the edition of the latest registration (Organisation left out)', async () => {
+    await env.DB.exec(`INSERT INTO teams (name) VALUES ('Organisation'), ('Alpha')`);
+    await env.DB.exec(`INSERT INTO members (team_id, first_name, last_name, email, created_at) VALUES (2, 'A', 'B', 'a@test.com', '2026-11-20 10:00:00')`);
+    expect(await detectEventYear(env.DB, at(2026, 11, 21))).toBe(2026);
+  });
+
+  it('editionForRegistration: on or before NDI day is that edition, after is the next', () => {
+    expect(editionForRegistration(new Date('2026-12-03T23:59:00Z'))).toBe(2026);
+    expect(editionForRegistration(new Date('2026-12-04T00:00:00Z'))).toBe(2027);
+    expect(editionForRegistration(new Date('2026-01-10T10:00:00Z'))).toBe(2026);
+    expect(editionForRegistration(new Date('2025-12-04T12:00:00Z'))).toBe(2025);
+    expect(editionForRegistration(new Date('2025-12-05T12:00:00Z'))).toBe(2026);
+  });
+
   it('uses the NDI-based default when no setting is configured', async () => {
     expect(await detectEventYear(env.DB, at(2026, 9, 30))).toBe(2025);
   });
@@ -72,7 +87,7 @@ describe('defaultEventYear / detectEventYear', () => {
     expect(await detectEventYear(env.DB, at(2026, 9, 30))).toBe(2024);
   });
 
-  it('ignores registration dates (regression: surviving Organisation members labelled the archive 2024)', async () => {
+  it('ignores the Organisation members\' registration dates (regression: surviving Organisation members labelled the archive 2024)', async () => {
     await env.DB.exec(`INSERT INTO teams (name) VALUES ('Organisation')`);
     await env.DB.exec(`INSERT INTO members (team_id, first_name, last_name, email, created_at) VALUES (1, 'Old', 'Member', 'o@test.com', '2024-03-15 10:00:00')`);
     expect(await detectEventYear(env.DB, at(2026, 9, 30))).toBe(2025);
