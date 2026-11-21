@@ -401,7 +401,7 @@ describe('registrations toolbar', () => {
     const batch = calls.find(c => c.path === '/admin/members/delete-batch');
     expect(batch).toMatchObject({ method: 'POST', auth: `Bearer ${VALID}` });
     expect(JSON.parse(fetchMock.mock.calls.find(([url]) => String(url).endsWith('/delete-batch'))[1].body).memberIds.sort()).toEqual([11, 12, 21]);
-    expect(statsCalls().length).toBe(before + 1);
+    expect(statsCalls()).toHaveLength(before + 1);
     expect(byId('delete-selected-btn').disabled).toBe(true);
   });
 

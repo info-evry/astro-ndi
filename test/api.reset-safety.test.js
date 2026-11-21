@@ -147,23 +147,15 @@ describe('reset requires an archive of the current data', () => {
 describe('edition year of the data on screen', () => {
   const eventYear = async () => (await (await adminFetch('/api/admin/event-year')).json()).year;
 
-  it('is the edition the registrations are for: registered in November 2026, it is 2026', async () => {
+  // NDI 2026: Thursday 3 December. On or before NDI day: that edition; after: the next one.
+  it.each([
+    ['registered in November 2026', '2026-11-20 15:52:39', 2026],
+    ['registered on NDI day itself', '2026-12-03 18:00:00', 2026],
+    ['registered after NDI day', '2026-12-05 10:00:00', 2027]
+  ])('is the edition the registrations are for: %s', async (_label, createdAt, year) => {
     const team = await seedTeam({ members: 1 });
-    await env.DB.prepare("UPDATE members SET created_at = '2026-11-20 15:52:39' WHERE team_id = ?").bind(team.id).run();
-    expect(await eventYear()).toBe(2026);
-  });
-
-  it('registrations after NDI day are for the next edition', async () => {
-    // NDI 2026: Thursday 3 December
-    const team = await seedTeam({ members: 1 });
-    await env.DB.prepare("UPDATE members SET created_at = '2026-12-05 10:00:00' WHERE team_id = ?").bind(team.id).run();
-    expect(await eventYear()).toBe(2027);
-  });
-
-  it('a registration on NDI day itself is for that edition', async () => {
-    const team = await seedTeam({ members: 1 });
-    await env.DB.prepare("UPDATE members SET created_at = '2026-12-03 18:00:00' WHERE team_id = ?").bind(team.id).run();
-    expect(await eventYear()).toBe(2026);
+    await env.DB.prepare('UPDATE members SET created_at = ? WHERE team_id = ?').bind(createdAt, team.id).run();
+    expect(await eventYear()).toBe(year);
   });
 
   it('the most recent registration wins, and the Organisation members do not count', async () => {

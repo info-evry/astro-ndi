@@ -79,8 +79,8 @@ describe('GET /api/admin/rooms', () => {
     const teamsWithRooms = data.teams.filter(t => t.room);
     const teamsWithoutRooms = data.teams.filter(t => !t.room);
 
-    expect(teamsWithRooms.length).toBe(2);
-    expect(teamsWithoutRooms.length).toBe(1);
+    expect(teamsWithRooms).toHaveLength(2);
+    expect(teamsWithoutRooms).toHaveLength(1);
   });
 
   it('should return member counts for each team', async () => {
@@ -110,7 +110,7 @@ describe('GET /api/admin/rooms', () => {
 
     expect(data.rooms).toContain('Salle A');
     expect(data.rooms).toContain('Salle B');
-    expect(data.rooms.length).toBe(2);
+    expect(data.rooms).toHaveLength(2);
   });
 
   it('should return by_room breakdown', async () => {
@@ -416,7 +416,7 @@ describe('GET /api/admin/rooms - Pizza by room', () => {
     const data = await response.json();
 
     // Should have 2 rooms with assigned teams (Salle A and Salle B)
-    expect(data.pizza_by_room.length).toBe(2);
+    expect(data.pizza_by_room).toHaveLength(2);
 
     const salleA = data.pizza_by_room.find(r => r.room === 'Salle A');
     const salleB = data.pizza_by_room.find(r => r.room === 'Salle B');
@@ -435,7 +435,7 @@ describe('GET /api/admin/rooms - Pizza by room', () => {
 
     const salleA = data.pizza_by_room.find(r => r.room === 'Salle A');
     expect(salleA.pizzas).toBeDefined();
-    expect(salleA.pizzas.length).toBe(2); // margherita and 4fromages
+    expect(salleA.pizzas).toHaveLength(2); // margherita and 4fromages
 
     // Check that each pizza type has total and present counts
     const margherita = salleA.pizzas.find(p => p.food_diet === 'margherita');

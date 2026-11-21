@@ -165,7 +165,7 @@ describe('Organisation Team Special Handling', () => {
     const orgTeam = data.teams.find(t => t.name === 'Organisation');
     expect(orgTeam).toBeDefined();
     expect(orgTeam.is_organisation).toBe(true);
-    expect(orgTeam.available_slots).toBe(null);
+    expect(orgTeam.available_slots).toBeNull();
     expect(orgTeam.is_full).toBe(false);
   });
 

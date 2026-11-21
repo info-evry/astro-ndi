@@ -219,7 +219,7 @@ describe('CSV Export - Official NDI Format', () => {
 
     const text = await response.text();
     const firstLine = text.split('\n')[0];
-    expect(firstLine.split(';').length).toBe(7);
+    expect(firstLine.split(';')).toHaveLength(7);
   });
 
   it('should include UTF-8 BOM', async () => {

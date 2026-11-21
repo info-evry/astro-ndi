@@ -364,7 +364,7 @@ describe('registration form', () => {
     expect(event.defaultPrevented).toBe(true);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(byId('form-errors').classList.contains('hidden')).toBe(false);
-    expect(byId('form-errors').querySelectorAll('li').length).toBe(5);
+    expect(byId('form-errors').querySelectorAll('li')).toHaveLength(5);
   });
 
   it('submit refuses to register when the event is full', async () => {

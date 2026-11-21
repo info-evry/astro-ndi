@@ -126,7 +126,7 @@ describe('getArchives', () => {
 
     const archives = await getArchives(env.DB);
 
-    expect(archives.length).toBe(3);
+    expect(archives).toHaveLength(3);
     expect(archives[0].event_year).toBe(2024);
     expect(archives[1].event_year).toBe(2023);
     expect(archives[2].event_year).toBe(2022);
@@ -254,7 +254,7 @@ describe('checkAllExpirations', () => {
     const results = await checkAllExpirations(env.DB);
 
     // Should only check non-expired archives (2020 and 2024)
-    expect(results.length).toBe(2);
+    expect(results).toHaveLength(2);
     expect(results.find(r => r.year === 2020)).toEqual({ year: 2020, expired: true, updated: true });
     expect(results.find(r => r.year === 2024)).toEqual({ year: 2024, expired: false, updated: false });
   });

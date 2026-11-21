@@ -87,7 +87,7 @@ describe('GET /api/admin/pizza', () => {
     expect(Array.isArray(data.stats.by_type)).toBe(true);
 
     // Should have 3 pizza types: margherita (2), 4fromages (1), vegetarienne (1)
-    expect(data.stats.by_type.length).toBe(3);
+    expect(data.stats.by_type).toHaveLength(3);
     const margherita = data.stats.by_type.find(t => t.food_diet === 'margherita');
     expect(margherita).toBeDefined();
     expect(margherita.total).toBe(2);

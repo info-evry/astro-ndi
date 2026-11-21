@@ -13,36 +13,15 @@ beforeAll(async () => {
 });
 
 describe('Admin Authentication - verifyAdmin', () => {
-  it('should reject request without Authorization header', async () => {
-    const response = await SELF.fetch('http://localhost/api/admin/stats');
-    expect(response.status).toBe(401);
-  });
-
-  it('should reject request with empty Authorization header', async () => {
-    const response = await SELF.fetch('http://localhost/api/admin/stats', {
-      headers: { 'Authorization': '' }
-    });
-    expect(response.status).toBe(401);
-  });
-
-  it('should reject request without Bearer prefix', async () => {
-    const response = await SELF.fetch('http://localhost/api/admin/stats', {
-      headers: { 'Authorization': 'test-admin-token' }
-    });
-    expect(response.status).toBe(401);
-  });
-
-  it('should reject request with wrong Bearer token', async () => {
-    const response = await SELF.fetch('http://localhost/api/admin/stats', {
-      headers: { 'Authorization': 'Bearer wrong-token' }
-    });
-    expect(response.status).toBe(401);
-  });
-
-  it('should reject request with Bearer but empty token', async () => {
-    const response = await SELF.fetch('http://localhost/api/admin/stats', {
-      headers: { 'Authorization': 'Bearer ' }
-    });
+  it.each([
+    ['no Authorization header', undefined],
+    ['an empty Authorization header', ''],
+    ['no Bearer prefix', 'test-admin-token'],
+    ['a wrong Bearer token', 'Bearer wrong-token'],
+    ['Bearer with an empty token', 'Bearer ']
+  ])('rejects a request with %s', async (_label, authorization) => {
+    const headers = authorization === undefined ? {} : { Authorization: authorization };
+    const response = await SELF.fetch('http://localhost/api/admin/stats', { headers });
     expect(response.status).toBe(401);
   });
 

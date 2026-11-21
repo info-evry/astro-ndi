@@ -7,8 +7,12 @@ import { describe, it, expect } from 'vitest';
 import { hashPassword, verifyPassword, needsHashUpgrade } from '../src/shared/crypto.js';
 
 describe('hashPassword', () => {
-  it('should generate a hash with salt:hash format', async () => {
-    const hash = await hashPassword('testpassword');
+  it.each([
+    ['a plain password', 'testpassword'],
+    ['an empty password', ''],
+    ['a unicode password', 'mot-de-passe-français-测试']
+  ])('hashes %s as salt:hash', async (_label, password) => {
+    const hash = await hashPassword(password);
     expect(hash).toContain(':');
     const [salt, hashPart] = hash.split(':');
     expect(salt).toHaveLength(32); // 16 bytes = 32 hex chars
@@ -26,22 +30,6 @@ describe('hashPassword', () => {
     const hash1 = await hashPassword('password', existingSalt);
     const hash2 = await hashPassword('password', existingSalt);
     expect(hash1).toBe(hash2);
-  });
-
-  it('should handle empty password', async () => {
-    const hash = await hashPassword('');
-    expect(hash).toContain(':');
-    const [salt, hashPart] = hash.split(':');
-    expect(salt).toHaveLength(32);
-    expect(hashPart).toHaveLength(64);
-  });
-
-  it('should handle unicode passwords', async () => {
-    const hash = await hashPassword('mot-de-passe-français-测试');
-    expect(hash).toContain(':');
-    const [salt, hashPart] = hash.split(':');
-    expect(salt).toHaveLength(32);
-    expect(hashPart).toHaveLength(64);
   });
 
   it('should handle very long passwords', async () => {
