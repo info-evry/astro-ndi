@@ -5,14 +5,15 @@
 import { json } from 'astro-core/router';
 import { parsePositiveId } from 'astro-core/ids';
 import { isUniqueConstraintError } from 'astro-core/request';
-import { badRequest, conflict, forbidden, invalidId, notFound, serverError } from 'astro-core/http';
+import { badRequest, conflict, invalidId, notFound, serverError } from 'astro-core/http';
 import * as db from '../lib/db.js';
 import { validateRegistration, validateTeamName, normalizeTeamDescription, normalizeTeamPassword } from '../lib/validation.js';
-import { hashPassword, verifyPassword, needsHashUpgrade } from '../shared/crypto.js';
+import { hashPassword } from '../shared/crypto.js';
 import { ORGANISATION_TEAM_NAME, isNoPizza } from '../shared/constants.js';
 import { readBody } from '../shared/http.js';
 import { getCapacitySettings } from '../database/db.settings.js';
 import { getConfiguredPizzaIds } from './config.js';
+import { checkTeamSecret } from './team-auth.js';
 
 const MSG_TEAM_EXISTS = "Ce nom d'équipe existe déjà";
 const MSG_MEMBERS_EXIST = 'Un ou plusieurs membres sont déjà inscrits';
@@ -73,20 +74,8 @@ async function joinExistingTeam(database, teamId, password, memberCount, limits)
     return { response: notFound('Équipe introuvable') };
   }
 
-  const passwordValid = await verifyPassword(password, team.password_hash);
-  if (!passwordValid) {
-    return { response: forbidden('Code secret incorrect') };
-  }
-
-  // Upgrade legacy hash to new format on successful verification
-  if (needsHashUpgrade(team.password_hash)) {
-    try {
-      const newHash = await hashPassword(password);
-      await db.updateTeam(database, teamId, { passwordHash: newHash });
-    } catch (error_) {
-      console.error('Failed to upgrade password hash:', error_);
-    }
-  }
+  const refusal = await checkTeamSecret(database, team, password);
+  if (refusal) return { response: refusal };
 
   // The Organisation team has no size limit and does not count for the capacity
   if (team.name !== ORGANISATION_TEAM_NAME) {

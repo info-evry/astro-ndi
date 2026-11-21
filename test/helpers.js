@@ -66,6 +66,15 @@ export function postJson(path, body, headers = {}) {
   });
 }
 
+/** PUT JSON to a public endpoint. */
+export function putJson(path, body, headers = {}) {
+  return SELF.fetch(`${BASE}${path}`, {
+    method: 'PUT',
+    headers: { ...JSON_HEADERS, ...headers },
+    body: typeof body === 'string' ? body : JSON.stringify(body)
+  });
+}
+
 let ipCounter = 0;
 
 /**

@@ -26,6 +26,7 @@ import {
   isNoPizza
 } from '../../shared/constants.js';
 import { settingsState, pricingSettings, teamsData, setPizzasConfig } from './state.js';
+import { bindPizzaChanges, parsePizzaChangesOpen, renderPizzaChanges } from './settings-pizza-changes.js';
 
 const SETTINGS_PATH = '/admin/settings';
 
@@ -64,6 +65,7 @@ export async function loadSettings(api) {
     settingsState.bacLevels = settings.bac_levels || [];
     settingsState.isDirty = false;
     applyPizzas(settings.pizzas);
+    settingsState.pizzaChangesOpen = parsePizzaChangesOpen(settings.pizza_changes_open);
 
     // On-site pricing settings
     pricingSettings.priceAssoMember = intOr(settings.price_asso_member, DEFAULT_PRICES.assoMember);
@@ -111,6 +113,7 @@ export function renderSettings() {
   if (gdprRetentionInput) gdprRetentionInput.value = settingsState.gdprRetentionYears || DEFAULT_GDPR_RETENTION_YEARS;
 
   renderPizzasList();
+  renderPizzaChanges();
   updateSaveButton();
 }
 
@@ -579,4 +582,5 @@ export function initSettings(api) {
   }
 
   bindPizzasList(api);
+  bindPizzaChanges(api);
 }

@@ -25,7 +25,8 @@ export function initApi(baseUrl) {
  * @returns {Promise<object>}
  */
 function api(endpoint, { method = 'GET', body } = {}) {
-  return method === 'GET' ? client.get(endpoint) : client.post(endpoint, body);
+  if (method === 'GET') return client.get(endpoint);
+  return method === 'PUT' ? client.put(endpoint, body) : client.post(endpoint, body);
 }
 
 /**
@@ -72,4 +73,16 @@ export async function submitRegistration(data) {
  */
 export async function viewTeamMembers(teamId, password) {
   return api(`/teams/${teamId}/view`, { method: 'POST', body: { password } });
+}
+
+/**
+ * Change the pizza of one member of a team (with the team's secret code)
+ * @param {number} teamId - Team ID
+ * @param {number} memberId - Member ID
+ * @param {string} password - Team secret code (API field name: `password`)
+ * @param {string} foodDiet - Id of the chosen pizza
+ * @returns {Promise<object>}
+ */
+export async function changeMemberPizza(teamId, memberId, password, foodDiet) {
+  return api(`/teams/${teamId}/members/${memberId}/pizza`, { method: 'PUT', body: { password, foodDiet } });
 }

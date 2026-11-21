@@ -12,6 +12,7 @@
  *   stats: object|null,
  *   isNewTeam: boolean,
  *   selectedTeamId: number|null,
+ *   teamSecret: string,
  *   isAtCapacity: boolean
  * }}
  */
@@ -21,6 +22,7 @@ export const state = {
   stats: null,
   isNewTeam: true,
   selectedTeamId: null,
+  teamSecret: '',
   isAtCapacity: false
 };
 
@@ -62,6 +64,15 @@ export function setTeamMode(isNew) {
  */
 export function setSelectedTeam(teamId) {
   state.selectedTeamId = teamId;
+}
+
+/**
+ * Remember the code secret the team view was opened with (memory only), so
+ * the pizza of a member can be changed without asking for it again.
+ * @param {string} secret - Empty to forget it
+ */
+export function setTeamSecret(secret) {
+  state.teamSecret = secret;
 }
 
 /**

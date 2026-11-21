@@ -75,6 +75,16 @@ const euros = (cents: number) => (cents / 100).toFixed(2);
         </p>
         <div id="pizzas-list" class="pizzas-list"></div>
 
+        <div class="form-group pizza-changes">
+          <label class="checkbox-label">
+            <input type="checkbox" id="setting-pizza-changes-open" checked>
+            Les participants peuvent changer leur pizza
+          </label>
+          <span class="form-hint" id="pizza-changes-hint">
+            Enregistré immédiatement. Désactivez-le quand la commande de pizzas part.
+          </span>
+        </div>
+
         <div id="pizza-add-form" class="pizza-add-form">
           <h4>Ajouter une pizza</h4>
           <form id="add-pizza-form-element">

@@ -9,6 +9,7 @@ import { getConfig } from './api/config.js';
 import { listTeams, getTeam, getStats } from './api/teams.js';
 import { register } from './api/register.js';
 import { viewTeamMembers } from './api/team-view.js';
+import { changeMemberPizza } from './api/team-pizza.js';
 import {
   listAllMembers,
   exportAllCSV,
@@ -74,6 +75,13 @@ export function createRouter() {
         limit: 10,
         windowSec: 600
       },
+      {
+        name: 'team-pizza',
+        methods: ['PUT'],
+        match: pathPattern(/^\/api\/teams\/[^/]+\/members\/[^/]+\/pizza$/),
+        limit: 20,
+        windowSec: 600
+      },
       ADMIN_RATE_LIMIT
     ]
   }));
@@ -89,6 +97,7 @@ export function createRouter() {
   router.get('/api/stats', getStats);
   router.post('/api/register', register);
   router.post('/api/teams/:id/view', viewTeamMembers);
+  router.put('/api/teams/:id/members/:memberId/pizza', changeMemberPizza);
 
   // Admin API routes - Read
   router.get('/api/admin/members', listAllMembers);

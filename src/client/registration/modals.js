@@ -5,9 +5,10 @@
 /* eslint-env browser */
 
 import { escapeHtml } from '@info-evry/astro-design/scripts/dom';
-import { state, setSelectedTeam } from './state.js';
+import { state, setSelectedTeam, setTeamSecret } from './state.js';
 import { elements } from './elements.js';
 import { viewTeamMembers } from './api.js';
+import { bindMemberPizza, renderMemberPizza, syncMemberPizza } from './member-pizza.js';
 
 /**
  * Open team view modal
@@ -32,6 +33,8 @@ export function openTeamViewModal(teamId) {
  */
 export function closeTeamViewModal() {
   setSelectedTeam(null);
+  setTeamSecret('');
+  elements.teamMembersList.innerHTML = '';
   elements.teamViewModal.classList.add('hidden');
   elements.teamViewPassword.value = '';
   elements.teamViewError.classList.add('hidden');
@@ -53,6 +56,7 @@ export async function handleTeamViewSubmit() {
 
   try {
     const result = await viewTeamMembers(state.selectedTeamId, password);
+    setTeamSecret(password);
     showTeamMembers(result.team);
   } catch (error) {
     elements.teamViewError.textContent = error.message;
@@ -83,8 +87,9 @@ function showTeamMembers(team) {
     8: 'BAC+8 (Doctorat)'
   };
 
+  const pizzas = state.config?.pizzas ?? [];
   elements.teamMembersList.innerHTML = team.members.map(member => `
-    <div class="member-item ${member.isLeader ? 'leader' : ''}">
+    <div class="member-item ${member.isLeader ? 'leader' : ''}" data-member-id="${member.id}">
       <div class="member-info">
         <span class="member-name">${escapeHtml(member.firstName)} ${escapeHtml(member.lastName)}</span>
         ${member.isLeader ? '<span class="badge-leader">Chef</span>' : ''}
@@ -92,10 +97,11 @@ function showTeamMembers(team) {
       <div class="member-details">
         <span class="member-email">${escapeHtml(member.email)}</span>
         <span class="member-bac">${bacLabels[member.bacLevel] || 'N/A'}</span>
-        ${member.foodDiet ? `<span class="member-food">${escapeHtml(member.foodDiet)}</span>` : ''}
       </div>
+      <div class="member-details">${renderMemberPizza(member, { pizzas, open: team.pizzaChangesOpen === true })}</div>
     </div>
   `).join('');
+  syncMemberPizza(elements.teamMembersList);
 
   elements.teamViewAuth.classList.add('hidden');
   elements.teamViewContent.classList.remove('hidden');
@@ -106,6 +112,7 @@ function showTeamMembers(team) {
  */
 export function setupModalListeners() {
   // Team view modal
+  if (elements.teamMembersList) bindMemberPizza(elements.teamMembersList);
   elements.teamViewSubmit?.addEventListener('click', handleTeamViewSubmit);
   elements.teamViewCancel?.addEventListener('click', closeTeamViewModal);
   elements.teamViewClose?.addEventListener('click', closeTeamViewModal);

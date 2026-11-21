@@ -24,6 +24,7 @@ export const settingsState = {
   minTeamSize: DEFAULT_MIN_TEAM_SIZE,
   schoolName: DEFAULT_SCHOOL_NAME,
   pizzas: [],
+  pizzaChangesOpen: true,
   bacLevels: [],
   isDirty: false,
   gdprRetentionYears: DEFAULT_GDPR_RETENTION_YEARS

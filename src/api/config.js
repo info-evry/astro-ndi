@@ -99,6 +99,7 @@ async function loadD1Settings(config, env) {
     config.maxTeamSize = capacity.maxTeamSize;
     config.maxTotalParticipants = capacity.maxTotalParticipants;
     config.minTeamSize = capacity.minTeamSize;
+    config.pizzaChangesOpen = await settingsDb.getPizzaChangesOpen(env.DB);
     return true;
   } catch (error_) {
     console.error('D1 settings read error:', error_);
@@ -140,7 +141,7 @@ function applyDefaultCapacity(config, env) {
  * @returns {Promise<object>}
  */
 export async function loadConfig(env) {
-  const config = { ...DEFAULT_CONFIG };
+  const config = { ...DEFAULT_CONFIG, pizzaChangesOpen: true };
 
   const d1Available = await isD1Available(env);
   if (d1Available) {

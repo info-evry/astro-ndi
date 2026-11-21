@@ -31,6 +31,11 @@ function intSetting(min, max) {
   };
 }
 
+/** `true`, `false`, "true" or "false" (stored as the text "true" / "false"). */
+function booleanSetting(value) {
+  return typeof value === 'boolean' || value === 'true' || value === 'false' || 'Doit être vrai ou faux';
+}
+
 /**
  * Validate one pizza entry; returns an error message or null.
  * @param {unknown} pizza
@@ -92,6 +97,7 @@ const SETTINGS_SCHEMA = {
   max_total_participants: intSetting(1, 10_000),
   min_team_size: intSetting(1, 50),
   pizzas: validatePizzas,
+  pizza_changes_open: booleanSetting,
   bac_levels: validateBacLevels,
   school_name: (v) => (typeof v === 'string' && v.length <= 256) || 'Doit être une chaîne de 256 caractères maximum',
   price_asso_member: intSetting(0, MAX_PAYMENT_AMOUNT_CENTS),

@@ -169,6 +169,21 @@ export async function getOnsitePrices(db) {
 }
 
 /**
+ * Whether participants may still change their pizza themselves
+ * (`pizza_changes_open`, "true" by default; only an explicit "false" closes it).
+ * @param {D1Database} db
+ * @returns {Promise<boolean>}
+ */
+export async function getPizzaChangesOpen(db) {
+  try {
+    return (await getSetting(db, 'pizza_changes_open')) !== 'false';
+  } catch (error) {
+    console.error('Error reading pizza_changes_open from DB:', error);
+    return true;
+  }
+}
+
+/**
  * Check if settings table exists
  * @param {D1Database} db
  * @returns {Promise<boolean>}
